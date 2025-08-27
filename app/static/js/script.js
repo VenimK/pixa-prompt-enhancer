@@ -36,6 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
     const copyButton = document.getElementById('copy-button');
     const clearButton = document.getElementById('clear-button');
+    const motionEffectSelect = document.getElementById('motion-effect-select');
+    const motionEffectContainer = document.getElementById('motion-effect-selector-container');
 
     // --- Event Listeners ---
     if (analyzeButton) {
@@ -71,6 +73,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (promptTypeSelect) {
+        promptTypeSelect.addEventListener('change', () => {
+            if (promptTypeSelect.value === 'WAN2') {
+                motionEffectContainer.style.display = 'flex';
+            } else {
+                motionEffectContainer.style.display = 'none';
+            }
+        });
+    }
+
     if (enhanceButton) {
         enhanceButton.addEventListener('click', async () => {
             const prompt = promptInput.value;
@@ -79,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const cinematography = cinematographySelect.value;
             const lighting = lightingSelect.value;
             const imageDescription = imageDescriptionText.innerText;
+            const motionEffect = motionEffectSelect.value;
 
             if (!prompt) {
                 alert('Please enter a prompt idea.');
@@ -102,7 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         style: style,
                         cinematography: cinematography,
                         lighting: lighting,
-                        image_description: (imageDescription && !imageDescription.startsWith('Analyzing')) ? imageDescription : ''
+                        image_description: (imageDescription && !imageDescription.startsWith('Analyzing')) ? imageDescription : '',
+                        motion_effect: promptType === 'WAN2' ? motionEffect : null
                     }),
                 });
 

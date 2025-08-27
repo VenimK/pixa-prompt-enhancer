@@ -24,6 +24,7 @@ class EnhanceRequest(BaseModel):
     cinematography: str
     lighting: str
     image_description: str | None = None
+    motion_effect: str | None = None
 
 class EnhanceResponse(BaseModel):
     enhanced_prompt: str
@@ -82,6 +83,8 @@ async def enhance_prompt_endpoint(request: EnhanceRequest):
         instructions.append(f"using a {request.cinematography.lower()} shot")
     if request.lighting != "auto":
         instructions.append(f"with {request.lighting.lower()} lighting")
+    if request.prompt_type == "WAN2" and request.motion_effect and request.motion_effect != "Static":
+        instructions.append(f"with a {request.motion_effect.lower()} motion effect")
     instruction_text = " " + " and ".join(instructions) if instructions else ""
 
     image_context = f" The user has provided a reference image described as: '{request.image_description}'." if request.image_description else ""
