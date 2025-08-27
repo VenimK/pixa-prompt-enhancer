@@ -1,5 +1,24 @@
-
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Theme Switcher Logic ---
+    const themeToggle = document.getElementById('checkbox');
+
+    function applySavedTheme() {
+        const isDarkMode = localStorage.getItem('darkMode') === 'true';
+        document.body.classList.toggle('dark-mode', isDarkMode);
+        if (themeToggle) {
+            themeToggle.checked = isDarkMode;
+        }
+    }
+
+    if (themeToggle) {
+        themeToggle.addEventListener('change', function() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', this.checked);
+        });
+    }
+
+    applySavedTheme();
+
     // --- Element References ---
     const enhanceButton = document.getElementById('enhance-button');
     const analyzeButton = document.getElementById('analyze-button');
@@ -16,93 +35,97 @@ document.addEventListener('DOMContentLoaded', () => {
     const imageDescriptionText = document.getElementById('image-description-text');
     const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
 
-    // --- Event Listener for Image Analysis ---
-    analyzeButton.addEventListener('click', async () => {
-        const file = imageUpload.files[0];
-        if (!file) {
-            alert('Please select an image file first.');
-            return;
-        }
-
-        imageResultContainer.style.display = 'flex';
-        imageDescriptionText.innerText = 'Analyzing image...';
-        imagePreview.src = URL.createObjectURL(file); // Show preview immediately
-
-        const formData = new FormData();
-        formData.append('image', file);
-
-        try {
-            const response = await fetch('/analyze-image', {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) {
-                throw new Error('Image analysis failed.');
+    // --- Event Listeners ---
+    if (analyzeButton) {
+        analyzeButton.addEventListener('click', async () => {
+            const file = imageUpload.files[0];
+            if (!file) {
+                alert('Please select an image file first.');
+                return;
             }
 
-            const data = await response.json();
-            imageDescriptionText.innerText = data.description;
-        } catch (error) {
-            imageDescriptionText.innerText = 'Error: ' + error.message;
-        }
-    });
+            imageResultContainer.style.display = 'flex';
+            imageDescriptionText.innerText = 'Analyzing image...';
+            imagePreview.src = URL.createObjectURL(file);
 
-    // --- Event Listener for Prompt Enhancement ---
-    enhanceButton.addEventListener('click', async () => {
-        const prompt = promptInput.value;
-        const promptType = promptTypeSelect.value;
-        const style = styleSelect.value;
-        const cinematography = cinematographySelect.value;
-        const lighting = lightingSelect.value;
-        const imageDescription = imageDescriptionText.innerText;
+            const formData = new FormData();
+            formData.append('image', file);
 
-        if (!prompt) {
-            alert('Please enter a prompt idea.');
-            return;
-        }
+            try {
+                const response = await fetch('/analyze-image', {
+                    method: 'POST',
+                    body: formData,
+                });
 
-        resultContainer.style.display = 'block';
-        resultText.innerText = 'Enhancing...';
+                if (!response.ok) {
+                    throw new Error('Image analysis failed.');
+                }
 
-        try {
-            const response = await fetch('/enhance', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    prompt: prompt,
-                    prompt_type: promptType,
-                    style: style,
-                    cinematography: cinematography,
-                    lighting: lighting,
-                    image_description: (imageDescription && !imageDescription.startsWith('Analyzing')) ? imageDescription : ''
-                }),
-            });
+                const data = await response.json();
+                imageDescriptionText.innerText = data.description;
+            } catch (error) {
+                imageDescriptionText.innerText = 'Error: ' + error.message;
+            }
+        });
+    }
 
-            if (!response.ok) {
-                throw new Error('Something went wrong with the request.');
+    if (enhanceButton) {
+        enhanceButton.addEventListener('click', async () => {
+            const prompt = promptInput.value;
+            const promptType = promptTypeSelect.value;
+            const style = styleSelect.value;
+            const cinematography = cinematographySelect.value;
+            const lighting = lightingSelect.value;
+            const imageDescription = imageDescriptionText.innerText;
+
+            if (!prompt) {
+                alert('Please enter a prompt idea.');
+                return;
             }
 
-            const data = await response.json();
-            resultText.innerText = data.enhanced_prompt;
-        } catch (error) {
-            resultText.innerText = 'Error: ' + error.message;
-        }
-    });
+            resultContainer.style.display = 'block';
+            resultText.innerText = 'Enhancing...';
 
-    // --- Scroll-to-Top Button Logic ---
-    window.onscroll = () => {
-        if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
-            scrollToTopBtn.style.display = "block";
-        } else {
-            scrollToTopBtn.style.display = "none";
-        }
-    };
+            try {
+                const response = await fetch('/enhance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        prompt_type: promptType,
+                        style: style,
+                        cinematography: cinematography,
+                        lighting: lighting,
+                        image_description: (imageDescription && !imageDescription.startsWith('Analyzing')) ? imageDescription : ''
+                    }),
+                });
 
-    scrollToTopBtn.addEventListener('click', () => {
-        document.body.scrollTop = 0; // For Safari
-        document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
-    });
+                if (!response.ok) {
+                    throw new Error('Something went wrong with the request.');
+                }
+
+                const data = await response.json();
+                resultText.innerText = data.enhanced_prompt;
+            } catch (error) {
+                resultText.innerText = 'Error: ' + error.message;
+            }
+        });
+    }
+
+    if (scrollToTopBtn) {
+        window.onscroll = () => {
+            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+                scrollToTopBtn.style.display = "block";
+            } else {
+                scrollToTopBtn.style.display = "none";
+            }
+        };
+
+        scrollToTopBtn.addEventListener('click', () => {
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+        });
+    }
 });

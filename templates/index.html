@@ -8,13 +8,22 @@
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-    <div class="container">
+    <div class="page-wrapper">
         {% if not api_key_set %}
         <div class="api-key-warning">
             <strong>Warning:</strong> The <code>GOOGLE_API_KEY</code> environment variable is not set. The application's core features will not work until it is configured. Please set the variable and restart the server.
         </div>
         {% endif %}
-        <h1>PiXa Prompt Enhancer</h1>
+        <div class="theme-switch-container">
+        <label class="theme-switch" for="checkbox">
+            <input type="checkbox" id="checkbox" />
+            <div class="slider round"></div>
+        </label>
+    </div>
+    <div class="container">
+        <div class="header">
+            <h1>PiXa Prompt Enhancer</h1>
+        </div>
         <p>Create powerful, nuanced prompts for generative AI models.</p>
         <div class="main-content">
             <div class="card image-card">
@@ -77,12 +86,16 @@
             </div>
         </div>
         <button id="enhance-button">Enhance Prompt</button>
-        <div id="result-container">
-            <h2>Enhanced Prompt:</h2>
+
+        <div id="result-container" style="display: none;">
+            <h2>Enhanced Prompt</h2>
             <pre id="result-text"></pre>
         </div>
     </div>
+
+    <button id="scroll-to-top-btn">&#8679;</button>
+
+    </div> <!-- Closing page-wrapper -->
     <script src="/static/js/script.js"></script>
-    <button id="scroll-to-top-btn" title="Go to top">↑</button>
 </body>
 </html>
