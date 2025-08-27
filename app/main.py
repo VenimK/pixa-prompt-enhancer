@@ -40,9 +40,8 @@ if "GOOGLE_API_KEY" in os.environ:
     genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
 
 def run_gemini(prompt: str, image_path: str | None = None):
-    if not genai.get_api_key():
-        return "Error: GOOGLE_API_KEY environment variable not set."
-
+    # The genai.configure call at the top of the file handles the API key.
+    # If the key is not set, the model.generate_content call will raise an exception.
     model = genai.GenerativeModel('gemini-1.5-flash')
     try:
         if image_path:
