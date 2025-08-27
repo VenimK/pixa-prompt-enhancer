@@ -50,6 +50,14 @@ Pixa Prompt Enhancer is a web-based application that helps you create rich and d
         ```
     -   **Note:** You must set this variable in the same terminal session where you run the application.
 
+### Troubleshooting API Key Issues
+
+If you receive an error like `400 API key not valid`, it usually means the environment variable is not set correctly. Here are a few things to check:
+
+*   **Same Terminal:** Ensure you are running `uvicorn app.main:app --reload` in the *exact same* terminal window where you set the API key.
+*   **No Extra Quotes:** When using `set GOOGLE_API_KEY=YOUR_API_KEY_HERE` in the Windows Command Prompt, do not include quotes around your key unless the key itself contains special characters.
+*   **Copy-Paste Errors:** Double-check that you have copied the entire API key from Google AI Studio without any extra spaces or missing characters.
+
 ## Setup and Usage
 
 1.  **Run the application:**
