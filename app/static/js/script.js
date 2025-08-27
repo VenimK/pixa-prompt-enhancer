@@ -34,6 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const imagePreview = document.getElementById('image-preview');
     const imageDescriptionText = document.getElementById('image-description-text');
     const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
+    const copyButton = document.getElementById('copy-button');
+    const clearButton = document.getElementById('clear-button');
 
     // --- Event Listeners ---
     if (analyzeButton) {
@@ -83,8 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // --- Start Loading ---
+            enhanceButton.disabled = true;
             resultContainer.style.display = 'block';
-            resultText.innerText = 'Enhancing...';
+            resultText.innerHTML = '<div class="loader"></div>';
 
             try {
                 const response = await fetch('/enhance', {
@@ -103,14 +107,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (!response.ok) {
-                    throw new Error('Something went wrong with the request.');
+                    const errorData = await response.json().catch(() => ({ detail: 'Something went wrong with the request.' }));
+                    throw new Error(errorData.detail);
                 }
 
                 const data = await response.json();
                 resultText.innerText = data.enhanced_prompt;
             } catch (error) {
                 resultText.innerText = 'Error: ' + error.message;
+            } finally {
+                // --- End Loading ---
+                enhanceButton.disabled = false;
             }
+        });
+    }
+
+    if (clearButton) {
+        clearButton.addEventListener('click', () => {
+            promptInput.value = '';
+            promptInput.focus();
+        });
+    }
+
+    if (copyButton) {
+        copyButton.addEventListener('click', () => {
+            navigator.clipboard.writeText(resultText.innerText).then(() => {
+                copyButton.innerText = 'Copied!';
+                setTimeout(() => {
+                    copyButton.innerText = 'Copy';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                alert('Failed to copy text.');
+            });
         });
     }
 

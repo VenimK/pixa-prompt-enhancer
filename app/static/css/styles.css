@@ -320,3 +320,74 @@ pre {
 #scroll-to-top-btn:hover {
     background-color: #0056b3;
 }
+
+/* --- Button Enhancements --- */
+
+.textarea-container {
+    position: relative;
+    width: 100%;
+}
+
+.clear-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-color);
+    cursor: pointer;
+    padding: 0;
+    width: auto;
+    margin: 0;
+    line-height: 1;
+    opacity: 0.5;
+}
+
+.clear-btn:hover {
+    opacity: 1;
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.result-header h2 {
+    margin: 0;
+    border: none;
+    padding: 0;
+}
+
+.copy-btn {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.9rem;
+    width: auto;
+    margin: 0;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+body.dark-mode button:disabled {
+    background-color: #555;
+}
+
+.loader {
+    border: 4px solid #f3f3f3; /* Light grey */
+    border-top: 4px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
