@@ -21,6 +21,9 @@ Pixa Prompt Enhancer is a web-based application that helps you create rich and d
     ```bash
     python3 -m venv venv
     source venv/bin/activate
+
+    # On Windows, use:
+    # venv\Scripts\activate
     ```
 
 3.  **Install the dependencies:**
@@ -38,6 +41,12 @@ Pixa Prompt Enhancer is a web-based application that helps you create rich and d
     -   In your terminal, set the `GOOGLE_API_KEY` environment variable. Replace `"YOUR_API_KEY_HERE"` with the key you obtained.
         ```bash
         export GOOGLE_API_KEY="YOUR_API_KEY_HERE"
+
+        # On Windows Command Prompt, use:
+        # set GOOGLE_API_KEY="YOUR_API_KEY_HERE"
+
+        # On Windows PowerShell, use:
+        # $env:GOOGLE_API_KEY="YOUR_API_KEY_HERE"
         ```
     -   **Note:** You must set this variable in the same terminal session where you run the application.
 
