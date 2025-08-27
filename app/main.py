@@ -68,7 +68,7 @@ async def analyze_image_endpoint(image: UploadFile = File(...)):
         shutil.copyfileobj(image.file, buffer)
 
     absolute_file_path = os.path.abspath(file_path)
-    meta_prompt = "Analyze this image and provide a concise, one-sentence description of its content. Do not add any conversational fluff."
+    meta_prompt = "Analyze this image in detail. Provide a comprehensive description covering the main subject, setting, composition, colors, and any notable elements. Be descriptive and thorough."
     
     description = run_gemini(meta_prompt, image_path=absolute_file_path)
     return AnalyzeResponse(description=description)
