@@ -1,0 +1,80 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PiXa Prompt Enhancer</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>PiXa Prompt Enhancer</h1>
+        <p>Optionally, upload a reference image for analysis.</p>
+        <div class="image-analysis-section">
+            <input type="file" id="image-upload" accept="image/*">
+            <button id="analyze-button">Analyze Image</button>
+            <div id="image-result-container" style="display: none;">
+                <img id="image-preview" src="#" alt="Image Preview"/>
+                <div id="image-description-box">
+                    <p><strong>Image Analysis:</strong></p>
+                    <p id="image-description-text"></p>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <h2>Step 2: Enhance Your Prompt</h2>
+        <div class="selector">
+            <label for="prompt-type-select"><strong>Prompt Type:</strong></label>
+            <select id="prompt-type-select">
+                <option value="VEO">VEO (Text-to-Video)</option>
+                <option value="WAN2">WAN2 (Image-to-Video)</option>
+            </select>
+        </div>
+        <textarea id="prompt-input" placeholder="e.g., a cat riding a skateboard"></textarea>
+        <div class="selectors-container">
+            <div class="selector">
+                <label for="style-select">Style:</label>
+                <select id="style-select">
+                    <option value="auto">Automatic</option>
+                    <option value="Cinematic">Cinematic</option>
+                    <option value="Vintage Film">Vintage Film</option>
+                    <option value="Fantasy Painting">Fantasy Painting</option>
+                    <option value="Documentary">Documentary</option>
+                    <option value="Cyberpunk">Cyberpunk</option>
+                    <option value="Surreal">Surreal</option>
+                </select>
+            </div>
+            <div class="selector">
+                <label for="cinematography-select">Cinematography:</label>
+                <select id="cinematography-select">
+                    <option value="auto">Automatic</option>
+                    <option value="Wide Shot">Wide Shot</option>
+                    <option value="Close-Up">Close-Up</option>
+                    <option value="Drone Shot">Drone Shot</option>
+                    <option value="Handheld">Handheld</option>
+                    <option value="Time-lapse">Time-lapse</option>
+                </select>
+            </div>
+            <div class="selector">
+                <label for="lighting-select">Lighting:</label>
+                <select id="lighting-select">
+                    <option value="auto">Automatic</option>
+                    <option value="Golden Hour">Golden Hour</option>
+                    <option value="Neon Noir">Neon Noir</option>
+                    <option value="Moonlight">Moonlight</option>
+                    <option value="Studio Light">Studio Light</option>
+                </select>
+            </div>
+        </div>
+        <button id="enhance-button">Enhance Prompt</button>
+        <div id="result-container">
+            <h2>Enhanced Prompt:</h2>
+            <pre id="result-text"></pre>
+        </div>
+    </div>
+    <script src="/static/js/script.js"></script>
+</body>
+</html>
