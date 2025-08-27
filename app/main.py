@@ -11,7 +11,7 @@ app = FastAPI()
 
 # --- Setup ---
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
-TEMP_UPLOADS_DIR = "temp_uploads"
+UPLOADS_DIR = "uploads"
 
 # --- Pydantic Models ---
 class EnhanceRequest(BaseModel):
@@ -50,10 +50,10 @@ async def read_root():
 
 @app.post("/analyze-image", response_model=AnalyzeResponse)
 async def analyze_image_endpoint(image: UploadFile = File(...)):
-    if not os.path.exists(TEMP_UPLOADS_DIR):
-        os.makedirs(TEMP_UPLOADS_DIR)
+    if not os.path.exists(UPLOADS_DIR):
+        os.makedirs(UPLOADS_DIR)
     
-    file_path = os.path.join(TEMP_UPLOADS_DIR, image.filename)
+    file_path = os.path.join(UPLOADS_DIR, image.filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(image.file, buffer)
 
