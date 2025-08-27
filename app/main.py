@@ -120,6 +120,9 @@ User's Specifications:
 
 Generate an implied animation prompt now."""
     
+    elif request.prompt_type == "Image":
+        meta_prompt = f"You are a creative assistant for a text-to-image model. Your goal is to expand the user's idea into a rich, descriptive prompt suitable for generating a static image{instruction_text}. Focus on the visual details of the scene, subject, and atmosphere.{image_context} Do not add conversational fluff. User's idea: '{request.prompt}'"
+
     else:
         # Fallback for safety
         meta_prompt = f"Enhance this prompt: {request.prompt}"
