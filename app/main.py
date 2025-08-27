@@ -5,6 +5,8 @@ from pydantic import BaseModel
 import subprocess
 import shutil
 import os
+import google.generativeai as genai
+import PIL.Image
 
 app = FastAPI()
 
@@ -32,21 +34,25 @@ def get_html_response():
     with open("templates/index.html") as f:
         return HTMLResponse(content=f.read(), status_code=200)
 
-def run_gemini_cli(prompt: str, image_path: str | None = None):
-    if image_path:
-        # The @ command for file inclusion should precede the text prompt.
-        full_prompt = f"@{image_path} {prompt}"
-        command = ["gemini", full_prompt]  # No -p flag needed for this format
-    else:
-        command = ["gemini", "-p", prompt]
+# Make sure to set your GOOGLE_API_KEY environment variable.
+# You can get one here: https://aistudio.google.com/app/apikey
+if "GOOGLE_API_KEY" in os.environ:
+    genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
 
+def run_gemini(prompt: str, image_path: str | None = None):
+    if not genai.get_api_key():
+        return "Error: GOOGLE_API_KEY environment variable not set."
+
+    model = genai.GenerativeModel('gemini-1.5-flash')
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
-        return result.stdout.strip()
-    except FileNotFoundError:
-        return "Error: The 'gemini' command was not found. Please ensure gemini-cli is installed."
-    except subprocess.CalledProcessError as e:
-        return f"Error executing gemini-cli: {e.stderr}"
+        if image_path:
+            image = PIL.Image.open(image_path)
+            response = model.generate_content([prompt, image])
+        else:
+            response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"An error occurred with the Gemini API: {e}"
 
 # --- Endpoints ---
 @app.get("/", response_class=HTMLResponse)
@@ -65,7 +71,7 @@ async def analyze_image_endpoint(image: UploadFile = File(...)):
     absolute_file_path = os.path.abspath(file_path)
     meta_prompt = "Analyze this image and provide a concise, one-sentence description of its content. Do not add any conversational fluff."
     
-    description = run_gemini_cli(meta_prompt, image_path=absolute_file_path)
+    description = run_gemini(meta_prompt, image_path=absolute_file_path)
     return AnalyzeResponse(description=description)
 
 @app.post("/enhance", response_model=EnhanceResponse)
@@ -117,5 +123,5 @@ Generate an implied animation prompt now."""
         # Fallback for safety
         meta_prompt = f"Enhance this prompt: {request.prompt}"
 
-    enhanced_prompt = run_gemini_cli(meta_prompt)
+    enhanced_prompt = run_gemini(meta_prompt)
     return EnhanceResponse(enhanced_prompt=enhanced_prompt)
