@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -33,8 +32,14 @@ def get_html_response():
     with open("templates/index.html") as f:
         return HTMLResponse(content=f.read(), status_code=200)
 
-def run_gemini_cli(prompt: str):
-    command = ["gemini", "-p", prompt]
+def run_gemini_cli(prompt: str, image_path: str | None = None):
+    if image_path:
+        # The @ command for file inclusion should precede the text prompt.
+        full_prompt = f"@{image_path} {prompt}"
+        command = ["gemini", full_prompt]  # No -p flag needed for this format
+    else:
+        command = ["gemini", "-p", prompt]
+
     try:
         result = subprocess.run(command, capture_output=True, text=True, check=True)
         return result.stdout.strip()
@@ -58,9 +63,9 @@ async def analyze_image_endpoint(image: UploadFile = File(...)):
         shutil.copyfileobj(image.file, buffer)
 
     absolute_file_path = os.path.abspath(file_path)
-    meta_prompt = f"Analyze this image and provide a concise, one-sentence description of its content. Do not add any conversational fluff. Image: @{absolute_file_path}"
+    meta_prompt = "Analyze this image and provide a concise, one-sentence description of its content. Do not add any conversational fluff."
     
-    description = run_gemini_cli(meta_prompt)
+    description = run_gemini_cli(meta_prompt, image_path=absolute_file_path)
     return AnalyzeResponse(description=description)
 
 @app.post("/enhance", response_model=EnhanceResponse)
