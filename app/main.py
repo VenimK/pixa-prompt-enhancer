@@ -1,6 +1,7 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import subprocess
 import shutil
@@ -12,6 +13,7 @@ app = FastAPI()
 
 # --- Setup ---
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+templates = Jinja2Templates(directory="templates")
 UPLOADS_DIR = "uploads"
 
 # --- Pydantic Models ---
@@ -29,10 +31,6 @@ class EnhanceResponse(BaseModel):
 class AnalyzeResponse(BaseModel):
     description: str
 
-# --- Helper Functions ---
-def get_html_response():
-    with open("templates/index.html") as f:
-        return HTMLResponse(content=f.read(), status_code=200)
 
 # Make sure to set your GOOGLE_API_KEY environment variable.
 # You can get one here: https://aistudio.google.com/app/apikey
@@ -55,8 +53,9 @@ def run_gemini(prompt: str, image_path: str | None = None):
 
 # --- Endpoints ---
 @app.get("/", response_class=HTMLResponse)
-async def read_root():
-    return get_html_response()
+async def read_root(request: Request):
+    api_key_set = "GOOGLE_API_KEY" in os.environ
+    return templates.TemplateResponse("index.html", {"request": request, "api_key_set": api_key_set})
 
 @app.post("/analyze-image", response_model=AnalyzeResponse)
 async def analyze_image_endpoint(image: UploadFile = File(...)):

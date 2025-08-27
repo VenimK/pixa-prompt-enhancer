@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const imageResultContainer = document.getElementById('image-result-container');
     const imagePreview = document.getElementById('image-preview');
     const imageDescriptionText = document.getElementById('image-description-text');
+    const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
 
     // --- Event Listener for Image Analysis ---
     analyzeButton.addEventListener('click', async () => {
@@ -89,5 +90,19 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             resultText.innerText = 'Error: ' + error.message;
         }
+    });
+
+    // --- Scroll-to-Top Button Logic ---
+    window.onscroll = () => {
+        if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+            scrollToTopBtn.style.display = "block";
+        } else {
+            scrollToTopBtn.style.display = "none";
+        }
+    };
+
+    scrollToTopBtn.addEventListener('click', () => {
+        document.body.scrollTop = 0; // For Safari
+        document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
     });
 });

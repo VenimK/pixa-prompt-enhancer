@@ -29,7 +29,17 @@ Pixa Prompt Enhancer is a web-based application that helps you create rich and d
     ```
 
 4.  **Install Gemini CLI:**
-    This application requires the Gemini CLI to be installed and authenticated. Please follow the official instructions to install and configure the Gemini CLI.
+    This application uses the Google Generative AI SDK and requires a `GOOGLE_API_KEY` to function.
+
+1.  **Get an API Key:**
+    -   Visit [Google AI Studio](https://aistudio.google.com/app/apikey) to create your free API key.
+
+2.  **Set the Environment Variable:**
+    -   In your terminal, set the `GOOGLE_API_KEY` environment variable. Replace `"YOUR_API_KEY_HERE"` with the key you obtained.
+        ```bash
+        export GOOGLE_API_KEY="YOUR_API_KEY_HERE"
+        ```
+    -   **Note:** You must set this variable in the same terminal session where you run the application.
 
 ## Setup and Usage
 

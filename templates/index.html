@@ -9,31 +9,38 @@
 </head>
 <body>
     <div class="container">
+        {% if not api_key_set %}
+        <div class="api-key-warning">
+            <strong>Warning:</strong> The <code>GOOGLE_API_KEY</code> environment variable is not set. The application's core features will not work until it is configured. Please set the variable and restart the server.
+        </div>
+        {% endif %}
         <h1>PiXa Prompt Enhancer</h1>
-        <p>Optionally, upload a reference image for analysis.</p>
-        <div class="image-analysis-section">
-            <input type="file" id="image-upload" accept="image/*">
-            <button id="analyze-button">Analyze Image</button>
-            <div id="image-result-container" style="display: none;">
-                <img id="image-preview" src="#" alt="Image Preview"/>
-                <div id="image-description-box">
-                    <p><strong>Image Analysis:</strong></p>
-                    <p id="image-description-text"></p>
+        <p>Create powerful, nuanced prompts for generative AI models.</p>
+        <div class="main-content">
+            <div class="card image-card">
+                <h2>Step 1: Analyze Image (Optional)</h2>
+                <div class="image-analysis-section">
+                    <input type="file" id="image-upload" accept="image/*">
+                    <button id="analyze-button">Analyze Image</button>
+                    <div id="image-result-container" style="display: none;">
+                        <img id="image-preview" src="#" alt="Image Preview"/>
+                        <div id="image-description-box">
+                            <p><strong>Image Analysis:</strong></p>
+                            <p id="image-description-text"></p>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <hr>
-
-        <h2>Step 2: Enhance Your Prompt</h2>
-        <div class="selector">
-            <label for="prompt-type-select"><strong>Prompt Type:</strong></label>
-            <select id="prompt-type-select">
-                <option value="VEO">VEO (Text-to-Video)</option>
-                <option value="WAN2">WAN2 (Image-to-Video)</option>
-            </select>
-        </div>
-        <textarea id="prompt-input" placeholder="e.g., a cat riding a skateboard"></textarea>
+            <div class="card prompt-card">
+                <h2>Step 2: Enhance Your Prompt</h2>
+                <div class="selector">
+                    <label for="prompt-type-select"><strong>Prompt Type:</strong></label>
+                    <select id="prompt-type-select">
+                        <option value="VEO">VEO (Text-to-Video)</option>
+                        <option value="WAN2">WAN2 (Image-to-Video)</option>
+                    </select>
+                </div>
+                <textarea id="prompt-input" placeholder="e.g., a cat riding a skateboard"></textarea>
         <div class="selectors-container">
             <div class="selector">
                 <label for="style-select">Style:</label>
@@ -76,5 +83,6 @@
         </div>
     </div>
     <script src="/static/js/script.js"></script>
+    <button id="scroll-to-top-btn" title="Go to top">↑</button>
 </body>
 </html>
