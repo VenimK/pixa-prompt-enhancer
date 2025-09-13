@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
+    <div id="toast-container" class="toast-container"></div>
     <div class="page-wrapper">
         {% if not api_key_set %}
         <div class="api-key-warning">
@@ -31,6 +32,7 @@
                 <div class="image-analysis-section">
                     <input type="file" id="image-upload" accept="image/*">
                     <button id="analyze-button">Analyze Image</button>
+                    <button id="clear-image-button" class="clear-image-btn" style="display: none;">Clear Image</button>
                     <div id="image-result-container" style="display: none;">
                         <img id="image-preview" src="#" alt="Image Preview"/>
                         <div id="image-description-box">
