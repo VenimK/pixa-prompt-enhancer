@@ -41,7 +41,7 @@ if "GOOGLE_API_KEY" in os.environ:
 def run_gemini(prompt: str, image_path: str | None = None):
     # The genai.configure call at the top of the file handles the API key.
     # If the key is not set, the model.generate_content call will raise an exception.
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     try:
         if image_path:
             image = PIL.Image.open(image_path)
