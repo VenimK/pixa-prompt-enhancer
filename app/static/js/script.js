@@ -16,10 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setTimeout(() => {
             toast.classList.remove('show');
-            // Remove the element after the transition is complete
             toast.addEventListener('transitionend', () => toast.remove());
         }, duration);
     }
+
     // --- Theme Switcher Logic ---
     const themeToggle = document.getElementById('checkbox');
 
@@ -39,6 +39,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     applySavedTheme();
+
+    // --- Element References ---
+    const enhanceButton = document.getElementById('enhance-button');
+    const analyzeButton = document.getElementById('analyze-button');
+    const imageUpload = document.getElementById('image-upload');
+    const promptInput = document.getElementById('prompt-input');
+    const promptTypeSelect = document.getElementById('prompt-type-select');
+    const styleSelect = document.getElementById('style-select');
+    const cinematographySelect = document.getElementById('cinematography-select');
+    const lightingSelect = document.getElementById('lighting-select');
+    const resultContainer = document.getElementById('result-container');
+    const resultText = document.getElementById('result-text');
+    const imageResultContainer = document.getElementById('image-result-container');
+    const imagePreview = document.getElementById('image-preview');
+    const imageDescriptionText = document.getElementById('image-description-text');
+    const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
+    const copyButton = document.getElementById('copy-button');
+    const clearButton = document.getElementById('clear-button');
+    const motionEffectSelect = document.getElementById('motion-effect-select');
+    const motionEffectContainer = document.getElementById('motion-effect-selector-container');
+    const clearImageButton = document.getElementById('clear-image-button');
 
     // --- Autosave Logic ---
     const formInputs = {
@@ -70,7 +91,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             // Manually trigger change event to show/hide motion effect selector
-            promptTypeSelect.dispatchEvent(new Event('change'));
+            if (promptTypeSelect) {
+                promptTypeSelect.dispatchEvent(new Event('change'));
+            }
         }
     }
 
@@ -82,29 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    loadInputs(); // Load saved inputs on page load
-
-
-    // --- Element References ---
-    const enhanceButton = document.getElementById('enhance-button');
-    const analyzeButton = document.getElementById('analyze-button');
-    const imageUpload = document.getElementById('image-upload');
-    const promptInput = document.getElementById('prompt-input');
-    const promptTypeSelect = document.getElementById('prompt-type-select');
-    const styleSelect = document.getElementById('style-select');
-    const cinematographySelect = document.getElementById('cinematography-select');
-    const lightingSelect = document.getElementById('lighting-select');
-    const resultContainer = document.getElementById('result-container');
-    const resultText = document.getElementById('result-text');
-    const imageResultContainer = document.getElementById('image-result-container');
-    const imagePreview = document.getElementById('image-preview');
-    const imageDescriptionText = document.getElementById('image-description-text');
-    const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
-    const copyButton = document.getElementById('copy-button');
-    const clearButton = document.getElementById('clear-button');
-    const motionEffectSelect = document.getElementById('motion-effect-select');
-    const motionEffectContainer = document.getElementById('motion-effect-selector-container');
-    const clearImageButton = document.getElementById('clear-image-button');
+    loadInputs();
 
     // --- Event Listeners ---
     if (analyzeButton) {

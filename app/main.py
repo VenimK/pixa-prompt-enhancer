@@ -8,6 +8,7 @@ import shutil
 import os
 import google.generativeai as genai
 import PIL.Image
+import time
 
 app = FastAPI()
 
@@ -56,7 +57,8 @@ def run_gemini(prompt: str, image_path: str | None = None):
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     api_key_set = "GOOGLE_API_KEY" in os.environ
-    return templates.TemplateResponse("index.html", {"request": request, "api_key_set": api_key_set})
+    version = int(time.time())
+    return templates.TemplateResponse("index.html", {"request": request, "api_key_set": api_key_set, "version": version})
 
 @app.post("/analyze-image", response_model=AnalyzeResponse)
 async def analyze_image_endpoint(image: UploadFile = File(...)):
