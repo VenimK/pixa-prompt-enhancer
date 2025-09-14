@@ -20,12 +20,13 @@ UPLOADS_DIR = "uploads"
 # --- Pydantic Models ---
 class EnhanceRequest(BaseModel):
     prompt: str
-    prompt_type: str # VEO or WAN2
+    prompt_type: str # VEO or WAN2 or Image
     style: str
     cinematography: str
     lighting: str
     image_description: str | None = None
     motion_effect: str | None = None
+    text_emphasis: str | None = None
 
 class EnhanceResponse(BaseModel):
     enhanced_prompt: str
@@ -90,25 +91,16 @@ async def enhance_prompt_endpoint(request: EnhanceRequest):
     instruction_text = " " + " and ".join(instructions) if instructions else ""
 
     image_context = f" The user has provided a reference image described as: '{request.image_description}'." if request.image_description else ""
+    text_emphasis = f" {request.text_emphasis}" if request.text_emphasis else ""
 
     # --- Logic to choose meta-prompt based on prompt_type ---
     if request.prompt_type == "VEO":
-        meta_prompt = f"You are a creative assistant for the VEO text-to-video model. Expand the user's idea into a rich, cinematic prompt{instruction_text}. Describe the scene, subject, and action in a detailed paragraph.{image_context} Do not add conversational fluff. User's idea: '{request.prompt}'"
+        meta_prompt = f"You are a creative assistant for the VEO text-to-video model. Expand the user's idea into a rich, cinematic prompt{instruction_text}. Describe the scene, subject, and action in a detailed paragraph.{image_context}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
     
     elif request.prompt_type == "WAN2":
         if request.prompt:
-            # Logic for when the user provides a specific animation idea
-            meta_prompt = f"""You are a creative assistant for an Image-to-Video model like WAN2. Your task is to enhance the user's animation idea into a more detailed and vivid prompt.
-- The prompt should be action-oriented, focusing on movement and transformation.
-- Add specific, imaginative details to the user's core idea. For example, instead of 'the hand crawls', describe *how* it crawls (e.g., 'the hand crawls forward like a spider, its fingers digging into the floor').
-- Do not add any conversational fluff.
-
-User's Specifications:
-- Reference Image: '{image_context}'
-- Animation Idea: '{request.prompt}'
-- Desired Style: '{instruction_text}'
-
-Generate the enhanced and detailed WAN2 prompt now."""
+            motion_effect = f" with {request.motion_effect} motion effect" if request.motion_effect and request.motion_effect != "Static" else ""
+            meta_prompt = f"You are a creative assistant for the WAN2 image-to-video animation model. Expand the user's idea into a rich, detailed prompt{instruction_text}{motion_effect}. Focus on describing a single frame that will be animated, with clear subjects and actions.{image_context}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
         else:
             # Logic for when the user wants the AI to imply the animation
             meta_prompt = f"""You are a creative assistant for an Image-to-Video model like WAN2. Your task is to look at the description of a static image and invent a compelling but subtle animation to make it come alive.
@@ -123,7 +115,7 @@ User's Specifications:
 Generate an implied animation prompt now."""
     
     elif request.prompt_type == "Image":
-        meta_prompt = f"You are a creative assistant for a text-to-image model. Your goal is to expand the user's idea into a rich, descriptive prompt suitable for generating a static image{instruction_text}. Focus on the visual details of the scene, subject, and atmosphere.{image_context} Do not add conversational fluff. User's idea: '{request.prompt}'"
+        meta_prompt = f"You are a creative assistant for a text-to-image model. Your goal is to expand the user's idea into a rich, descriptive prompt suitable for generating a static image{instruction_text}. Focus on the visual details of the scene, subject, and atmosphere.{image_context}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
 
     else:
         # Fallback for safety

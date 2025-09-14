@@ -21,6 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
         lighting: document.getElementById('lighting-select'),
         motionEffect: document.getElementById('motion-effect-select'),
         template: document.getElementById('template-select'),
+        textEmphasis: document.getElementById('text-emphasis-input'),
+        textPosition: document.getElementById('text-emphasis-position'),
         
         // Containers and Text Elements
         result: document.getElementById('result-container'),
@@ -149,6 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const lighting = els.lighting.value;
             const imageDescription = els.imageDescription.innerText;
             const motionEffect = els.motionEffect.value;
+            const textToEmphasis = els.textEmphasis.value;
+            const textPosition = els.textPosition.value;
 
             if (!prompt) {
                 showToast('Please enter a prompt idea.', 'error');
@@ -158,6 +162,15 @@ document.addEventListener('DOMContentLoaded', () => {
             els.enhance.disabled = true;
             els.result.style.display = 'block';
             els.resultText.innerHTML = '<div class="loader"></div>';
+
+            // Prepare text emphasis details if provided
+            let textEmphasisDetails = '';
+            if (textToEmphasis) {
+                const positionText = textPosition ? 
+                    getPositionDescription(textPosition, textToEmphasis) : 
+                    `Prominently displayed in the center of the image, the text "${textToEmphasis}" is clearly visible and legible.`;
+                textEmphasisDetails = positionText;
+            }
 
             try {
                 const response = await fetch('/enhance', {
@@ -172,7 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         cinematography: cinematography,
                         lighting: lighting,
                         image_description: (imageDescription && !imageDescription.startsWith('Analyzing')) ? imageDescription : '',
-                        motion_effect: promptType === 'WAN2' ? motionEffect : null
+                        motion_effect: promptType === 'WAN2' ? motionEffect : null,
+                        text_emphasis: textEmphasisDetails
                     }),
                 });
 
@@ -520,6 +534,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // --- Text Emphasis Logic ---
+    function getPositionDescription(position, text) {
+        switch(position) {
+            case 'center':
+                return `Prominently displayed in the center of the image, the text "${text}" is clearly visible and legible, with good contrast against the background.`;
+            case 'plaque':
+                return `A stone plaque with the words "${text}" carved in bold, legible letters. The text is well-lit and stands out clearly against the background.`;
+            case 'sign':
+                return `A clearly visible sign with the text "${text}" written in bold, legible letters. The sign is positioned prominently in the scene.`;
+            case 'banner':
+                return `A large banner with the text "${text}" displayed in bold, clear typography. The banner is a focal point in the image.`;
+            case 'screen':
+                return `A screen or display showing the text "${text}" in bright, clear letters that contrast well with the background.`;
+            case 'etched':
+                return `The text "${text}" is deeply etched or carved into the surface, with shadows and highlights making the letters stand out clearly.`;
+            default:
+                return `Prominently displayed in the image, the text "${text}" is clearly visible and legible.`;
+        }
+    }
+
     // --- Character Counter Logic ---
     function updateCharCount() {
         if (els.charCount && els.prompt) {

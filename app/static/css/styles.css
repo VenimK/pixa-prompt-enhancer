@@ -305,6 +305,26 @@ textarea {
     margin-bottom: 1rem;
 }
 
+.text-emphasis-wrapper {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.text-emphasis-wrapper input {
+    flex: 2;
+    padding: 8px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+.text-emphasis-wrapper select {
+    flex: 1;
+}
+
 .selector label {
     margin-bottom: 5px;
     color: var(--text-color);
