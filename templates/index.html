@@ -22,15 +22,63 @@
         </label>
     </div>
     <div class="container">
+        <button id="shortcuts-btn" class="shortcuts-btn" title="Show Keyboard Shortcuts">⌨</button>
+        <div id="shortcuts-overlay" class="shortcuts-overlay">
+            <div class="shortcuts-content">
+                <h3>Keyboard Shortcuts</h3>
+                <div class="shortcut-grid">
+                    <div class="shortcut">
+                        <kbd>Ctrl</kbd> + <kbd>Enter</kbd>
+                        <span>Enhance Prompt</span>
+                    </div>
+                    <div class="shortcut">
+                        <kbd>Esc</kbd>
+                        <span>Clear Prompt</span>
+                    </div>
+                    <div class="shortcut">
+                        <kbd>Ctrl</kbd> + <kbd>C</kbd>
+                        <span>Copy Enhanced Prompt</span>
+                    </div>
+                </div>
+                <button class="close-shortcuts">Close</button>
+            </div>
+        </div>
+        <div class="history-panel">
+            <div class="history-header">
+                <h3>Prompt History</h3>
+                <button id="clear-history" class="clear-history-btn" title="Clear History">&times;</button>
+            </div>
+            <div id="history-list" class="history-list">
+                <!-- History items will be added here dynamically -->
+            </div>
+        </div>
         <div class="header">
             <h1>PiXa Prompt Enhancer</h1>
         </div>
         <p>Create powerful, nuanced prompts for generative AI models.</p>
+        <div class="progress-steps">
+            <div class="step" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Analyze Image (Optional)</div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Enhance Prompt</div>
+            </div>
+        </div>
         <div class="main-content">
             <div class="card image-card">
                 <h2>Step 1: Analyze Image (Optional)</h2>
                 <div class="image-analysis-section">
-                    <input type="file" id="image-upload" accept="image/*">
+                    <div class="drop-zone" id="drop-zone">
+                        <input type="file" id="image-upload" accept="image/*" class="drop-zone-input">
+                        <div class="drop-zone-content">
+                            <div class="drop-zone-text">
+                                <span class="drop-zone-prompt">Drop image here or click to upload</span>
+                                <span class="drop-zone-hint">Supports: JPG, PNG, GIF</span>
+                            </div>
+                        </div>
+                    </div>
                     <button id="analyze-button">Analyze Image</button>
                     <button id="clear-image-button" class="clear-image-btn" style="display: none;">Clear Image</button>
                     <div id="image-result-container" style="display: none;">
@@ -52,19 +100,102 @@
                         <option value="Image">Image (Text-to-Image)</option>
                     </select>
                 </div>
+                <div class="templates-section">
+                    <label for="template-select">Quick Templates:</label>
+                    <select id="template-select">
+                        <option value="">Choose a template...</option>
+                        <optgroup label="Photography">
+                            <option value="portrait">Portrait Photography</option>
+                            <option value="nature">Nature Landscape</option>
+                            <option value="aerial">Aerial Photography</option>
+                            <option value="product">Product Photography</option>
+                            <option value="food">Food Photography</option>
+                            <option value="underwater">Underwater Scene</option>
+                            <option value="wildlife">Wildlife Photography</option>
+                            <option value="street">Street Photography</option>
+                            <option value="architecture">Architecture</option>
+                        </optgroup>
+                        <optgroup label="Video & Animation">
+                            <option value="cinematic">Cinematic Scene</option>
+                            <option value="animation">Animation Style</option>
+                            <option value="anime">Anime Scene</option>
+                            <option value="pixar">Pixar Style</option>
+                            <option value="studioghibli">Studio Ghibli</option>
+                            <option value="stopmotion">Stop Motion</option>
+                            <option value="claymation">Claymation</option>
+                            <option value="timelapse">Timelapse</option>
+                            <option value="musicvideo">Music Video</option>
+                            <option value="cinemagraph">Cinemagraph</option>
+                            <option value="slowmo">Slow Motion</option>
+                        </optgroup>
+                        <optgroup label="Creative Styles">
+                            <option value="scifi">Sci-Fi Environment</option>
+                            <option value="cyberpunk">Cyberpunk City</option>
+                            <option value="fantasy">Fantasy World</option>
+                            <option value="horror">Horror Scene</option>
+                            <option value="abstract">Abstract Art</option>
+                            <option value="vintage">Vintage Retro</option>
+                            <option value="steampunk">Steampunk</option>
+                            <option value="vaporwave">Vaporwave</option>
+                        </optgroup>
+                        <optgroup label="Fine Art">
+                            <option value="oilpainting">Oil Painting</option>
+                            <option value="watercolor">Watercolor</option>
+                            <option value="pencilsketch">Pencil Sketch</option>
+                            <option value="digitalart">Digital Art</option>
+                        </optgroup>
+                        <optgroup label="Special Effects">
+                            <option value="neon">Neon Lighting</option>
+                            <option value="silhouette">Silhouette</option>
+                            <option value="longexposure">Long Exposure</option>
+                            <option value="macro">Macro Photography</option>
+                        </optgroup>
+                    </select>
+                </div>
                 <div class="textarea-container">
                     <textarea id="prompt-input" placeholder="e.g., a cat riding a skateboard"></textarea>
                     <button id="clear-button" class="clear-btn" title="Clear text">&times;</button>
+                    <div class="char-counter">
+                        <span id="char-count">0</span> / 1000
+                    </div>
                 </div>
         <div class="selectors-container">
             <div class="selector" id="motion-effect-selector-container" style="display: none;">
                 <label for="motion-effect-select">Motion Effect:</label>
                 <select id="motion-effect-select">
                     <option value="Static">Static</option>
-                    <option value="Subtle Zoom In">Subtle Zoom In</option>
-                    <option value="Pan Left">Pan Left</option>
-                    <option value="Tilt Up">Tilt Up</option>
-                    <option value="Dolly">Dolly</option>
+                    <optgroup label="Camera Movements">
+                        <option value="Subtle Zoom In">Subtle Zoom In</option>
+                        <option value="Zoom Out">Zoom Out</option>
+                        <option value="Pan Left">Pan Left</option>
+                        <option value="Pan Right">Pan Right</option>
+                        <option value="Tilt Up">Tilt Up</option>
+                        <option value="Tilt Down">Tilt Down</option>
+                        <option value="Dolly In">Dolly In</option>
+                        <option value="Dolly Out">Dolly Out</option>
+                        <option value="Tracking Shot">Tracking Shot</option>
+                    </optgroup>
+                    <optgroup label="Cinematic Effects">
+                        <option value="Slow Motion">Slow Motion</option>
+                        <option value="Time Lapse">Time Lapse</option>
+                        <option value="Dolly Zoom">Dolly Zoom</option>
+                        <option value="Whip Pan">Whip Pan</option>
+                        <option value="Dutch Angle">Dutch Angle</option>
+                    </optgroup>
+                    <optgroup label="Special Movements">
+                        <option value="Orbital">Orbital</option>
+                        <option value="Crane Shot">Crane Shot</option>
+                        <option value="Drone Flyover">Drone Flyover</option>
+                        <option value="Handheld">Handheld</option>
+                        <option value="Steadicam">Steadicam</option>
+                    </optgroup>
+                    <optgroup label="Subject Motion">
+                        <option value="Walking Forward">Walking Forward</option>
+                        <option value="Running">Running</option>
+                        <option value="Dancing">Dancing</option>
+                        <option value="Spinning">Spinning</option>
+                        <option value="Floating">Floating</option>
+                    </optgroup>
                 </select>
             </div>
 
@@ -72,22 +203,77 @@
                 <label for="style-select">Style:</label>
                 <select id="style-select">
                     <option value="auto">Automatic</option>
-                    <option value="Cinematic">Cinematic</option>
-                    <option value="Vintage Film">Vintage Film</option>
-                    <option value="Fantasy Painting">Fantasy Painting</option>
-                    <option value="Documentary">Documentary</option>
-                    <option value="Cyberpunk">Cyberpunk</option>
-                    <option value="Surreal">Surreal</option>
+                    <optgroup label="Photography & Film">
+                        <option value="Photographic">Photographic</option>
+                        <option value="Cinematic">Cinematic</option>
+                        <option value="Documentary">Documentary</option>
+                        <option value="Commercial">Commercial</option>
+                        <option value="Vintage Film">Vintage Film</option>
+                        <option value="Noir">Film Noir</option>
+                        <option value="Polaroid">Polaroid</option>
+                        <option value="Retro">Retro</option>
+                    </optgroup>
+                    <optgroup label="Art Styles">
+                        <option value="Fine Art">Fine Art</option>
+                        <option value="Impressionist">Impressionist</option>
+                        <option value="Expressionist">Expressionist</option>
+                        <option value="Cubist">Cubist</option>
+                        <option value="Surreal">Surreal</option>
+                        <option value="Pop Art">Pop Art</option>
+                        <option value="Minimalist">Minimalist</option>
+                        <option value="Abstract">Abstract</option>
+                        <option value="Digital Art">Digital Art</option>
+                    </optgroup>
+                    <optgroup label="Genre Styles">
+                        <option value="Fantasy">Fantasy</option>
+                        <option value="Sci-Fi">Sci-Fi</option>
+                        <option value="Cyberpunk">Cyberpunk</option>
+                        <option value="Steampunk">Steampunk</option>
+                        <option value="Horror">Horror</option>
+                        <option value="Gothic">Gothic</option>
+                        <option value="Anime">Anime</option>
+                        <option value="Cartoon">Cartoon</option>
+                        <option value="Comic Book">Comic Book</option>
+                    </optgroup>
+                    <optgroup label="Lighting & Mood">
+                        <option value="Dark">Dark</option>
+                        <option value="Bright">Bright</option>
+                        <option value="Moody">Moody</option>
+                        <option value="Ethereal">Ethereal</option>
+                        <option value="Dramatic">Dramatic</option>
+                    </optgroup>
                 </select>
             </div>
             <div class="selector">
                 <label for="cinematography-select">Cinematography:</label>
                 <select id="cinematography-select">
                     <option value="auto">Automatic</option>
-                    <option value="Wide Shot">Wide Shot</option>
-                    <option value="Close-Up">Close-Up</option>
-                    <option value="Drone Shot">Drone Shot</option>
-                    <option value="Handheld">Handheld</option>
+                    <optgroup label="Basic Shots">
+                        <option value="Wide Shot">Wide Shot</option>
+                        <option value="Medium Shot">Medium Shot</option>
+                        <option value="Close Up">Close Up</option>
+                        <option value="Extreme Close Up">Extreme Close Up</option>
+                    </optgroup>
+                    <optgroup label="Angle Shots">
+                        <option value="Bird's Eye">Bird's Eye View</option>
+                        <option value="High Angle">High Angle</option>
+                        <option value="Low Angle">Low Angle</option>
+                        <option value="Dutch Angle">Dutch Angle</option>
+                    </optgroup>
+                    <optgroup label="Movement Shots">
+                        <option value="Tracking Shot">Tracking Shot</option>
+                        <option value="Dolly Zoom">Dolly Zoom</option>
+                        <option value="Steadicam">Steadicam</option>
+                        <option value="Handheld">Handheld</option>
+                        <option value="Drone Shot">Drone Shot</option>
+                    </optgroup>
+                    <optgroup label="Special Shots">
+                        <option value="Telephoto">Telephoto</option>
+                        <option value="Macro">Macro</option>
+                        <option value="Split Screen">Split Screen</option>
+                        <option value="Fisheye">Fisheye</option>
+                        <option value="Tilt Shift">Tilt Shift</option>
+                    </optgroup>
                     <option value="Time-lapse">Time-lapse</option>
                 </select>
             </div>
@@ -95,10 +281,41 @@
                 <label for="lighting-select">Lighting:</label>
                 <select id="lighting-select">
                     <option value="auto">Automatic</option>
-                    <option value="Golden Hour">Golden Hour</option>
-                    <option value="Neon Noir">Neon Noir</option>
-                    <option value="Moonlight">Moonlight</option>
-                    <option value="Studio Light">Studio Light</option>
+                    <optgroup label="Natural Light">
+                        <option value="Golden Hour">Golden Hour</option>
+                        <option value="Sunrise">Sunrise</option>
+                        <option value="Midday">Midday</option>
+                        <option value="Sunset">Sunset</option>
+                        <option value="Moonlight">Moonlight</option>
+                        <option value="Natural">Natural</option>
+                        <option value="Overcast">Overcast</option>
+                    </optgroup>
+                    <optgroup label="Studio Light">
+                        <option value="Studio">Studio</option>
+                        <option value="Soft">Soft</option>
+                        <option value="High Key">High Key</option>
+                        <option value="Low Key">Low Key</option>
+                        <option value="Rembrandt">Rembrandt</option>
+                        <option value="Split">Split</option>
+                        <option value="Backlit">Backlit</option>
+                    </optgroup>
+                    <optgroup label="Atmospheric">
+                        <option value="Foggy">Foggy</option>
+                        <option value="Hazy">Hazy</option>
+                        <option value="Smoky">Smoky</option>
+                        <option value="Rainy">Rainy</option>
+                        <option value="Snowy">Snowy</option>
+                    </optgroup>
+                    <optgroup label="Special Lighting">
+                        <option value="Neon">Neon</option>
+                        <option value="Neon Noir">Neon Noir</option>
+                        <option value="Dramatic">Dramatic</option>
+                        <option value="Cinematic">Cinematic</option>
+                        <option value="Underwater">Underwater</option>
+                        <option value="Fire">Fire</option>
+                        <option value="Magical">Magical</option>
+                        <option value="Bioluminescent">Bioluminescent</option>
+                    </optgroup>
                 </select>
             </div>
         </div>

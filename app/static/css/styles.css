@@ -13,6 +13,9 @@ body {
 }
 
 :root {
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --error-color: #dc3545;
     --background-color: #f4f7f6;
     --text-color: #333;
     --container-bg: white;
@@ -54,6 +57,100 @@ body.dark-mode {
     width: 90%;
     max-width: 1200px;
     margin: auto;
+    position: relative;
+}
+
+.history-panel {
+    position: absolute;
+    right: -300px;
+    top: 0;
+    width: 280px;
+    background: var(--container-bg);
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+    transition: transform 0.3s ease;
+}
+
+.history-panel.show {
+    transform: translateX(-320px);
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.history-header h3 {
+    margin: 0;
+    color: var(--h1-color);
+    font-size: 1.1rem;
+}
+
+.clear-history-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.clear-history-btn:hover {
+    opacity: 1;
+}
+
+.history-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.history-item {
+    padding: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.history-item:hover {
+    background-color: var(--input-bg);
+}
+
+.history-item .prompt {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.history-item .metadata {
+    font-size: 0.8rem;
+    color: var(--text-color);
+    opacity: 0.7;
+}
+
+.history-item .star-btn {
+    float: right;
+    background: none;
+    border: none;
+    color: #ffd700;
+    cursor: pointer;
+    padding: 0;
+    font-size: 1.2rem;
+    opacity: 0.3;
+    transition: opacity 0.2s;
+}
+
+.history-item .star-btn:hover,
+.history-item .star-btn.starred {
+    opacity: 1;
 }
 
 .header {
@@ -265,6 +362,59 @@ pre {
     gap: 1rem;
 }
 
+.drop-zone {
+    width: 100%;
+    min-height: 120px;
+    padding: 1rem;
+    background: var(--input-bg);
+    border: 2px dashed var(--input-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.3s, background-color 0.3s;
+    position: relative;
+}
+
+.drop-zone.drag-over {
+    border-color: var(--button-bg);
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.drop-zone-input {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.drop-zone-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.drop-zone-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.drop-zone-prompt {
+    color: var(--text-color);
+    font-size: 1.1rem;
+}
+
+.drop-zone-hint {
+    color: var(--text-color);
+    opacity: 0.6;
+    font-size: 0.9rem;
+}
+
 #image-result-container {
     display: flex;
     margin-top: 1rem;
@@ -390,6 +540,94 @@ body.dark-mode button:disabled {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* --- Keyboard Shortcuts --- */
+.shortcuts-btn {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--button-bg);
+    color: var(--button-text);
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 100;
+    transition: transform 0.2s;
+}
+
+.shortcuts-btn:hover {
+    transform: scale(1.1);
+}
+
+.shortcuts-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.shortcuts-overlay.show {
+    display: flex;
+}
+
+.shortcuts-content {
+    background: var(--container-bg);
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    max-width: 500px;
+    width: 90%;
+}
+
+.shortcuts-content h3 {
+    margin-top: 0;
+    color: var(--h1-color);
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.shortcut-grid {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.shortcut {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem;
+    background: var(--input-bg);
+    border-radius: 5px;
+}
+
+.shortcut kbd {
+    background: var(--button-bg);
+    color: var(--button-text);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.shortcut span {
+    color: var(--text-color);
+}
+
+.close-shortcuts {
+    width: 100%;
+    margin-top: 1rem;
 }
 
 /* --- Toast Notifications --- */
