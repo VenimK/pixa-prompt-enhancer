@@ -309,10 +309,11 @@ textarea {
     display: flex;
     gap: 10px;
     width: 100%;
+    margin-bottom: 10px;
 }
 
 .text-emphasis-wrapper input {
-    flex: 2;
+    width: 100%;
     padding: 8px;
     border: 1px solid var(--input-border);
     border-radius: 4px;
@@ -321,8 +322,72 @@ textarea {
     font-size: 14px;
 }
 
-.text-emphasis-wrapper select {
+.text-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.text-control-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.text-control-group {
     flex: 1;
+    min-width: 120px;
+}
+
+.text-control-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.8rem;
+    color: var(--text-color);
+}
+
+.text-control-group select {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    font-size: 13px;
+}
+
+/* Collapsible text controls */
+.text-controls {
+    position: relative;
+}
+
+.text-controls-toggle {
+    position: absolute;
+    top: -25px;
+    right: 0;
+    font-size: 0.8rem;
+    color: var(--button-bg);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 5px;
+    text-decoration: underline;
+}
+
+.text-controls.collapsed .text-control-row:not(:first-child) {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .text-control-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .text-control-group {
+        width: 100%;
+    }
 }
 
 .selector label {

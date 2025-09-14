@@ -1,4 +1,27 @@
 document.addEventListener('DOMContentLoaded', () => {
+    initDarkMode();
+    initTextControls();
+    updateProgress(1, 'active');
+});
+
+// Initialize text controls (collapsed by default)
+function initTextControls() {
+    if (document.getElementById('text-controls-toggle')) {
+        const textControls = document.querySelector('.text-controls');
+        if (textControls) {
+            // Start with controls collapsed
+            textControls.classList.add('collapsed');
+            
+            document.getElementById('text-controls-toggle').addEventListener('click', () => {
+                textControls.classList.toggle('collapsed');
+                document.getElementById('text-controls-toggle').textContent = 
+                    textControls.classList.contains('collapsed') ? 'Show more options' : 'Hide options';
+            });
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
     // --- Element References ---
     const els = {
         // Buttons
@@ -11,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shortcuts: document.getElementById('shortcuts-btn'),
         closeShortcuts: document.querySelector('.close-shortcuts'),
         scrollToTop: document.getElementById('scroll-to-top-btn'),
+        textControlsToggle: document.getElementById('text-controls-toggle'),
         
         // Inputs and Selects
         imageUpload: document.getElementById('image-upload'),
@@ -21,8 +45,17 @@ document.addEventListener('DOMContentLoaded', () => {
         lighting: document.getElementById('lighting-select'),
         motionEffect: document.getElementById('motion-effect-select'),
         template: document.getElementById('template-select'),
+        
+        // Text Emphasis Controls
         textEmphasis: document.getElementById('text-emphasis-input'),
         textPosition: document.getElementById('text-emphasis-position'),
+        textSize: document.getElementById('text-emphasis-size'),
+        textStyle: document.getElementById('text-emphasis-style'),
+        textColor: document.getElementById('text-emphasis-color'),
+        textEffect: document.getElementById('text-emphasis-effect'),
+        textMaterial: document.getElementById('text-emphasis-material'),
+        textBackground: document.getElementById('text-emphasis-background'),
+        textIntegration: document.getElementById('text-emphasis-integration'),
         
         // Containers and Text Elements
         result: document.getElementById('result-container'),
@@ -166,10 +199,27 @@ document.addEventListener('DOMContentLoaded', () => {
             // Prepare text emphasis details if provided
             let textEmphasisDetails = '';
             if (textToEmphasis) {
-                const positionText = textPosition ? 
-                    getPositionDescription(textPosition, textToEmphasis) : 
-                    `Prominently displayed in the center of the image, the text "${textToEmphasis}" is clearly visible and legible.`;
-                textEmphasisDetails = positionText;
+                // Get all text options
+                const textSize = els.textSize ? els.textSize.value : '';
+                const textStyle = els.textStyle ? els.textStyle.value : '';
+                const textColor = els.textColor ? els.textColor.value : '';
+                const textEffect = els.textEffect ? els.textEffect.value : '';
+                const textMaterial = els.textMaterial ? els.textMaterial.value : '';
+                const textBackground = els.textBackground ? els.textBackground.value : '';
+                const textIntegration = els.textIntegration ? els.textIntegration.value : '';
+                
+                // Generate comprehensive text description
+                textEmphasisDetails = getTextEmphasisDescription(
+                    textToEmphasis, 
+                    textPosition, 
+                    textSize,
+                    textStyle, 
+                    textColor,
+                    textEffect,
+                    textMaterial,
+                    textBackground,
+                    textIntegration
+                );
             }
 
             try {
@@ -535,23 +585,350 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- Text Emphasis Logic ---
-    function getPositionDescription(position, text) {
-        switch(position) {
-            case 'center':
-                return `Prominently displayed in the center of the image, the text "${text}" is clearly visible and legible, with good contrast against the background.`;
-            case 'plaque':
-                return `A stone plaque with the words "${text}" carved in bold, legible letters. The text is well-lit and stands out clearly against the background.`;
-            case 'sign':
-                return `A clearly visible sign with the text "${text}" written in bold, legible letters. The sign is positioned prominently in the scene.`;
-            case 'banner':
-                return `A large banner with the text "${text}" displayed in bold, clear typography. The banner is a focal point in the image.`;
-            case 'screen':
-                return `A screen or display showing the text "${text}" in bright, clear letters that contrast well with the background.`;
-            case 'etched':
-                return `The text "${text}" is deeply etched or carved into the surface, with shadows and highlights making the letters stand out clearly.`;
-            default:
-                return `Prominently displayed in the image, the text "${text}" is clearly visible and legible.`;
+    function getTextEmphasisDescription(text, position, size, style, color, effect, material, background, integration) {
+        // Start with the base text description
+        let textDesc = `The text "${text}"`;
+        
+        // Add size description if provided
+        if (size) {
+            switch(size) {
+                case 'tiny':
+                    textDesc = `The tiny text "${text}"`;
+                    break;
+                case 'small':
+                    textDesc = `The small text "${text}"`;
+                    break;
+                case 'medium':
+                    textDesc = `The medium-sized text "${text}"`;
+                    break;
+                case 'large':
+                    textDesc = `The large text "${text}"`;
+                    break;
+                case 'huge':
+                    textDesc = `The huge text "${text}"`;
+                    break;
+                case 'giant':
+                    textDesc = `The giant, monumental text "${text}"`;
+                    break;
+            }
         }
+        
+        // Add style description if provided
+        if (style) {
+            switch(style) {
+                case 'bold':
+                    textDesc = textDesc.replace(`The`, `The bold`);
+                    break;
+                case 'elegant':
+                    textDesc = textDesc.replace(`The`, `The elegant serif`);
+                    break;
+                case 'modern':
+                    textDesc = textDesc.replace(`The`, `The clean, modern sans-serif`);
+                    break;
+                case 'handwritten':
+                    textDesc = textDesc.replace(`The`, `The handwritten`);
+                    break;
+                case 'vintage':
+                    textDesc = textDesc.replace(`The`, `The vintage-style`);
+                    break;
+                case 'futuristic':
+                    textDesc = textDesc.replace(`The`, `The futuristic`);
+                    break;
+                case 'gothic':
+                    textDesc = textDesc.replace(`The`, `The gothic-style`);
+                    break;
+                case 'blocky':
+                    textDesc = textDesc.replace(`The`, `The blocky, 3D`);
+                    break;
+                case 'minimalist':
+                    textDesc = textDesc.replace(`The`, `The minimalist`);
+                    break;
+                case 'ornate':
+                    textDesc = textDesc.replace(`The`, `The ornate, decorative`);
+                    break;
+                case 'pixel':
+                    textDesc = textDesc.replace(`The`, `The pixel-style, 8-bit`);
+                    break;
+                case 'calligraphy':
+                    textDesc = textDesc.replace(`The`, `The beautifully calligraphed`);
+                    break;
+            }
+        }
+        
+        // Add material description if provided
+        if (material) {
+            switch(material) {
+                case 'stone':
+                    textDesc += ` made of stone`;
+                    break;
+                case 'metal':
+                    textDesc += ` made of polished metal`;
+                    break;
+                case 'wood':
+                    textDesc += ` carved in wood`;
+                    break;
+                case 'glass':
+                    textDesc += ` made of transparent glass`;
+                    break;
+                case 'crystal':
+                    textDesc += ` made of sparkling crystal`;
+                    break;
+                case 'ice':
+                    textDesc += ` formed from ice`;
+                    break;
+                case 'paper':
+                    textDesc += ` on paper`;
+                    break;
+                case 'plastic':
+                    textDesc += ` made of plastic`;
+                    break;
+                case 'neon':
+                    textDesc += ` formed by neon tubes`;
+                    break;
+                case 'led':
+                    textDesc += ` on an LED display`;
+                    break;
+                case 'hologram':
+                    textDesc += ` as a holographic projection`;
+                    break;
+                case 'liquid':
+                    textDesc += ` formed from flowing liquid`;
+                    break;
+                case 'fire':
+                    textDesc += ` made of flickering flames`;
+                    break;
+            }
+        }
+        
+        // Add color description if provided
+        if (color) {
+            switch(color) {
+                case 'white':
+                    textDesc += ` in white color`;
+                    break;
+                case 'black':
+                    textDesc += ` in black color`;
+                    break;
+                case 'red':
+                    textDesc += ` in bright red color`;
+                    break;
+                case 'blue':
+                    textDesc += ` in vibrant blue color`;
+                    break;
+                case 'green':
+                    textDesc += ` in rich green color`;
+                    break;
+                case 'purple':
+                    textDesc += ` in deep purple color`;
+                    break;
+                case 'yellow':
+                    textDesc += ` in bright yellow color`;
+                    break;
+                case 'orange':
+                    textDesc += ` in warm orange color`;
+                    break;
+                case 'pink':
+                    textDesc += ` in soft pink color`;
+                    break;
+                case 'teal':
+                    textDesc += ` in teal color`;
+                    break;
+                case 'gold':
+                    textDesc += ` in shimmering gold`;
+                    break;
+                case 'silver':
+                    textDesc += ` in metallic silver`;
+                    break;
+                case 'copper':
+                    textDesc += ` in warm copper`;
+                    break;
+                case 'neon-blue':
+                    textDesc += ` in glowing neon blue`;
+                    break;
+                case 'neon-pink':
+                    textDesc += ` in vibrant neon pink`;
+                    break;
+                case 'neon-green':
+                    textDesc += ` in electric neon green`;
+                    break;
+                case 'glowing':
+                    textDesc += ` with a luminous glow`;
+                    break;
+                case 'rainbow':
+                    textDesc += ` in rainbow colors`;
+                    break;
+                case 'gradient':
+                    textDesc += ` in a smooth color gradient`;
+                    break;
+                case 'contrast':
+                    textDesc += ` with high contrast against the background`;
+                    break;
+            }
+        }
+        
+        // Add effect description if provided
+        if (effect) {
+            switch(effect) {
+                case 'shadow':
+                    textDesc += ` with a dramatic drop shadow`;
+                    break;
+                case 'outline':
+                    textDesc += ` with a clear outline`;
+                    break;
+                case 'embossed':
+                    textDesc += ` with an embossed effect`;
+                    break;
+                case 'beveled':
+                    textDesc += ` with beveled edges`;
+                    break;
+                case 'distressed':
+                    textDesc += ` with a worn, distressed appearance`;
+                    break;
+                case 'glitch':
+                    textDesc += ` with a digital glitch effect`;
+                    break;
+                case 'blur':
+                    textDesc += ` with a subtle motion blur`;
+                    break;
+                case 'sparkle':
+                    textDesc += ` with sparkling highlights`;
+                    break;
+                case 'fire':
+                    textDesc += ` with flames emanating from it`;
+                    break;
+                case 'ice':
+                    textDesc += ` with frost and ice crystals forming on it`;
+                    break;
+                case 'smoke':
+                    textDesc += ` with wisps of smoke swirling around it`;
+                    break;
+            }
+        }
+        
+        // Build the final description with position and background
+        let finalDesc = '';
+        
+        // Add position description
+        if (position) {
+            switch(position) {
+                case 'center':
+                    finalDesc = `${textDesc} is prominently displayed in the center of the image`;
+                    break;
+                case 'top':
+                    finalDesc = `${textDesc} is positioned at the top of the image`;
+                    break;
+                case 'bottom':
+                    finalDesc = `${textDesc} is positioned at the bottom of the image`;
+                    break;
+                case 'left':
+                    finalDesc = `${textDesc} is positioned on the left side of the image`;
+                    break;
+                case 'right':
+                    finalDesc = `${textDesc} is positioned on the right side of the image`;
+                    break;
+                case 'plaque':
+                    finalDesc = `A plaque with ${textDesc} is prominently displayed`;
+                    break;
+                case 'sign':
+                    finalDesc = `A sign with ${textDesc} is clearly visible`;
+                    break;
+                case 'banner':
+                    finalDesc = `A banner with ${textDesc} is displayed prominently`;
+                    break;
+                case 'screen':
+                    finalDesc = `A screen showing ${textDesc} is visible`;
+                    break;
+                case 'etched':
+                    finalDesc = `${textDesc} is deeply etched into the surface`;
+                    break;
+                case 'floating':
+                    finalDesc = `${textDesc} appears to be floating in the air`;
+                    break;
+                case 'graffiti':
+                    finalDesc = `${textDesc} appears as stylized graffiti art`;
+                    break;
+                case 'neon':
+                    finalDesc = `${textDesc} is displayed as a glowing sign`;
+                    break;
+                case 'tattoo':
+                    finalDesc = `${textDesc} appears as a detailed tattoo`;
+                    break;
+                case 'skywriting':
+                    finalDesc = `${textDesc} appears as skywriting across the sky`;
+                    break;
+                default:
+                    finalDesc = `${textDesc} is prominently displayed`;
+            }
+        } else {
+            finalDesc = `${textDesc} is prominently displayed`;
+        }
+        
+        // Add background description if provided
+        if (background) {
+            switch(background) {
+                case 'none':
+                    // No additional description
+                    break;
+                case 'contrasting':
+                    finalDesc += `, set against a contrasting background that makes it stand out`;
+                    break;
+                case 'halo':
+                    finalDesc += `, surrounded by a soft halo of light`;
+                    break;
+                case 'spotlight':
+                    finalDesc += `, highlighted by a focused spotlight`;
+                    break;
+                case 'shadow':
+                    finalDesc += `, casting dramatic shadows`;
+                    break;
+                case 'frame':
+                    finalDesc += `, enclosed in a decorative frame`;
+                    break;
+                case 'ribbon':
+                    finalDesc += ` on a flowing ribbon`;
+                    break;
+                case 'clouds':
+                    finalDesc += ` against a backdrop of clouds`;
+                    break;
+                case 'stars':
+                    finalDesc += ` against a starry background`;
+                    break;
+                case 'blur':
+                    finalDesc += ` with a blurred background that makes the text pop`;
+                    break;
+            }
+        }
+        
+        // Add integration description if provided
+        if (integration) {
+            switch(integration) {
+                case 'foreground':
+                    finalDesc += `. The text stands out clearly as a foreground element`;
+                    break;
+                case 'integrated':
+                    finalDesc += `. The text is well-integrated with the scene, appearing as a natural part of it`;
+                    break;
+                case 'part-of':
+                    finalDesc += `. The text appears as an organic part of the environment`;
+                    break;
+                case 'hidden':
+                    finalDesc += `. The text is subtly hidden within the scene, visible but not immediately obvious`;
+                    break;
+                case 'focal':
+                    finalDesc += `. The text is the main focal point of the image`;
+                    break;
+            }
+        }
+        
+        // Ensure the description ends with a period
+        if (!finalDesc.endsWith('.')) {
+            finalDesc += '.'
+        }
+        
+        // Add a final note about legibility
+        finalDesc += ' The text is clearly visible and legible.';
+        
+        return finalDesc;
     }
 
     // --- Character Counter Logic ---

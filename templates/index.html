@@ -164,15 +164,161 @@
                 <label for="text-emphasis-input">Text to Emphasize:</label>
                 <div class="text-emphasis-wrapper">
                     <input type="text" id="text-emphasis-input" placeholder="e.g., PiXa Contest">
-                    <select id="text-emphasis-position">
-                        <option value="">Position...</option>
-                        <option value="center">Center</option>
-                        <option value="plaque">On Plaque</option>
-                        <option value="sign">On Sign</option>
-                        <option value="banner">On Banner</option>
-                        <option value="screen">On Screen</option>
-                        <option value="etched">Etched/Carved</option>
-                    </select>
+                </div>
+                <div class="text-controls">
+                    <button id="text-controls-toggle" class="text-controls-toggle">Show more options</button>
+                    <div class="text-control-row">
+                        <div class="text-control-group">
+                            <label for="text-emphasis-position">Position:</label>
+                            <select id="text-emphasis-position">
+                                <option value="">Choose position...</option>
+                                <optgroup label="Standard Positions">
+                                    <option value="center">Center</option>
+                                    <option value="top">Top</option>
+                                    <option value="bottom">Bottom</option>
+                                    <option value="left">Left Side</option>
+                                    <option value="right">Right Side</option>
+                                </optgroup>
+                                <optgroup label="Specific Placements">
+                                    <option value="plaque">On Plaque</option>
+                                    <option value="sign">On Sign</option>
+                                    <option value="banner">On Banner</option>
+                                    <option value="screen">On Screen</option>
+                                    <option value="etched">Etched/Carved</option>
+                                    <option value="floating">Floating/Holographic</option>
+                                    <option value="graffiti">As Graffiti</option>
+                                    <option value="neon">Neon Sign</option>
+                                    <option value="tattoo">As Tattoo</option>
+                                    <option value="skywriting">Skywriting</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="text-control-group">
+                            <label for="text-emphasis-size">Size:</label>
+                            <select id="text-emphasis-size">
+                                <option value="">Choose size...</option>
+                                <option value="tiny">Tiny</option>
+                                <option value="small">Small</option>
+                                <option value="medium">Medium</option>
+                                <option value="large">Large</option>
+                                <option value="huge">Huge</option>
+                                <option value="giant">Giant/Monumental</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="text-control-row">
+                        <div class="text-control-group">
+                            <label for="text-emphasis-style">Style:</label>
+                            <select id="text-emphasis-style">
+                                <option value="">Choose style...</option>
+                                <option value="bold">Bold</option>
+                                <option value="elegant">Elegant/Serif</option>
+                                <option value="modern">Modern/Sans-serif</option>
+                                <option value="handwritten">Handwritten</option>
+                                <option value="vintage">Vintage</option>
+                                <option value="futuristic">Futuristic</option>
+                                <option value="gothic">Gothic</option>
+                                <option value="blocky">Blocky/3D</option>
+                                <option value="minimalist">Minimalist</option>
+                                <option value="ornate">Ornate/Decorative</option>
+                                <option value="pixel">Pixel/8-bit</option>
+                                <option value="calligraphy">Calligraphy</option>
+                            </select>
+                        </div>
+                        <div class="text-control-group">
+                            <label for="text-emphasis-color">Color:</label>
+                            <select id="text-emphasis-color">
+                                <option value="">Choose color...</option>
+                                <option value="white">White</option>
+                                <option value="black">Black</option>
+                                <option value="red">Red</option>
+                                <option value="blue">Blue</option>
+                                <option value="green">Green</option>
+                                <option value="purple">Purple</option>
+                                <option value="yellow">Yellow</option>
+                                <option value="orange">Orange</option>
+                                <option value="pink">Pink</option>
+                                <option value="teal">Teal</option>
+                                <option value="gold">Gold</option>
+                                <option value="silver">Silver</option>
+                                <option value="copper">Copper</option>
+                                <option value="neon-blue">Neon Blue</option>
+                                <option value="neon-pink">Neon Pink</option>
+                                <option value="neon-green">Neon Green</option>
+                                <option value="glowing">Glowing</option>
+                                <option value="rainbow">Rainbow</option>
+                                <option value="gradient">Gradient</option>
+                                <option value="contrast">High Contrast</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="text-control-row">
+                        <div class="text-control-group">
+                            <label for="text-emphasis-effect">Effect:</label>
+                            <select id="text-emphasis-effect">
+                                <option value="">Choose effect...</option>
+                                <option value="shadow">Drop Shadow</option>
+                                <option value="outline">Outlined</option>
+                                <option value="embossed">Embossed</option>
+                                <option value="beveled">Beveled</option>
+                                <option value="distressed">Distressed/Worn</option>
+                                <option value="glitch">Glitch Effect</option>
+                                <option value="blur">Motion Blur</option>
+                                <option value="sparkle">Sparkling</option>
+                                <option value="fire">Fire Effect</option>
+                                <option value="ice">Ice/Frost Effect</option>
+                                <option value="smoke">Smoke Effect</option>
+                            </select>
+                        </div>
+                        <div class="text-control-group">
+                            <label for="text-emphasis-material">Material:</label>
+                            <select id="text-emphasis-material">
+                                <option value="">Choose material...</option>
+                                <option value="stone">Stone</option>
+                                <option value="metal">Metal</option>
+                                <option value="wood">Wood</option>
+                                <option value="glass">Glass</option>
+                                <option value="crystal">Crystal</option>
+                                <option value="ice">Ice</option>
+                                <option value="paper">Paper</option>
+                                <option value="plastic">Plastic</option>
+                                <option value="neon">Neon Tubes</option>
+                                <option value="led">LED Display</option>
+                                <option value="hologram">Holographic</option>
+                                <option value="liquid">Liquid</option>
+                                <option value="fire">Fire</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="text-control-row">
+                        <div class="text-control-group">
+                            <label for="text-emphasis-background">Background:</label>
+                            <select id="text-emphasis-background">
+                                <option value="">Choose background...</option>
+                                <option value="none">No Special Background</option>
+                                <option value="contrasting">Contrasting Color</option>
+                                <option value="halo">Halo/Glow</option>
+                                <option value="spotlight">Spotlight</option>
+                                <option value="shadow">Dramatic Shadow</option>
+                                <option value="frame">Decorative Frame</option>
+                                <option value="ribbon">Ribbon</option>
+                                <option value="clouds">Clouds</option>
+                                <option value="stars">Stars/Space</option>
+                                <option value="blur">Blurred Background</option>
+                            </select>
+                        </div>
+                        <div class="text-control-group">
+                            <label for="text-emphasis-integration">Integration:</label>
+                            <select id="text-emphasis-integration">
+                                <option value="">Choose integration...</option>
+                                <option value="foreground">Foreground (Stands Out)</option>
+                                <option value="integrated">Integrated with Scene</option>
+                                <option value="part-of">Part of Environment</option>
+                                <option value="hidden">Subtly Hidden</option>
+                                <option value="focal">Main Focal Point</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
 
