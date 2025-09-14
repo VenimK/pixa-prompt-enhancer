@@ -390,6 +390,49 @@ textarea {
     }
 }
 
+/* Model info styling */
+.model-info {
+    margin: 10px 0 15px;
+    padding: 12px 15px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    background-color: #f8f9fa;
+    border-left: 4px solid #007bff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.dark-mode .model-info {
+    background-color: #2c2c2c;
+    border-left: 4px solid #0056b3;
+}
+
+.model-info strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 1rem;
+}
+
+.model-info em {
+    display: block;
+    margin-top: 5px;
+    font-style: italic;
+    opacity: 0.8;
+}
+
+/* Model-specific styling */
+.flux-model {
+    border-left-color: #3498db;
+}
+
+.qwen-model {
+    border-left-color: #2ecc71;
+}
+
+.nunchaku-model {
+    border-left-color: #e74c3c;
+}
+
 .selector label {
     margin-bottom: 5px;
     color: var(--text-color);

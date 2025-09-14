@@ -93,11 +93,22 @@
             <div class="card prompt-card">
                 <h2>Step 2: Enhance Your Prompt</h2>
                 <div class="selector">
-                    <label for="prompt-type-select"><strong>Prompt Type:</strong></label>
+                    <label for="prompt-type-select">Prompt Type:</label>
                     <select id="prompt-type-select">
-                        <option value="VEO">VEO (Text-to-Video)</option>
-                        <option value="WAN2">WAN2 (Image-to-Video)</option>
-                        <option value="Image">Image (Text-to-Image)</option>
+                        <option value="Image">Image</option>
+                        <option value="VEO">Video (VEO)</option>
+                        <option value="WAN2">Animation (WAN2)</option>
+                    </select>
+                </div>
+                <div class="selector" id="model-selector-container">
+                    <label for="model-select">AI Model:</label>
+                    <select id="model-select">
+                        <option value="default" title="Standard prompt formatting without model-specific optimizations">Default</option>
+                        <optgroup label="Image Models">
+                            <option value="flux" title="Optimized for photorealistic imagery with detailed technical specifications. Best for photography-style images with fine details.">Flux (Photorealistic)</option>
+                            <option value="qwen" title="Balanced approach with clear subject descriptions and compositional instructions. Good for versatile, well-composed images.">Qwen (Versatile)</option>
+                            <option value="nunchaku" title="Focuses on style coherence and artistic interpretations. Ideal for creative, stylized imagery with strong mood/atmosphere.">Nunchaku (Artistic)</option>
+                        </optgroup>
                     </select>
                 </div>
                 <div class="templates-section">

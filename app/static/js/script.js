@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         imageUpload: document.getElementById('image-upload'),
         prompt: document.getElementById('prompt-input'),
         promptType: document.getElementById('prompt-type-select'),
+        modelSelect: document.getElementById('model-select'),
         style: document.getElementById('style-select'),
         cinematography: document.getElementById('cinematography-select'),
         lighting: document.getElementById('lighting-select'),
@@ -199,6 +200,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
             }
 
+            // Get selected model and apply model-specific formatting
+            const selectedModel = els.modelSelect ? els.modelSelect.value : 'default';
+            const formattedPrompt = formatPromptForModel(prompt, selectedModel, promptType);
+            
             try {
                 const response = await fetch('/enhance', {
                     method: 'POST',
@@ -206,17 +211,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        prompt: prompt,
+                        prompt: formattedPrompt,
                         prompt_type: promptType,
                         style: style,
                         cinematography: cinematography,
                         lighting: lighting,
-                        image_description: (imageDescription && !imageDescription.startsWith('Analyzing')) ? imageDescription : '',
-                        motion_effect: promptType === 'WAN2' ? motionEffect : null,
-                        text_emphasis: textEmphasisDetails
+                        motion_effect: motionEffect,
+                        image_description: imageDescription,
+                        text_emphasis: textEmphasisDetails,
+                        model: selectedModel
                     }),
                 });
-
+                
                 if (!response.ok) {
                     throw new Error('Failed to enhance prompt.');
                 }
@@ -241,7 +247,70 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 els.motionEffectContainer.style.display = 'none';
             }
+            
+            // Show/hide model selector based on prompt type
+            if (els.promptType.value === 'Image' && document.getElementById('model-selector-container')) {
+                document.getElementById('model-selector-container').style.display = 'flex';
+            } else if (document.getElementById('model-selector-container')) {
+                document.getElementById('model-selector-container').style.display = 'none';
+            }
         });
+    }
+    
+    // Add event listener for model selection
+    if (els.modelSelect) {
+        els.modelSelect.addEventListener('change', () => {
+            const modelInfoElement = document.getElementById('model-info');
+            const selectedModel = els.modelSelect.value;
+            
+            // Remove any existing model info
+            if (modelInfoElement) {
+                modelInfoElement.remove();
+            }
+            
+            // Only show model info for specific models
+            if (selectedModel !== 'default') {
+                const modelInfo = document.createElement('div');
+                modelInfo.id = 'model-info';
+                modelInfo.className = 'model-info';
+                
+                let infoContent = '';
+                
+                switch(selectedModel) {
+                    case 'flux':
+                        infoContent = `<strong>Flux Model Selected</strong><br>
+                            Your prompt will be optimized for photorealistic imagery with technical details.<br>
+                            <em>Tip: Include specific subjects and scenes for best results.</em>`;
+                        modelInfo.className += ' flux-model';
+                        break;
+                    case 'qwen':
+                        infoContent = `<strong>Qwen Model Selected</strong><br>
+                            Your prompt will be optimized for versatile, well-composed imagery.<br>
+                            <em>Tip: Focus on clear descriptions rather than technical terms.</em>`;
+                        modelInfo.className += ' qwen-model';
+                        break;
+                    case 'nunchaku':
+                        infoContent = `<strong>Nunchaku Model Selected</strong><br>
+                            Your prompt will be optimized for artistic, stylized imagery.<br>
+                            <em>Tip: Include mood/atmosphere descriptions for best results.</em>`;
+                        modelInfo.className += ' nunchaku-model';
+                        break;
+                }
+                
+                modelInfo.innerHTML = infoContent;
+                
+                // Insert after the model selector
+                const modelSelectorContainer = document.getElementById('model-selector-container');
+                if (modelSelectorContainer) {
+                    modelSelectorContainer.insertAdjacentElement('afterend', modelInfo);
+                }
+            }
+        });
+        
+        // Initialize visibility of model selector based on current prompt type
+        if (els.promptType && els.promptType.value !== 'Image' && document.getElementById('model-selector-container')) {
+            document.getElementById('model-selector-container').style.display = 'none';
+        }
     }
     
     // --- Templates System ---
@@ -908,6 +977,109 @@ document.addEventListener('DOMContentLoaded', () => {
         return finalDesc;
     }
 
+    // --- Model-Specific Prompt Formatting ---
+    function formatPromptForModel(prompt, model, promptType) {
+        // Default formatting if no specific model is selected
+        if (!model || model === 'default') {
+            return prompt;
+        }
+        
+        // Only apply model-specific formatting for image prompts
+        if (promptType !== 'Image') {
+            return prompt;
+        }
+        
+        switch(model) {
+            case 'flux':
+                return formatFluxPrompt(prompt);
+            case 'qwen':
+                return formatQwenPrompt(prompt);
+            case 'nunchaku':
+                return formatNunchakuPrompt(prompt);
+            default:
+                return prompt;
+        }
+    }
+    
+    function formatFluxPrompt(prompt) {
+        // Flux excels at photorealistic imagery with detailed technical specifications
+        let formattedPrompt = prompt.trim();
+        
+        // Add photography-related technical details if not present
+        if (!formattedPrompt.toLowerCase().includes('lens') && 
+            !formattedPrompt.toLowerCase().includes('mm') && 
+            !formattedPrompt.toLowerCase().includes('camera')) {
+            formattedPrompt += ', shot with a professional camera, high-quality lens';
+        }
+        
+        // Add lighting details if not specified
+        if (!formattedPrompt.toLowerCase().includes('lighting') && 
+            !formattedPrompt.toLowerCase().includes('light')) {
+            formattedPrompt += ', perfect lighting';
+        }
+        
+        // Add quality indicators
+        if (!formattedPrompt.toLowerCase().includes('detailed') && 
+            !formattedPrompt.toLowerCase().includes('detail')) {
+            formattedPrompt += ', highly detailed';
+        }
+        
+        // Add photorealism tag
+        if (!formattedPrompt.toLowerCase().includes('photorealistic') && 
+            !formattedPrompt.toLowerCase().includes('realistic')) {
+            formattedPrompt += ', photorealistic';
+        }
+        
+        return formattedPrompt;
+    }
+    
+    function formatQwenPrompt(prompt) {
+        // Qwen works well with clear subject descriptions and compositional instructions
+        let formattedPrompt = prompt.trim();
+        
+        // Add clarity indicator if not present
+        if (!formattedPrompt.toLowerCase().includes('clear') && 
+            !formattedPrompt.toLowerCase().includes('crisp')) {
+            formattedPrompt += ', clear and well-composed';
+        }
+        
+        // Add quality indicator if not present
+        if (!formattedPrompt.toLowerCase().includes('high quality') && 
+            !formattedPrompt.toLowerCase().includes('high-quality')) {
+            formattedPrompt += ', high quality';
+        }
+        
+        return formattedPrompt;
+    }
+    
+    function formatNunchakuPrompt(prompt) {
+        // Nunchaku focuses on style coherence and artistic interpretations
+        let formattedPrompt = prompt.trim();
+        
+        // Add style indicator at the beginning if not present
+        const styleKeywords = ['cinematic', 'artistic', 'stylized', 'dramatic', 'vibrant'];
+        let hasStyleKeyword = false;
+        
+        for (const keyword of styleKeywords) {
+            if (formattedPrompt.toLowerCase().includes(keyword)) {
+                hasStyleKeyword = true;
+                break;
+            }
+        }
+        
+        if (!hasStyleKeyword) {
+            formattedPrompt = 'Artistic, stylized: ' + formattedPrompt;
+        }
+        
+        // Add mood/atmosphere if not present
+        if (!formattedPrompt.toLowerCase().includes('mood') && 
+            !formattedPrompt.toLowerCase().includes('atmosphere')) {
+            formattedPrompt += ', atmospheric mood';
+        }
+        
+        return formattedPrompt;
+    }
+    
     // --- Character Counter Logic ---
     function updateCharCount() {
         if (els.charCount && els.prompt) {

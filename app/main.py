@@ -2,6 +2,7 @@ from fastapi import FastAPI, File, UploadFile, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import subprocess
 import shutil
@@ -11,6 +12,15 @@ import PIL.Image
 import time
 
 app = FastAPI()
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For development only, restrict in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- Setup ---
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -27,6 +37,7 @@ class EnhanceRequest(BaseModel):
     image_description: str | None = None
     motion_effect: str | None = None
     text_emphasis: str | None = None
+    model: str | None = None  # AI model selection (flux, qwen, nunchaku, etc.)
 
 class EnhanceResponse(BaseModel):
     enhanced_prompt: str
@@ -77,14 +88,16 @@ async def analyze_image_endpoint(image: UploadFile = File(...)):
     return AnalyzeResponse(description=description)
 
 @app.post("/enhance", response_model=EnhanceResponse)
-async def enhance_prompt_endpoint(request: EnhanceRequest):
-    # Build the shared instruction string
+async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
+    """Enhance the prompt using OpenAI's API."""
+    
+    # --- Build instructions based on user selections ---
     instructions = []
-    if request.style != "auto":
-        instructions.append(f"in a {request.style.lower()} style")
-    if request.cinematography != "auto":
-        instructions.append(f"using a {request.cinematography.lower()} shot")
-    if request.lighting != "auto":
+    if request.style and request.style != "None":
+        instructions.append(f"in {request.style.lower()} style")
+    if request.cinematography and request.cinematography != "None":
+        instructions.append(f"with {request.cinematography.lower()} cinematography")
+    if request.lighting and request.lighting != "None":
         instructions.append(f"with {request.lighting.lower()} lighting")
     if request.prompt_type == "WAN2" and request.motion_effect and request.motion_effect != "Static":
         instructions.append(f"with a {request.motion_effect.lower()} motion effect")
@@ -92,6 +105,16 @@ async def enhance_prompt_endpoint(request: EnhanceRequest):
 
     image_context = f" The user has provided a reference image described as: '{request.image_description}'." if request.image_description else ""
     text_emphasis = f" {request.text_emphasis}" if request.text_emphasis else ""
+    
+    # --- Add model-specific guidance if a specific model is selected ---
+    model_guidance = ""
+    if request.model and request.model != "default" and request.prompt_type == "Image":
+        if request.model == "flux":
+            model_guidance = " For the Flux model, include technical photography details (camera, lens, lighting setup) and focus on photorealism with high detail."
+        elif request.model == "qwen":
+            model_guidance = " For the Qwen model, focus on clear subject descriptions and compositional instructions without technical jargon."
+        elif request.model == "nunchaku":
+            model_guidance = " For the Nunchaku model, start with style keywords, focus on mood/atmosphere, and use artistic terminology rather than technical camera terms."
 
     # --- Logic to choose meta-prompt based on prompt_type ---
     if request.prompt_type == "VEO":
@@ -113,9 +136,9 @@ User's Specifications:
 - Desired Style: '{instruction_text}'
 
 Generate an implied animation prompt now."""
-    
+
     elif request.prompt_type == "Image":
-        meta_prompt = f"You are a creative assistant for a text-to-image model. Your goal is to expand the user's idea into a rich, descriptive prompt suitable for generating a static image{instruction_text}. Focus on the visual details of the scene, subject, and atmosphere.{image_context}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
+        meta_prompt = f"You are a creative assistant for a text-to-image model. Your goal is to expand the user's idea into a rich, descriptive prompt suitable for generating a static image{instruction_text}.{model_guidance} Focus on the visual details of the scene, subject, and atmosphere.{image_context}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
 
     else:
         # Fallback for safety
