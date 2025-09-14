@@ -1,27 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    initDarkMode();
-    initTextControls();
-    updateProgress(1, 'active');
-});
-
-// Initialize text controls (collapsed by default)
-function initTextControls() {
-    if (document.getElementById('text-controls-toggle')) {
-        const textControls = document.querySelector('.text-controls');
-        if (textControls) {
-            // Start with controls collapsed
-            textControls.classList.add('collapsed');
-            
-            document.getElementById('text-controls-toggle').addEventListener('click', () => {
-                textControls.classList.toggle('collapsed');
-                document.getElementById('text-controls-toggle').textContent = 
-                    textControls.classList.contains('collapsed') ? 'Show more options' : 'Hide options';
-            });
-        }
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
     // --- Element References ---
     const els = {
         // Buttons
@@ -957,6 +934,21 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Initialize character count on page load
         updateCharCount();
+    }
+    
+    // Initialize text controls toggle functionality
+    if (els.textControlsToggle) {
+        const textControls = document.querySelector('.text-controls');
+        if (textControls) {
+            // Start with controls collapsed
+            textControls.classList.add('collapsed');
+            
+            els.textControlsToggle.addEventListener('click', () => {
+                textControls.classList.toggle('collapsed');
+                els.textControlsToggle.textContent = 
+                    textControls.classList.contains('collapsed') ? 'Show more options' : 'Hide options';
+            });
+        }
     }
 
     if (els.copy) {
