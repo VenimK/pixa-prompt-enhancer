@@ -259,42 +259,38 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Add event listener for model selection
     if (els.modelSelect) {
-        els.modelSelect.addEventListener('change', () => {
-            const modelInfoElement = document.getElementById('model-info');
-            const selectedModel = els.modelSelect.value;
-            
+        // Function to update model info based on selection
+        function updateModelInfo(model) {
+            const modelInfoContainer = document.getElementById('model-info-container');
+            if (!modelInfoContainer) return;
+
             // Remove any existing model info
-            if (modelInfoElement) {
-                modelInfoElement.remove();
-            }
-            
-            // Only show model info for specific models
-            if (selectedModel !== 'default') {
+            const existingInfo = document.getElementById('model-info');
+            if (existingInfo) existingInfo.remove();
+
+            // Create new model info if a specific model is selected
+            if (model && model !== 'default') {
                 const modelInfo = document.createElement('div');
                 modelInfo.id = 'model-info';
-                modelInfo.className = 'model-info';
-                
+                modelInfo.className = `model-info ${model}-model`;
+
                 let infoContent = '';
                 
-                switch(selectedModel) {
-                    case 'flux':
-                        infoContent = `<strong>Flux Model Selected</strong><br>
-                            Your prompt will be optimized for photorealistic imagery with technical details.<br>
-                            <em>Tip: Include specific subjects and scenes for best results.</em>`;
-                        modelInfo.className += ' flux-model';
-                        break;
-                    case 'qwen':
-                        infoContent = `<strong>Qwen Model Selected</strong><br>
-                            Your prompt will be optimized for versatile, well-composed imagery.<br>
-                            <em>Tip: Focus on clear descriptions rather than technical terms.</em>`;
-                        modelInfo.className += ' qwen-model';
-                        break;
-                    case 'nunchaku':
-                        infoContent = `<strong>Nunchaku Model Selected</strong><br>
-                            Your prompt will be optimized for artistic, stylized imagery.<br>
-                            <em>Tip: Include mood/atmosphere descriptions for best results.</em>`;
-                        modelInfo.className += ' nunchaku-model';
-                        break;
+                if (model === 'flux') {
+                    infoContent = `<strong>Flux Model Selected</strong>
+                    <p>Optimizing for photorealistic imagery with technical details.</p>
+                    <em>Best for: Detailed photography-style images with realistic lighting and textures.</em>`;
+                } else if (model === 'qwen') {
+                    infoContent = `<strong>Qwen Model Selected</strong>
+                    <p>Optimizing for clear composition and exceptional text rendering. This 20B MMDiT model excels at displaying text in images, especially Chinese characters.</p>
+                    <em>Best for: Images containing text, signs, or multilingual content. Also great for portraits with natural expressions.</em>
+                    <em>Tip: Add "Ultra HD, 4K, cinematic composition" to enhance quality.</em>`;
+                } else if (model === 'nunchaku') {
+                    infoContent = `<strong>Nunchaku Model Selected</strong>
+                    <p>Optimizing for artistic style with mood-focused descriptions.</p>
+                    <em>Best for: Stylized, atmospheric images with strong emotional impact.</em>
+                    <em>Tip: Include mood/atmosphere descriptions for best results.</em>`;
+                    modelInfo.className += ' nunchaku-model';
                 }
                 
                 modelInfo.innerHTML = infoContent;
@@ -305,7 +301,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     modelSelectorContainer.insertAdjacentElement('afterend', modelInfo);
                 }
             }
+        }
+        
+        // Add event listener to model select dropdown
+        els.modelSelect.addEventListener('change', function() {
+            updateModelInfo(this.value);
         });
+        
+        // Initialize model info with current selection
+        if (els.modelSelect.value !== 'default') {
+            updateModelInfo(els.modelSelect.value);
+        }
         
         // Initialize visibility of model selector based on current prompt type
         if (els.promptType && els.promptType.value !== 'Image' && document.getElementById('model-selector-container')) {
