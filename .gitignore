@@ -5,6 +5,10 @@ venv/
 __pycache__/
 *.pyc
 
+# Environment variables and secrets
+.env
+.env.*
+
 # Temporary Uploads
 temp_uploads/
 uploads/
