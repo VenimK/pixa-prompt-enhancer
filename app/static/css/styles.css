@@ -250,6 +250,23 @@ input:checked + .slider:before {
     border-radius: 4px;
 }
 
+.api-key-info {
+    background-color: #e8f4fe;
+    color: #0c5460;
+    padding: 0.75rem;
+    border: 1px solid #bee5eb;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    text-align: left;
+    font-size: 0.9rem;
+}
+
+body.dark-mode .api-key-info {
+    background-color: #1e3a4a;
+    color: #8ed8f8;
+    border-color: #2c6384;
+}
+
 h1 {
     margin-top: 0;
     color: var(--h1-color);

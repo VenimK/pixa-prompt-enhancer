@@ -14,6 +14,10 @@
         <div class="api-key-warning">
             <strong>Warning:</strong> The <code>GOOGLE_API_KEY</code> environment variable is not set. The application's core features will not work until it is configured. Please set the variable and restart the server.
         </div>
+        {% else %}
+        <div class="api-key-info">
+            <strong>API:</strong> {{ api_key_info.provider }} (Key: {{ api_key_info.masked_key }})
+        </div>
         {% endif %}
         <div class="theme-switch-container">
         <label class="theme-switch" for="checkbox">

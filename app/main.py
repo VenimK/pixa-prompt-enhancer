@@ -10,6 +10,10 @@ import os
 import google.generativeai as genai
 import PIL.Image
 import time
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI()
 
@@ -69,8 +73,20 @@ def run_gemini(prompt: str, image_path: str | None = None):
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     api_key_set = "GOOGLE_API_KEY" in os.environ
+    api_key_info = {}
+    if api_key_set:
+        # Get first and last 4 characters of the API key for display (for security)
+        api_key = os.environ.get("GOOGLE_API_KEY", "")
+        if len(api_key) > 8:
+            masked_key = f"{api_key[:4]}...{api_key[-4:]}"
+        else:
+            masked_key = "[Invalid key format]"
+        api_key_info = {
+            "provider": "Google Gemini",
+            "masked_key": masked_key
+        }
     version = int(time.time())
-    return templates.TemplateResponse("index.html", {"request": request, "api_key_set": api_key_set, "version": version})
+    return templates.TemplateResponse("index.html", {"request": request, "api_key_set": api_key_set, "api_key_info": api_key_info, "version": version})
 
 @app.post("/analyze-image", response_model=AnalyzeResponse)
 async def analyze_image_endpoint(image: UploadFile = File(...)):
