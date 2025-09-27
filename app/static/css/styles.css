@@ -656,11 +656,24 @@ pre {
     padding: 0;
 }
 
-.copy-btn {
+.button-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.copy-btn, .share-btn {
     padding: 0.25rem 0.75rem;
     font-size: 0.9rem;
     width: auto;
     margin: 0;
+}
+
+.share-btn {
+    background-color: #2e8b57;
+}
+
+.share-btn:hover {
+    background-color: #1d6e42;
 }
 
 button:disabled {

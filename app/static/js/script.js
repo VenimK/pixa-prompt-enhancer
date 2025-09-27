@@ -1,4 +1,31 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Check for shared prompt in URL parameters
+    function loadSharedPrompt() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedPrompt = urlParams.get('shared_prompt');
+        
+        if (sharedPrompt) {
+            // Display the shared prompt
+            els.result.style.display = 'block';
+            els.resultText.innerText = sharedPrompt;
+            
+            // Set other parameters if available
+            const promptType = urlParams.get('type');
+            const style = urlParams.get('style');
+            const model = urlParams.get('model');
+            
+            if (promptType && els.promptType) els.promptType.value = promptType;
+            if (style && els.style) els.style.value = style;
+            if (model && els.modelSelect) els.modelSelect.value = model;
+            
+            // Scroll to the result
+            setTimeout(() => {
+                els.result.scrollIntoView({ behavior: 'smooth' });
+                showToast('Shared prompt loaded!', 'success');
+            }, 500);
+        }
+    }
+
     // --- Element References ---
     const els = {
         // Buttons
@@ -1139,6 +1166,39 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+    
+    // Share button functionality
+    const shareButton = document.getElementById('share-button');
+    if (shareButton) {
+        shareButton.addEventListener('click', () => {
+            // Create a shareable URL with the prompt as a parameter
+            const enhancedPrompt = els.resultText.innerText;
+            if (!enhancedPrompt) {
+                showToast('No prompt to share!', 'error');
+                return;
+            }
+            
+            // Encode the prompt and other relevant parameters
+            const params = new URLSearchParams();
+            params.append('shared_prompt', enhancedPrompt);
+            
+            // Optional: Add other parameters that might be useful for context
+            if (els.promptType.value) params.append('type', els.promptType.value);
+            if (els.style.value && els.style.value !== 'None') params.append('style', els.style.value);
+            if (els.modelSelect.value && els.modelSelect.value !== 'default') params.append('model', els.modelSelect.value);
+            
+            // Create the shareable URL
+            const shareableUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+            
+            // Copy the URL to clipboard
+            navigator.clipboard.writeText(shareableUrl).then(() => {
+                showToast('Shareable URL copied to clipboard!', 'success');
+            }).catch(err => {
+                console.error('Failed to copy URL: ', err);
+                showToast('Failed to create shareable link.', 'error');
+            });
+        });
+    }
 
     if (els.scrollToTop) {
         window.onscroll = () => {
@@ -1234,4 +1294,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize the application
     applySavedTheme();
+    
+    // Load shared prompt if available in URL
+    loadSharedPrompt();
 });

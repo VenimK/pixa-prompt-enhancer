@@ -69,6 +69,27 @@ def run_gemini(prompt: str, image_path: str | None = None):
     except Exception as e:
         return f"An error occurred with the Gemini API: {e}"
 
+
+def limit_prompt_length(enhanced_prompt: str, model_type: str) -> str:
+    """
+    Limit the length of the enhanced prompt based on the model type.
+    Different models have different character limits.
+    """
+    if model_type == "WAN2":
+        # WAN2 has a lower character limit to prevent OOM errors
+        max_length = 500
+        if len(enhanced_prompt) > max_length:
+            # If the prompt is too long, truncate it and add a note
+            truncated_prompt = enhanced_prompt[:max_length]
+            # Try to find the last complete sentence
+            last_period = truncated_prompt.rfind('.')
+            if last_period > max_length * 0.7:  # Only truncate at sentence if it's not too short
+                truncated_prompt = truncated_prompt[:last_period+1]
+            return truncated_prompt
+    
+    # For other models, return the original prompt
+    return enhanced_prompt
+
 # --- Endpoints ---
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -153,19 +174,19 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
     elif request.prompt_type == "WAN2":
         if request.prompt:
             motion_effect = f" with {request.motion_effect} motion effect" if request.motion_effect and request.motion_effect != "Static" else ""
-            meta_prompt = f"You are a creative assistant for the WAN2 image-to-video animation model. Expand the user's idea into a rich, detailed prompt{instruction_text}{motion_effect}. Focus on describing a single frame that will be animated, with clear subjects and actions.{image_context}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
+            meta_prompt = f"You are a creative assistant for the WAN2 image-to-video animation model. Create a CONCISE prompt (maximum 500 characters){instruction_text}{motion_effect}. Focus on describing a single frame that will be animated, with clear subjects and actions. Be extremely brief but descriptive, prioritizing visual elements over detailed explanations. WAN2 has strict character limits to prevent OOM errors.{image_context}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
         else:
             # Logic for when the user wants the AI to imply the animation
-            meta_prompt = f"""You are a creative assistant for an Image-to-Video model like WAN2. Your task is to look at the description of a static image and invent a compelling but subtle animation to make it come alive.
-- Identify the most likely elements for movement in the scene (e.g., hair, clothing, water, clouds, fire, trees).
-- Create a prompt that describes this subtle animation in a detailed and vivid way.
-- Do not add any conversational fluff.
+            meta_prompt = f"""You are a creative assistant for the WAN2 image-to-video model. Create a CONCISE prompt (maximum 500 characters) that describes how to animate the static image.
+- Identify 1-3 key elements for movement (e.g., hair, clothing, water, clouds).
+- Describe the animation briefly but vividly.
+- Keep the total prompt under 500 characters to prevent OOM errors.
 
 User's Specifications:
 - Reference Image: '{image_context}'
 - Desired Style: '{instruction_text}'
 
-Generate an implied animation prompt now."""
+Generate a brief animation prompt now."""
 
     elif request.prompt_type == "Image":
         # Check for specific materials, styles, or compositions in the prompt
@@ -259,4 +280,8 @@ Generate an implied animation prompt now."""
         meta_prompt = f"Enhance this prompt: {request.prompt}"
 
     enhanced_prompt = run_gemini(meta_prompt)
-    return EnhanceResponse(enhanced_prompt=enhanced_prompt)
+    
+    # Apply length limits based on model type
+    limited_prompt = limit_prompt_length(enhanced_prompt, request.prompt_type)
+    
+    return EnhanceResponse(enhanced_prompt=limited_prompt)
