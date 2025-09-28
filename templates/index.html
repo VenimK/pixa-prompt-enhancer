@@ -43,6 +43,18 @@
                         <kbd>Ctrl</kbd> + <kbd>C</kbd>
                         <span>Copy Enhanced Prompt</span>
                     </div>
+                    <div class="shortcut">
+                        <kbd>Ctrl</kbd> + <kbd>H</kbd>
+                        <span>Toggle History Panel</span>
+                    </div>
+                    <div class="shortcut">
+                        <kbd>Ctrl</kbd> + <kbd>M</kbd>
+                        <span>Toggle Comparison View</span>
+                    </div>
+                    <div class="shortcut">
+                        <kbd>Ctrl</kbd> + <kbd>S</kbd>
+                        <span>Save Prompt for Comparison</span>
+                    </div>
                 </div>
                 <button class="close-shortcuts">Close</button>
             </div>
@@ -83,14 +95,14 @@
                             </div>
                         </div>
                     </div>
-                    <button id="analyze-button">Analyze Image</button>
-                    <button id="clear-image-button" class="clear-image-btn" style="display: none;">Clear Image</button>
+                    <div class="image-buttons">
+                        <button id="analyze-button">Analyze Image</button>
+                        <button id="clear-image-button" class="clear-image-btn" style="display: none;">Clear Image</button>
+                    </div>
                     <div id="image-result-container" style="display: none;">
                         <img id="image-preview" src="#" alt="Image Preview"/>
-                        <div id="image-description-box">
-                            <p><strong>Image Analysis:</strong></p>
-                            <p id="image-description-text"></p>
-                        </div>
+                        <div id="image-progress-container"></div>
+                        <div id="image-description-text"></div>
                     </div>
                 </div>
             </div>
@@ -108,17 +120,53 @@
                     <label for="model-select">AI Model:</label>
                     <select id="model-select">
                         <option value="default" title="Standard prompt formatting without model-specific optimizations">Default</option>
-                        <optgroup label="Image Models">
+                        <optgroup label="Photorealistic Models">
                             <option value="flux" title="Optimized for photorealistic imagery with detailed technical specifications. Best for photography-style images with fine details.">Flux (Photorealistic)</option>
+                            <option value="pixart" title="Excellent for detailed compositions with strong artistic direction. Good balance of realism and artistic flair.">PixArt (Detailed)</option>
+                            <option value="dalle3" title="Excellent for following complex instructions and generating coherent scenes with accurate text rendering.">DALL-E 3 (Coherent)</option>
+                        </optgroup>
+                        <optgroup label="Versatile Models">
                             <option value="qwen" title="Balanced approach with clear subject descriptions and compositional instructions. Good for versatile, well-composed images.">Qwen (Versatile)</option>
+                            <option value="midjourney" title="Excellent for artistic compositions with strong aesthetic appeal. Best for stylized, visually striking imagery.">Midjourney (Aesthetic)</option>
+                            <option value="sdxl" title="Good for detailed compositions with strong artistic direction. Versatile across many styles and subjects.">SDXL (Balanced)</option>
+                        </optgroup>
+                        <optgroup label="Artistic Models">
                             <option value="nunchaku" title="Focuses on style coherence and artistic interpretations. Ideal for creative, stylized imagery with strong mood/atmosphere.">Nunchaku (Artistic)</option>
+                            <option value="kandinsky" title="Excellent for abstract and artistic compositions with unique stylistic elements.">Kandinsky (Abstract)</option>
+                            <option value="imagen" title="Strong at following detailed instructions and creating coherent scenes with good composition.">Imagen (Coherent)</option>
                         </optgroup>
                     </select>
                 </div>
                 <div class="templates-section">
                     <label for="template-select">Quick Templates:</label>
-                    <select id="template-select">
-                        <option value="">Choose a template...</option>
+                    <div class="template-controls">
+                        <select id="template-select">
+                            <option value="">Choose a template...</option>
+                            <optgroup label="Model-Optimized Templates">
+                                <!-- Photorealistic Models -->
+                                <option value="flux-portrait">Flux - Portrait</option>
+                                <option value="flux-landscape">Flux - Landscape</option>
+                                <option value="flux-product">Flux - Product</option>
+                                <option value="pixart-concept">PixArt - Concept Art</option>
+                                <option value="pixart-character">PixArt - Character Design</option>
+                                <option value="dalle3-text">DALL-E 3 - Text Rendering</option>
+                                <option value="dalle3-scene">DALL-E 3 - Complex Scene</option>
+                                
+                                <!-- Versatile Models -->
+                                <option value="qwen-text">Qwen - Text Rendering</option>
+                                <option value="qwen-portrait">Qwen - Portrait</option>
+                                <option value="midjourney-landscape">Midjourney - Epic Landscape</option>
+                                <option value="midjourney-fantasy">Midjourney - Fantasy Art</option>
+                                <option value="sdxl-realistic">SDXL - Photorealistic</option>
+                                <option value="sdxl-painting">SDXL - Digital Painting</option>
+                                
+                                <!-- Artistic Models -->
+                                <option value="nunchaku-fantasy">Nunchaku - Fantasy</option>
+                                <option value="nunchaku-abstract">Nunchaku - Abstract</option>
+                                <option value="kandinsky-abstract">Kandinsky - Abstract Art</option>
+                                <option value="kandinsky-surreal">Kandinsky - Surreal</option>
+                                <option value="imagen-detailed">Imagen - Detailed Scene</option>
+                            </optgroup>
                         <optgroup label="Photography">
                             <option value="portrait">Portrait Photography</option>
                             <option value="nature">Nature Landscape</option>
@@ -499,16 +547,51 @@
         <button id="enhance-button">Enhance Prompt</button>
 
         <div id="result-container" style="display: none;">
-            <div class="result-header">
-                <h2>Enhanced Prompt</h2>
-                <div class="button-group">
-                    <button id="copy-button" class="copy-btn">Copy</button>
-                    <button id="share-button" class="share-btn">Share</button>
+            <div id="result" class="result-container" style="display: none;">
+                <div class="result-header">
+                    <h3>Enhanced Prompt</h3>
+                    <div class="view-toggle">
+                        <button id="single-view-btn" class="view-btn active">Single</button>
+                        <button id="compare-view-btn" class="view-btn">Compare</button>
+                    </div>
+                </div>
+                
+                <div class="result-actions">
+                    <button id="copy-button" class="action-button"><i class="fas fa-copy"></i> Copy</button>
+                    <button id="share-button" class="action-button"><i class="fas fa-share-alt"></i> Share</button>
+                    <button id="export-button" class="action-button"><i class="fas fa-download"></i> Export</button>
+                    <button id="save-to-compare-button" class="action-button"><i class="fas fa-columns"></i> Save for Compare</button>
+                    <label for="import-file" class="action-button" id="import-label"><i class="fas fa-upload"></i> Import</label>
+                    <input type="file" id="import-file" accept=".json" style="display: none;">
+                </div>
+                
+                <!-- Single View Mode -->
+                <div id="single-view" class="view-mode active">
+                    <div id="result-text" class="result-text"></div>
+                </div>
+                
+                <!-- Compare View Mode -->
+                <div id="compare-view" class="view-mode">
+                    <div class="compare-container">
+                        <div class="compare-column">
+                            <div class="compare-header">
+                                <h4>Current Prompt</h4>
+                            </div>
+                            <div id="current-prompt" class="compare-content"></div>
+                        </div>
+                        <div class="compare-column">
+                            <div class="compare-header">
+                                <h4>Saved Prompt</h4>
+                                <button id="clear-saved-prompt" class="small-btn"><i class="fas fa-trash"></i></button>
+                            </div>
+                            <div id="saved-prompt" class="compare-content"></div>
+                        </div>
+                    </div>
+                    <div class="compare-info">
+                        <p>Save the current prompt for comparison using the "Save for Compare" button.</p>
+                    </div>
                 </div>
             </div>
-            <pre id="result-text"></pre>
-        </div>
-    </div>
 
     <button id="scroll-to-top-btn">&#8679;</button>
 
