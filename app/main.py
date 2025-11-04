@@ -92,21 +92,71 @@ def limit_prompt_length(enhanced_prompt: str, model_type: str) -> str:
     """
     Limit the length of the enhanced prompt based on the model type.
     Different models have different character limits.
-    """
-    if model_type == "WAN2":
-        # WAN2 has a lower character limit to prevent OOM errors
-        max_length = 500
-        if len(enhanced_prompt) > max_length:
-            # If the prompt is too long, truncate it and add a note
-            truncated_prompt = enhanced_prompt[:max_length]
-            # Try to find the last complete sentence
-            last_period = truncated_prompt.rfind('.')
-            if last_period > max_length * 0.7:  # Only truncate at sentence if it's not too short
-                truncated_prompt = truncated_prompt[:last_period+1]
-            return truncated_prompt
     
-    # For other models, return the original prompt
-    return enhanced_prompt
+    Args:
+        enhanced_prompt: The prompt to be limited
+        model_type: The model type (e.g., 'WAN2')
+        
+    Returns:
+        The potentially truncated prompt with a note if truncated
+    """
+    # Define model-specific limits
+    model_limits = {
+        # Prompt types
+        "wan2": 1000,  # WAN2 has a lower limit to prevent OOM errors
+        "image": 2000,  # Image prompt type default
+        "veo": 2000,  # Video prompt type default
+        # AI Models - all set to 2000 except WAN2
+        "default": 2000,
+        "qwen": 2000,
+        "flux": 2000,
+        "pixart": 2000,
+        "dalle3": 2000,
+        "midjourney": 2000,
+        "sdxl": 2000,
+        "nunchaku": 2000,
+        "kandinsky": 2000,
+        "imagen": 2000,
+    }
+    
+    # Convert model_type to lowercase for case-insensitive matching
+    model_key = model_type.lower()
+    max_length = model_limits.get(model_key, model_limits["default"])
+    
+    if len(enhanced_prompt) <= max_length:
+        return enhanced_prompt
+        
+    # If we get here, the prompt needs to be truncated
+    truncated = False
+    
+    # First try to find a good sentence boundary
+    last_period = enhanced_prompt.rfind('.', 0, max_length)
+    last_excl = enhanced_prompt.rfind('!', 0, max_length)
+    last_question = enhanced_prompt.rfind('?', 0, max_length)
+    
+    # Find the last occurrence of any sentence terminator
+    last_sentence_end = max(last_period, last_excl, last_question)
+    
+    # If we found a good sentence end (not too early in the text)
+    if last_sentence_end > max_length * 0.7:
+        truncated_prompt = enhanced_prompt[:last_sentence_end + 1]
+        truncated = True
+    else:
+        # If no good sentence boundary, just truncate at word boundary
+        last_space = enhanced_prompt.rfind(' ', 0, max_length - 3)
+        if last_space > max_length * 0.5:  # Only if we can keep most of the text
+            truncated_prompt = enhanced_prompt[:last_space] + '...'
+            truncated = True
+        else:
+            # Last resort: hard truncation
+            truncated_prompt = enhanced_prompt[:max_length - 3] + '...'
+            truncated = True
+    
+    # Add a note if we truncated
+    if truncated:
+        truncated_prompt += "\n\n[Note: Prompt was truncated to fit model's character limit]"
+    
+    return truncated_prompt
 
 # --- Endpoints ---
 @app.get("/", response_class=HTMLResponse)
@@ -268,7 +318,7 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
 
         # --- Logic to choose meta-prompt based on prompt_type ---
         if request.prompt_type == "VEO":
-            meta_prompt = f"You are a creative assistant for the VEO text-to-video model. Expand the user's idea into a rich, cinematic prompt{instruction_text}. Describe the scene, subject, and action in a detailed paragraph.{image_context}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
+            meta_prompt = f"You are a creative assistant for the VEO text-to-video model. Expand the user's idea into a rich, cinematic prompt{instruction_text}. Describe the scene, subject, and action in a detailed paragraph.{image_context}{text_emphasis} IMPORTANT: Keep your enhanced prompt under 2000 characters total. Do not add conversational fluff. User's idea: '{request.prompt}'"
         
         elif request.prompt_type == "WAN2":
             if request.prompt:
@@ -288,19 +338,24 @@ User's Specifications:
 Generate a brief animation prompt now."""
 
         elif request.prompt_type == "Image":
+            # Determine character limit for this model
+            char_limit = 2000  # Default for most models
+            if request.model and request.model.lower() == "wan2":
+                char_limit = 1000
+            
             # Check for specific materials, styles, or compositions in the prompt
             prompt_lower = request.prompt.lower()
             
             # Material-specific handling
             if "yarn" in prompt_lower and any(word in prompt_lower for word in ["animal", "creature", "wildlife"]):
-                meta_prompt = f"You are a creative assistant for a text-to-image model specializing in yarn art. Your goal is to create a detailed prompt for an image where the main subject is an animal ENTIRELY made of yarn - not a real animal, but a yarn sculpture/creation that looks like an animal. Describe the yarn's texture, colors, stitching details, and how the yarn construction gives the animal character. Make sure to emphasize that this is a yarn creation, not a real animal with yarn elements.{instruction_text}{model_guidance} Include details about the setting and lighting that would best showcase this yarn creation.{image_context}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
+                meta_prompt = f"You are a creative assistant for a text-to-image model specializing in yarn art. Your goal is to create a detailed prompt for an image where the main subject is an animal ENTIRELY made of yarn - not a real animal, but a yarn sculpture/creation that looks like an animal. Describe the yarn's texture, colors, stitching details, and how the yarn construction gives the animal character. Make sure to emphasize that this is a yarn creation, not a real animal with yarn elements.{instruction_text}{model_guidance} Include details about the setting and lighting that would best showcase this yarn creation.{image_context}{text_emphasis} IMPORTANT: Keep your enhanced prompt under {char_limit} characters total. Do not add conversational fluff. User's idea: '{request.prompt}'"
             
             # Add all the other material-specific and style-specific handlers here...
             # (I'm omitting them for brevity, but they should remain in the actual code)
             
             # Default case with enhanced guidance
             else:
-                meta_prompt = f"You are a creative assistant for a text-to-image model. Your goal is to expand the user's idea into a rich, descriptive prompt suitable for generating a static image{instruction_text}.{model_guidance} Focus on the visual details of the scene, subject, and atmosphere. Be specific about composition (rule of thirds, leading lines, framing), perspective (eye level, bird's eye, worm's eye), depth (foreground, middle ground, background elements), and the quality of light (direction, color, intensity, shadows).{image_context}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
+                meta_prompt = f"You are a creative assistant for a text-to-image model. Your goal is to expand the user's idea into a rich, descriptive prompt suitable for generating a static image{instruction_text}.{model_guidance} Focus on the visual details of the scene, subject, and atmosphere. Be specific about composition (rule of thirds, leading lines, framing), perspective (eye level, bird's eye, worm's eye), depth (foreground, middle ground, background elements), and the quality of light (direction, color, intensity, shadows).{image_context}{text_emphasis} IMPORTANT: Keep your enhanced prompt under {char_limit} characters total. Do not add conversational fluff. User's idea: '{request.prompt}'"
         
         else:
             # Fallback for safety
@@ -313,7 +368,9 @@ Generate a brief animation prompt now."""
             return EnhanceResponse(enhanced_prompt=enhanced_prompt)
         
         # Apply length limits based on model type
-        limited_prompt = limit_prompt_length(enhanced_prompt, request.prompt_type)
+        # Use the model parameter if available, otherwise fall back to prompt_type
+        model_for_limit = request.model if request.model else request.prompt_type
+        limited_prompt = limit_prompt_length(enhanced_prompt, model_for_limit)
         
         return EnhanceResponse(enhanced_prompt=limited_prompt)
         

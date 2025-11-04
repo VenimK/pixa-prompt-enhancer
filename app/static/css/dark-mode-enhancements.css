@@ -1,0 +1,113 @@
+/* Dark Mode Specific Enhancements */
+
+body.dark-mode {
+    /* Enhanced card styling for dark mode */
+    .card {
+        background: var(--surface-color);
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    
+    /* Better text contrast */
+    .text-muted {
+        color: var(--text-muted);
+    }
+    
+    /* Enhanced input fields */
+    .form-control {
+        background-color: var(--input-bg);
+        border-color: var(--input-border);
+        color: var(--text-color);
+    }
+    
+    .form-control::placeholder {
+        color: var(--text-muted);
+        opacity: 0.6;
+    }
+    
+    /* Better button contrast */
+    .btn-primary {
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    }
+    
+    .btn-primary:hover {
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+    
+    /* Enhanced drop zone in dark mode */
+    .drop-zone {
+        background: var(--background-secondary);
+        border-color: var(--border-color);
+    }
+    
+    .drop-zone:hover {
+        background: rgba(99, 102, 241, 0.05);
+        border-color: var(--primary-color);
+    }
+    
+    /* Better navbar appearance */
+    .navbar {
+        border-bottom-color: var(--border-color);
+        background: linear-gradient(to right, transparent, rgba(99, 102, 241, 0.03));
+    }
+    
+    /* Enhanced progress steps */
+    .progress-steps {
+        background: var(--background-secondary);
+        border-color: var(--border-color);
+    }
+    
+    /* Better code block appearance */
+    code {
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--primary-light);
+        padding: 0.125rem 0.375rem;
+        border-radius: var(--radius-sm);
+    }
+    
+    /* Enhanced scrollbar for dark mode */
+    ::-webkit-scrollbar-thumb {
+        background: var(--border-color);
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--text-muted);
+    }
+    
+    /* Better select appearance */
+    select.form-control {
+        background-color: var(--input-bg);
+        color: var(--text-color);
+    }
+    
+    select.form-control option {
+        background-color: var(--surface-color);
+        color: var(--text-color);
+    }
+    
+    /* Enhanced toast notifications */
+    .toast-notification {
+        background: var(--surface-color);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    
+    /* Better history panel */
+    .history-panel {
+        background: var(--surface-color);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+}
+
+/* Smooth theme transition */
+body {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body * {
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Prevent transition on page load */
+body.preload * {
+    transition: none !important;
+}

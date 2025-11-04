@@ -1,0 +1,8 @@
+
+=== DEBUG 2025-11-04 07:18:41.148837 ===
+model_for_limit = qwen
+request.model = qwen
+request.prompt_type = Image
+enhanced_prompt length = 3085
+limit_prompt_length: model_type=qwen, model_key=qwen, max_length=2000, prompt_length=3085
+Prompt WAS TRUNCATED! Original length: 3085, max_length: 2000, truncated to: 2029

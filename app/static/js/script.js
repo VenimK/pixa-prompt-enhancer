@@ -1,4 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Initialize Theme Early ---
+    const savedTheme = localStorage.getItem('darkMode');
+    if (savedTheme === 'true') {
+        document.documentElement.classList.add('dark-mode');
+        document.body.classList.add('dark-mode');
+    }
+    
     // --- Prompt History Management ---
     const HISTORY_STORAGE_KEY = 'pixa_prompt_history';
     const MAX_HISTORY_ITEMS = 50;
@@ -273,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
         step2: document.querySelector('.step[data-step="2"]'),
         
         // Theme
-        themeToggle: document.getElementById('checkbox')
+        themeToggle: document.getElementById('theme-toggle')
     };
 
     // --- Toast Notification Logic ---
@@ -300,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Theme Switcher Logic ---
     function applySavedTheme() {
         const isDarkMode = localStorage.getItem('darkMode') === 'true';
+        document.documentElement.classList.toggle('dark-mode', isDarkMode);
         document.body.classList.toggle('dark-mode', isDarkMode);
         if (els.themeToggle) {
             els.themeToggle.checked = isDarkMode;
@@ -308,8 +316,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (els.themeToggle) {
         els.themeToggle.addEventListener('change', function() {
-            document.body.classList.toggle('dark-mode');
-            localStorage.setItem('darkMode', this.checked);
+            const isDark = this.checked;
+            document.documentElement.classList.toggle('dark-mode', isDark);
+            document.body.classList.toggle('dark-mode', isDark);
+            localStorage.setItem('darkMode', isDark);
+            
+            // Show a toast notification
+            showToast(isDark ? '🌙 Dark mode enabled' : '☀️ Light mode enabled', 'info', 2000);
         });
     }
 
@@ -358,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Show analyzing state
             showToast('Analyzing image...', 'info');
-            els.imageResult.style.display = 'flex';
+            els.imageResult.style.display = 'block';
             els.analyze.disabled = true;
             els.analyze.innerHTML = '<div class="loader-small"></div> Analyzing...';
             
@@ -374,11 +387,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Clear previous results and insert progress bar
             els.imageProgressContainer.innerHTML = '';
+            els.imageProgressContainer.style.display = 'block';
             els.imageDescription.innerHTML = '';
+            els.imageDescription.parentElement.style.display = 'none';
             els.imageProgressContainer.appendChild(progressContainer);
             
             // Show image preview
             els.imagePreview.src = URL.createObjectURL(file);
+            els.imagePreview.style.display = 'block';
             els.clearImage.style.display = 'inline-block';
 
             const formData = new FormData();
@@ -404,25 +420,31 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         // Clear progress bar
                         els.imageProgressContainer.innerHTML = '';
+                        els.imageProgressContainer.style.display = 'none';
                         
                         // Check if the response contains an error message
                         if (data.description && data.description.startsWith('Error:')) {
                             els.imageDescription.innerHTML = `<div class="error-message">${data.description}</div>`;
+                            els.imageDescription.parentElement.style.display = 'block';
                             showToast('Image analysis failed: ' + data.description.split(':')[1], 'error');
                         } else {
                             // Success - show the description
                             els.imageDescription.innerHTML = data.description;
+                            els.imageDescription.parentElement.style.display = 'block';
+                            els.imagePreview.style.display = 'block';
                             showToast('Image analyzed successfully!', 'success');
                             updateProgress(1, 'completed');
                             updateProgress(2, 'active');
                         }
                     } catch (error) {
                         els.imageDescription.innerHTML = '<div class="error-message">Failed to parse server response</div>';
+                        els.imageDescription.parentElement.style.display = 'block';
                         showToast('Image analysis failed: Invalid server response', 'error');
                     }
                 } else {
                     els.imageProgressContainer.innerHTML = ''; // Clear progress on error
                     els.imageDescription.innerHTML = '<div class="error-message">Server error: ' + xhr.status + '</div>';
+                    els.imageDescription.parentElement.style.display = 'block';
                     showToast('Image analysis failed: Server error', 'error');
                 }
                 
@@ -435,6 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('XHR network error occurred.');
                 els.imageProgressContainer.innerHTML = ''; // Clear progress on error
                 els.imageDescription.innerHTML = '<div class="error-message">Network error occurred</div>';
+                els.imageDescription.parentElement.style.display = 'block';
                 showToast('Image analysis failed: Network error', 'error');
                 els.analyze.disabled = false;
                 els.analyze.innerHTML = 'Analyze Image';
@@ -442,6 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             xhr.addEventListener('abort', () => {
                 els.imageDescription.innerHTML = '<div class="error-message">Upload aborted</div>';
+                els.imageDescription.parentElement.style.display = 'block';
                 showToast('Image analysis aborted', 'warning');
                 els.analyze.disabled = false;
                 els.analyze.innerHTML = 'Analyze Image';
@@ -1425,7 +1449,11 @@ document.addEventListener('DOMContentLoaded', () => {
             els.imageResult.style.display = 'none';
             els.clearImage.style.display = 'none';
             els.imagePreview.src = '#';
+            els.imagePreview.style.display = 'none';
             els.imageDescription.innerText = '';
+            els.imageDescription.parentElement.style.display = 'none';
+            els.imageProgressContainer.innerHTML = '';
+            showToast('Image cleared', 'info');
         });
     }
 
@@ -1891,9 +1919,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Model-specific character limits
     const MODEL_CHAR_LIMITS = {
         'Image': {
-            'default': 1000,
+            'default': 2000,
             'flux': 1200,
-            'qwen': 1000,
+            'qwen': 2000,  // Increased Qwen limit to 2000 characters
             'nunchaku': 800
         },
         'VEO': {
@@ -1928,8 +1956,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const count = els.prompt.value.length;
             const charLimit = getCurrentCharLimit();
             
-            // Update the character count display
-            els.charCount.textContent = count;
+            // Update the character count display with current count and limit
+            els.charCount.textContent = `${count} / ${charLimit}`;
             
             // Create or update the model limit info element
             let modelLimitInfo = document.querySelector('.model-limit-info');
@@ -1967,6 +1995,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add input event listener to prompt textarea for character counting
     if (els.prompt && els.charCount) {
         els.prompt.addEventListener('input', updateCharCount);
+        
+        // Add event listener for model selection changes
+        if (els.modelSelect) {
+            els.modelSelect.addEventListener('change', updateCharCount);
+        }
+        
+        // Add event listener for prompt type changes
+        if (els.promptType) {
+            els.promptType.addEventListener('change', updateCharCount);
+        }
         
         // Initialize character count on page load
         updateCharCount();
@@ -2019,38 +2057,46 @@ document.addEventListener('DOMContentLoaded', () => {
             // Double-check what we're about to copy
             console.log('About to copy text:', textToCopy.substring(0, 200) + (textToCopy.length > 200 ? '...' : ''));
 
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                console.log('Text copied successfully to clipboard');
-                console.log('Copied text preview:', textToCopy.substring(0, 100) + '...');
-                showToast('Enhanced prompt copied to clipboard!', 'success');
-            }).catch(err => {
-                console.error('Failed to copy text to clipboard: ', err);
-                console.error('Error details:', err.message);
-                showToast('Failed to copy text. Please try selecting and copying manually.', 'error');
-
-                // Fallback: try the older method
-                console.log('Trying fallback copy method...');
+            // Check if clipboard API is available
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    console.log('Text copied successfully to clipboard');
+                    console.log('Copied text preview:', textToCopy.substring(0, 100) + '...');
+                    showToast('Enhanced prompt copied to clipboard!', 'success');
+                }).catch(err => {
+                    console.error('Failed to copy text to clipboard: ', err);
+                    console.error('Error details:', err.message);
+                    // Use fallback method
+                    copyTextFallback(textToCopy);
+                });
+            } else {
+                // Clipboard API not available, use fallback immediately
+                console.log('Clipboard API not available, using fallback method');
+                copyTextFallback(textToCopy);
+            }
+            
+            // Fallback copy function
+            function copyTextFallback(text) {
                 try {
                     const textArea = document.createElement('textarea');
-                    textArea.value = textToCopy;
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-9999px';
                     document.body.appendChild(textArea);
                     textArea.select();
-                    document.execCommand('copy');
+                    const successful = document.execCommand('copy');
                     document.body.removeChild(textArea);
-                    console.log('Fallback copy successful');
-                    showToast('Enhanced prompt copied to clipboard!', 'success');
+                    if (successful) {
+                        console.log('Fallback copy successful');
+                        showToast('Enhanced prompt copied to clipboard!', 'success');
+                    } else {
+                        throw new Error('execCommand copy returned false');
+                    }
                 } catch (fallbackErr) {
                     console.error('Fallback copy also failed:', fallbackErr);
-                    console.error('Final fallback: Trying to copy just the first part of the text');
-                    try {
-                        navigator.clipboard.writeText(textToCopy.substring(0, 500));
-                        showToast('Enhanced prompt copied to clipboard!', 'success');
-                    } catch (finalErr) {
-                        console.error('All copy methods failed:', finalErr);
-                        showToast('Copy failed. Please select the text manually and copy.', 'error');
-                    }
+                    showToast('Copy failed. Please select the text manually and copy (Cmd+C or Ctrl+C).', 'error');
                 }
-            });
+            }
         });
     } else {
         console.log('Copy button element NOT found');

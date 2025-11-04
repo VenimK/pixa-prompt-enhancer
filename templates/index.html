@@ -6,103 +6,146 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PiXa Prompt Enhancer</title>
     <link rel="stylesheet" href="/static/css/styles.css?v={{ version }}">
+    <link rel="stylesheet" href="/static/css/professional-additions.css?v={{ version }}">
+    <link rel="stylesheet" href="/static/css/dark-mode-enhancements.css?v={{ version }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        // Apply dark mode before page renders to prevent flash
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.documentElement.classList.add('dark-mode');
+        }
+    </script>
 </head>
-<body>
+<body class="fade-in">
     <div id="toast-container" class="toast-container"></div>
     <div class="page-wrapper">
+        <nav class="navbar">
+            <h1 class="nav-title">PiXa Prompt Enhancer</h1>
+            <div class="nav-actions">
+                <button id="shortcuts-btn" class="btn btn-outline" title="Keyboard Shortcuts">⌨️ Shortcuts</button>
+                <label class="theme-switch" for="theme-toggle" title="Toggle Dark Mode">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </nav>
+
         {% if not api_key_set %}
-        <div class="api-key-warning">
-            <strong>Warning:</strong> The <code>GOOGLE_API_KEY</code> environment variable is not set. The application's core features will not work until it is configured. Please set the variable and restart the server.
+        <div class="card api-warning">
+            <div class="card-header">
+                <h3 class="card-title">⚠️ Configuration Required</h3>
+            </div>
+            <p>The <code>GOOGLE_API_KEY</code> environment variable is not set. Please set the variable and restart the server for full functionality.</p>
         </div>
         {% else %}
-        <div class="api-key-info">
-            <strong>API:</strong> {{ api_key_info.provider }} (Key: {{ api_key_info.masked_key }})
+        <div class="card api-info">
+            <p><strong>API:</strong> {{ api_key_info.provider }} (Key: {{ api_key_info.masked_key }})</p>
         </div>
         {% endif %}
-        <div class="theme-switch-container">
-        <label class="theme-switch" for="checkbox">
-            <input type="checkbox" id="checkbox" />
-            <div class="slider round"></div>
-        </label>
-    </div>
-    <div class="container">
-        <button id="shortcuts-btn" class="shortcuts-btn" title="Show Keyboard Shortcuts">⌨</button>
-        <div id="shortcuts-overlay" class="shortcuts-overlay">
-            <div class="shortcuts-content">
-                <h3>Keyboard Shortcuts</h3>
-                <div class="shortcut-grid">
-                    <div class="shortcut">
-                        <kbd>Ctrl</kbd> + <kbd>Enter</kbd>
-                        <span>Enhance Prompt</span>
-                    </div>
-                    <div class="shortcut">
-                        <kbd>Esc</kbd>
-                        <span>Clear Prompt</span>
-                    </div>
-                    <div class="shortcut">
-                        <kbd>Ctrl</kbd> + <kbd>C</kbd>
-                        <span>Copy Enhanced Prompt</span>
-                    </div>
-                    <div class="shortcut">
-                        <kbd>Ctrl</kbd> + <kbd>H</kbd>
-                        <span>Toggle History Panel</span>
-                    </div>
-                    <div class="shortcut">
-                        <kbd>Ctrl</kbd> + <kbd>M</kbd>
-                        <span>Toggle Comparison View</span>
-                    </div>
-                    <div class="shortcut">
-                        <kbd>Ctrl</kbd> + <kbd>S</kbd>
-                        <span>Save Prompt for Comparison</span>
+
+        <!-- Shortcuts Modal -->
+        <div id="shortcuts-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Keyboard Shortcuts</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="shortcut-grid">
+                        <div class="shortcut-item">
+                            <kbd>Ctrl</kbd> + <kbd>Enter</kbd>
+                            <span>Enhance Prompt</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Esc</kbd>
+                            <span>Clear Prompt</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Ctrl</kbd> + <kbd>C</kbd>
+                            <span>Copy Enhanced Prompt</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Ctrl</kbd> + <kbd>H</kbd>
+                            <span>Toggle History</span>
+                        </div>
                     </div>
                 </div>
-                <button class="close-shortcuts">Close</button>
             </div>
         </div>
-        <div class="history-panel">
-            <div class="history-header">
-                <h3>Prompt History</h3>
-                <button id="clear-history" class="clear-history-btn" title="Clear History">&times;</button>
+        
+        <main class="main-content">
+            <div class="card intro-card">
+                <h2>Create powerful, nuanced prompts for generative AI models</h2>
+                <p>Enhance your text prompts with detailed styles, lighting, and effects to get better results from AI models.</p>
+                
+                <div class="progress-steps">
+                    <div class="step active" data-step="1">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <div class="step-title">Analyze Image</div>
+                            <div class="step-description">Optional - Upload an image for analysis</div>
+                        </div>
+                    </div>
+                    <div class="step" data-step="2">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <div class="step-title">Enhance Prompt</div>
+                            <div class="step-description">Generate detailed AI prompts</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div id="history-list" class="history-list">
-                <!-- History items will be added here dynamically -->
-            </div>
-        </div>
-        <div class="header">
-            <h1>PiXa Prompt Enhancer</h1>
-        </div>
-        <p>Create powerful, nuanced prompts for generative AI models.</p>
-        <div class="progress-steps">
-            <div class="step" data-step="1">
-                <div class="step-number">1</div>
-                <div class="step-label">Analyze Image (Optional)</div>
-            </div>
-            <div class="step" data-step="2">
-                <div class="step-number">2</div>
-                <div class="step-label">Enhance Prompt</div>
-            </div>
-        </div>
-        <div class="main-content">
-            <div class="card image-card">
-                <h2>Step 1: Analyze Image (Optional)</h2>
-                <div class="image-analysis-section">
-                    <div class="drop-zone" id="drop-zone">
-                        <input type="file" id="image-upload" accept="image/*" class="drop-zone-input">
-                        <div class="drop-zone-content">
-                            <div class="drop-zone-text">
-                                <span class="drop-zone-prompt">Drop image here or click to upload</span>
-                                <span class="drop-zone-hint">Supports: JPG, PNG, GIF</span>
+            <div class="card image-upload-card">
+                <div class="card-header">
+                    <h3 class="card-title">Step 1: Analyze Image (Optional)</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <div class="drop-zone" id="drop-zone">
+                            <input type="file" id="image-upload" accept="image/*" class="drop-zone-input">
+                            <div class="drop-zone-content">
+                                <div class="drop-zone-icon">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"></path>
+                                        <line x1="16" y1="5" x2="22" y2="5"></line>
+                                        <line x1="19" y1="2" x2="19" y2="8"></line>
+                                        <circle cx="9" cy="9" r="2"></circle>
+                                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                                    </svg>
+                                </div>
+                                <div class="drop-zone-text">
+                                    <p class="drop-zone-prompt">Drag & drop an image here, or click to select</p>
+                                    <p class="drop-zone-hint">Supports JPG, PNG, GIF • Max 5MB</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="image-buttons">
-                        <button id="analyze-button">Analyze Image</button>
-                        <button id="clear-image-button" class="clear-image-btn" style="display: none;">Clear Image</button>
+                    <div class="form-actions">
+                        <button id="analyze-button" class="btn btn-primary">
+                            <span class="btn-icon">🔍</span>
+                            <span>Analyze Image</span>
+                        </button>
+                        <button id="clear-image-button" class="btn btn-outline" style="display: none;">
+                            <span class="btn-icon">🗑️</span>
+                            <span>Clear</span>
+                        </button>
                     </div>
-                    <div id="image-result-container" style="display: none;">
-                        <img id="image-preview" src="#" alt="Image Preview"/>
-                        <div id="image-progress-container"></div>
-                        <div id="image-description-text"></div>
+                    
+                    <!-- Image Analysis Result Container -->
+                    <div id="image-result-container" class="image-result-container" style="display: none; margin-top: 1.5rem; padding: 1rem; background: var(--card-bg); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                        <div class="image-preview-container" style="margin-bottom: 1rem; text-align: center;">
+                            <img id="image-preview" src="#" alt="Uploaded preview" style="max-width: 100%; max-height: 300px; border-radius: var(--radius-sm); display: none;">
+                        </div>
+                        <div id="image-progress-container" style="display: none; margin-bottom: 1rem;">
+                            <div class="progress-bar" style="height: 4px; background: var(--border-color); border-radius: 2px; overflow: hidden;">
+                                <div class="progress" style="height: 100%; width: 0%; background: var(--primary-color); transition: width 0.3s ease;"></div>
+                            </div>
+                            <p style="text-align: center; margin: 0.5rem 0 0; color: var(--text-muted); font-size: 0.875rem;">Analyzing image...</p>
+                        </div>
+                        <div id="image-description" style="display: none;">
+                            <h4 style="margin: 0 0 0.5rem; font-size: 1rem; color: var(--text-color);">Image Analysis:</h4>
+                            <p id="image-description-text" style="margin: 0; color: var(--text-muted); font-size: 0.9375rem; line-height: 1.5;"></p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -219,7 +262,7 @@
                     <textarea id="prompt-input" placeholder="e.g., a cat riding a skateboard"></textarea>
                     <button id="clear-button" class="clear-btn" title="Clear text">&times;</button>
                     <div class="char-counter">
-                        <span id="char-count">0</span> / 1000
+                        <span id="char-count">0</span>
                     </div>
                 </div>
         <div class="selectors-container">
@@ -592,8 +635,21 @@
                     </div>
                 </div>
             </div>
+        </main>
+        
+        <aside class="sidebar">
+            <div class="card history-panel">
+                <div class="card-header">
+                    <h3 class="card-title">Prompt History</h3>
+                    <button id="clear-history" class="btn btn-sm btn-outline" title="Clear History">Clear All</button>
+                </div>
+                <div id="history-list" class="history-list">
+                    <!-- History items will be added here dynamically -->
+                </div>
+            </div>
+        </aside>
 
-    <button id="scroll-to-top-btn">&#8679;</button>
+        <button id="scroll-to-top-btn">&#8679;</button>
 
     </div> <!-- Closing page-wrapper -->
     <script src="/static/js/script.js?v={{ version }}"></script>
