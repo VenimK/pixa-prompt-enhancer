@@ -10,12 +10,50 @@ import os
 import google.generativeai as genai
 import PIL.Image
 import time
+from datetime import datetime
 from dotenv import load_dotenv
+import atexit
 
 # Load environment variables from .env file
 load_dotenv()
 
 app = FastAPI()
+
+# Debug log configuration
+DEBUG_LOG_PATH = "debug.log"
+
+# Initialize debug log on startup
+def init_debug_log():
+    """Clear and initialize the debug log file"""
+    with open(DEBUG_LOG_PATH, "w") as f:
+        f.write(f"=== Prompt Enhancer Debug Log Started at {datetime.now()} ===\n")
+        f.write(f"Application initialized\n\n")
+
+def log_debug(message: str):
+    """Write a debug message to the log file"""
+    try:
+        with open(DEBUG_LOG_PATH, "a") as f:
+            f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}\n")
+    except Exception as e:
+        print(f"Failed to write to debug log: {e}")
+
+def shutdown_debug_log():
+    """Log shutdown message"""
+    log_debug("=== Application shutting down ===\n")
+
+# Initialize log on startup
+init_debug_log()
+
+# Register shutdown handler
+atexit.register(shutdown_debug_log)
+
+@app.on_event("startup")
+async def startup_event():
+    log_debug("FastAPI startup event triggered")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    log_debug("FastAPI shutdown event triggered")
 
 # Enable CORS
 app.add_middleware(
@@ -123,8 +161,13 @@ def limit_prompt_length(enhanced_prompt: str, model_type: str) -> str:
     model_key = model_type.lower()
     max_length = model_limits.get(model_key, model_limits["default"])
     
+    log_debug(f"  - Checking limit: model_type={model_type}, max_length={max_length} chars")
+    
     if len(enhanced_prompt) <= max_length:
+        log_debug(f"  ✓ Within limit ({len(enhanced_prompt)} <= {max_length})")
         return enhanced_prompt
+    
+    log_debug(f"  ✗ EXCEEDS limit ({len(enhanced_prompt)} > {max_length}) - truncation needed")
         
     # If we get here, the prompt needs to be truncated
     truncated = False
@@ -141,26 +184,31 @@ def limit_prompt_length(enhanced_prompt: str, model_type: str) -> str:
     if last_sentence_end > max_length * 0.7:
         truncated_prompt = enhanced_prompt[:last_sentence_end + 1]
         truncated = True
+        log_debug(f"  - Truncation method: Sentence boundary (at position {last_sentence_end})")
     else:
         # If no good sentence boundary, just truncate at word boundary
         last_space = enhanced_prompt.rfind(' ', 0, max_length - 3)
         if last_space > max_length * 0.5:  # Only if we can keep most of the text
             truncated_prompt = enhanced_prompt[:last_space] + '...'
             truncated = True
+            log_debug(f"  - Truncation method: Word boundary (at position {last_space})")
         else:
             # Last resort: hard truncation
             truncated_prompt = enhanced_prompt[:max_length - 3] + '...'
             truncated = True
+            log_debug(f"  - Truncation method: Hard truncation (at position {max_length - 3})")
     
     # Add a note if we truncated
     if truncated:
         truncated_prompt += "\n\n[Note: Prompt was truncated to fit model's character limit]"
+        log_debug(f"  - Result: {len(enhanced_prompt)} chars → {len(truncated_prompt)} chars (removed {len(enhanced_prompt) - len(truncated_prompt)} chars)")
     
     return truncated_prompt
 
 # --- Endpoints ---
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
+    log_debug(f"GET / - Home page accessed from {request.client.host}")
     api_key_set = "GOOGLE_API_KEY" in os.environ
     api_key_info = {}
     if api_key_set:
@@ -225,6 +273,9 @@ async def analyze_image_endpoint(image: UploadFile = File(...)):
 @app.post("/enhance", response_model=EnhanceResponse)
 async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
     """Enhance the prompt using Gemini API."""
+    import time
+    start_time = time.time()
+    
     try:
         # Validate input
         if not request.prompt and request.prompt_type != "WAN2":
@@ -370,12 +421,54 @@ Generate a brief animation prompt now."""
         # Apply length limits based on model type
         # Use the model parameter if available, otherwise fall back to prompt_type
         model_for_limit = request.model if request.model else request.prompt_type
+        
+        log_debug(f"\n{'='*60}")
+        log_debug(f"ENHANCE REQUEST")
+        log_debug(f"{'='*60}")
+        log_debug(f"User Settings:")
+        log_debug(f"  - Prompt Type: {request.prompt_type}")
+        log_debug(f"  - Model: {request.model}")
+        log_debug(f"  - Style: {request.style}")
+        log_debug(f"  - Cinematography: {request.cinematography}")
+        log_debug(f"  - Lighting: {request.lighting}")
+        if hasattr(request, 'motion_effect') and request.motion_effect:
+            log_debug(f"  - Motion Effect: {request.motion_effect}")
+        if request.text_emphasis:
+            log_debug(f"  - Text Emphasis: {request.text_emphasis[:50]}...")
+        if request.image_description:
+            log_debug(f"  - Image Description: Present ({len(request.image_description)} chars)")
+        
+        log_debug(f"\nOriginal Prompt ({len(request.prompt)} chars):")
+        log_debug(f"  {request.prompt[:200]}{'...' if len(request.prompt) > 200 else ''}")
+        
+        log_debug(f"\nEnhanced Prompt ({len(enhanced_prompt)} chars):")
+        log_debug(f"  {enhanced_prompt[:200]}{'...' if len(enhanced_prompt) > 200 else ''}")
+        
+        log_debug(f"\nModel Guidance Used:")
+        if model_guidance:
+            log_debug(f"  {model_guidance[:150]}{'...' if len(model_guidance) > 150 else ''}")
+        else:
+            log_debug(f"  None (default/standard)")
+        
+        log_debug(f"\nCharacter Limit Check:")
+        log_debug(f"  - Model for limit: {model_for_limit}")
+        
         limited_prompt = limit_prompt_length(enhanced_prompt, model_for_limit)
+        
+        log_debug(f"\nFinal Output:")
+        log_debug(f"  - Length: {len(limited_prompt)} chars")
+        log_debug(f"  - Truncated: {'YES' if len(limited_prompt) != len(enhanced_prompt) else 'NO'}")
+        
+        elapsed_time = time.time() - start_time
+        log_debug(f"\n⏱️  Processing time: {elapsed_time:.2f} seconds")
+        log_debug(f"{'='*60}\n")
         
         return EnhanceResponse(enhanced_prompt=limited_prompt)
         
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
+        log_debug(f"ERROR in enhance_prompt_endpoint: {e}")
+        log_debug(f"Error traceback: {error_details}")
         print(f"Error in enhance_prompt_endpoint: {error_details}")
         return EnhanceResponse(enhanced_prompt=f"An unexpected error occurred: {e}. Please try again later.")
