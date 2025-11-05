@@ -33,12 +33,27 @@ jobs:
         cache: 'npm'
     
     - name: Install Python dependencies
+      timeout-minutes: 5
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        if ($env:RUNNER_OS -eq "Windows") {
-          # Additional Windows-specific setup if needed
-          Write-Host "Windows specific setup"
+        try {
+          Write-Host "Upgrading pip..."
+          python -m pip install --upgrade pip
+          
+          Write-Host "Installing requirements..."
+          pip install -r requirements.txt
+          
+          if ($env:RUNNER_OS -eq "Windows") {
+            Write-Host "Running Windows-specific setup..."
+            # Additional Windows-specific setup if needed
+            python -c "import sys; print(f'Python {sys.version}')"
+          }
+          
+          Write-Host "Dependencies installed successfully"
+        } catch {
+          Write-Host "Error installing dependencies: $_"
+          Write-Host "Python version: $(python --version)"
+          Write-Host "Pip version: $(pip --version)"
+          exit 1
         }
     
     - name: Install Node.js dependencies
