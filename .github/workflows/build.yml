@@ -66,16 +66,32 @@ jobs:
           npm install
         fi
     
+    - name: Check for tests directory
+      id: check_tests
+      shell: bash
+      run: |
+        if [ -d "tests" ] && [ -n "$(ls -A tests/ 2>/dev/null)" ]; then
+          echo "HAS_TESTS=true" >> $GITHUB_OUTPUT
+        else
+          echo "HAS_TESTS=false" >> $GITHUB_OUTPUT
+        fi
+    
     - name: Run Python tests (Linux/macOS)
-      if: matrix.os != 'windows-latest'
+      if: matrix.os != 'windows-latest' && steps.check_tests.outputs.HAS_TESTS == 'true'
       shell: bash
       run: |
         source venv/bin/activate
         pip install pytest pytest-cov
-        python -m pytest tests/ || echo "No tests found or tests failed"
+        python -m pytest tests/
+    
+    - name: Skip tests (Linux/macOS - no tests directory)
+      if: matrix.os != 'windows-latest' && steps.check_tests.outputs.HAS_TESTS != 'true'
+      shell: bash
+      run: |
+        echo "No tests directory found, skipping tests"
     
     - name: Run Python tests (Windows)
-      if: matrix.os == 'windows-latest'
+      if: matrix.os == 'windows-latest' && steps.check_tests.outputs.HAS_TESTS == 'true'
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Continue'
@@ -118,6 +134,12 @@ jobs:
             Write-Output "Unexpected error: $_"
             exit 1
         }
+    
+    - name: Skip tests (Windows - no tests directory)
+      if: matrix.os == 'windows-latest' && steps.check_tests.outputs.HAS_TESTS != 'true'
+      shell: pwsh
+      run: |
+        Write-Output "No tests directory found, skipping tests"
     
     - name: Lint Python code
       shell: bash
