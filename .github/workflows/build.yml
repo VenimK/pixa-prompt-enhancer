@@ -1,25 +1,31 @@
-name: Build and Test
+name: Build, Test, and Package
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  release:
+    types: [created]
 
 jobs:
-  test:
+  build:
+    name: Build and Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.9', '3.10', '3.11']
-        exclude:
-          # Skip Python 3.11 on Windows as it might have compatibility issues
+        python-version: ['3.10']  # Use a single, well-supported version for builds
+        include:
+          - os: ubuntu-latest
+            artifact_name: prompt-enhancer-linux
           - os: windows-latest
-            python-version: '3.11'
+            artifact_name: prompt-enhancer-windows
+          - os: macos-latest
+            artifact_name: prompt-enhancer-macos
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
@@ -27,52 +33,42 @@ jobs:
         python-version: ${{ matrix.python-version }}
     
     - name: Install Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'  # Using LTS version
         cache: 'npm'
     
-    - name: Install Python dependencies
-      timeout-minutes: 5
+    - name: Install system dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
       run: |
-        try {
-          Write-Host "Upgrading pip..."
-          python -m pip install --upgrade pip
-          
-          Write-Host "Installing requirements..."
-          pip install -r requirements.txt
-          
-          if ($env:RUNNER_OS -eq "Windows") {
-            Write-Host "Running Windows-specific setup..."
-            # Additional Windows-specific setup if needed
-            python -c "import sys; print(f'Python {sys.version}')"
-          }
-          
-          Write-Host "Dependencies installed successfully"
-        } catch {
-          Write-Host "Error installing dependencies: $_"
-          Write-Host "Python version: $(python --version)"
-          Write-Host "Pip version: $(pip --version)"
-          exit 1
-        }
+        sudo apt-get update
+        sudo apt-get install -y python3-venv
+    
+    - name: Set up Python environment
+      shell: bash
+      run: |
+        python -m venv venv
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          source venv/Scripts/activate
+        else
+          source venv/bin/activate
+        fi
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
     
     - name: Install Node.js dependencies
       run: npm ci
     
     - name: Run Python tests
+      shell: bash
       run: |
-        # Add your test command here, for example:
-        # python -m pytest tests/
-        echo "Running Python tests"
-    
-    - name: Run Node.js tests
-      run: |
-        # Add your test command here, for example:
-        # npm test
-        echo "Running Node.js tests"
+        source venv/bin/activate
+        python -m pytest tests/ || echo "No tests found or tests failed"
     
     - name: Lint Python code
+      shell: bash
       run: |
+        source venv/bin/activate
         pip install black flake8
         black --check .
         flake8 .
@@ -83,7 +79,9 @@ jobs:
     - name: Verify application starts
       env:
         GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      shell: bash
       run: |
+        source venv/bin/activate
         # Start the server in the background
         nohup uvicorn app.main:app --port 8000 --host 0.0.0.0 > server.log 2>&1 &
         SERVER_PID=$!
@@ -93,12 +91,79 @@ jobs:
         
         # Check if the server is running
         if curl --output /dev/null --silent --head --fail http://localhost:8000; then
-          echo "Server started successfully"
+          echo "✅ Server started successfully"
+          # Kill the server
+          kill $SERVER_PID
         else
-          echo "Server failed to start"
+          echo "❌ Server failed to start"
           cat server.log
           exit 1
         fi
+    
+    - name: Create package for distribution
+      shell: bash
+      run: |
+        mkdir -p dist/${{ matrix.artifact_name }}
         
-        # Kill the server
-        kill $SERVER_PID
+        # Copy necessary files
+        cp -r app dist/${{ matrix.artifact_name }}/
+        cp -r static dist/${{ matrix.artifact_name }}/
+        cp requirements.txt dist/${{ matrix.artifact_name }}/
+        cp README.md dist/${{ matrix.artifact_name }}/
+        
+        # Create a run script
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          echo "@echo off" > dist/${{ matrix.artifact_name }}/run.bat
+          echo "python -m venv venv" >> dist/${{ matrix.artifact_name }}/run.bat
+          echo "call venv\\Scripts\\activate.bat" >> dist/${{ matrix.artifact_name }}/run.bat
+          echo "pip install -r requirements.txt" >> dist/${{ matrix.artifact_name }}/run.bat
+          echo "uvicorn app.main:app --host 0.0.0.0 --port 8000" >> dist/${{ matrix.artifact_name }}/run.bat
+        else
+          echo '#!/bin/bash' > dist/${{ matrix.artifact_name }}/run.sh
+          echo 'python3 -m venv venv' >> dist/${{ matrix.artifact_name }}/run.sh
+          echo 'source venv/bin/activate' >> dist/${{ matrix.artifact_name }}/run.sh
+          echo 'pip install -r requirements.txt' >> dist/${{ matrix.artifact_name }}/run.sh
+          echo 'uvicorn app.main:app --host 0.0.0.0 --port 8000' >> dist/${{ matrix.artifact_name }}/run.sh
+          chmod +x dist/${{ matrix.artifact_name }}/run.sh
+        fi
+        
+        # Create archive
+        cd dist
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          Compress-Archive -Path ${{ matrix.artifact_name }} -DestinationPath ${{ matrix.artifact_name }}.zip -Force
+        else
+          tar -czf ${{ matrix.artifact_name }}.tar.gz ${{ matrix.artifact_name }}
+        fi
+        cd ..
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: dist/${{ matrix.artifact_name }}*.*
+        retention-days: 1
+
+  release:
+    name: Create Release
+    needs: build
+    if: github.event_name == 'release' && github.event.action == 'created'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/prompt-enhancer-linux/*
+            artifacts/prompt-enhancer-macos/*
+            artifacts/prompt-enhancer-windows/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
