@@ -23,7 +23,8 @@ Pixa Prompt Enhancer is a web-based application that helps you create rich and d
     source venv/bin/activate
 
     # On Windows, use:
-    # venv\Scripts\activate
+    python3 -m venv venv
+    venv\Scripts\activate
     ```
 
 3.  **Install the dependencies:**
@@ -67,8 +68,10 @@ If you receive an error like `400 API key not valid`, it usually means the envir
 
 1.  **Run the application:**
     ```bash
-    uvicorn app.main:app --reload
+    uvicorn app.main:app --reload --log-level debug
     ```
+    using other port
+    uvicorn app.main:app --port 8001 --host 0.0.0.0 --reload --log-level debug
 
 2.  **Open your browser:**
     Navigate to `http://127.0.0.1:8000` in your web browser.
