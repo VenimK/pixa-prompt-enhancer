@@ -57,7 +57,14 @@ jobs:
         pip install -r requirements.txt
     
     - name: Install Node.js dependencies
-      run: npm ci
+      shell: bash
+      run: |
+        # Use npm ci for clean install
+        if [ -f "package-lock.json" ]; then
+          npm ci
+        else
+          npm install
+        fi
     
     - name: Run Python tests
       shell: bash
@@ -100,7 +107,8 @@ jobs:
           exit 1
         fi
     
-    - name: Create package for distribution
+    - name: Create package for distribution (Linux/macOS)
+      if: matrix.os != 'windows-latest'
       shell: bash
       run: |
         mkdir -p dist/${{ matrix.artifact_name }}
@@ -111,30 +119,43 @@ jobs:
         cp requirements.txt dist/${{ matrix.artifact_name }}/
         cp README.md dist/${{ matrix.artifact_name }}/
         
-        # Create a run script
-        if [[ "${{ runner.os }}" == "Windows" ]]; then
-          echo "@echo off" > dist/${{ matrix.artifact_name }}/run.bat
-          echo "python -m venv venv" >> dist/${{ matrix.artifact_name }}/run.bat
-          echo "call venv\\Scripts\\activate.bat" >> dist/${{ matrix.artifact_name }}/run.bat
-          echo "pip install -r requirements.txt" >> dist/${{ matrix.artifact_name }}/run.bat
-          echo "uvicorn app.main:app --host 0.0.0.0 --port 8000" >> dist/${{ matrix.artifact_name }}/run.bat
-        else
-          echo '#!/bin/bash' > dist/${{ matrix.artifact_name }}/run.sh
-          echo 'python3 -m venv venv' >> dist/${{ matrix.artifact_name }}/run.sh
-          echo 'source venv/bin/activate' >> dist/${{ matrix.artifact_name }}/run.sh
-          echo 'pip install -r requirements.txt' >> dist/${{ matrix.artifact_name }}/run.sh
-          echo 'uvicorn app.main:app --host 0.0.0.0 --port 8000' >> dist/${{ matrix.artifact_name }}/run.sh
-          chmod +x dist/${{ matrix.artifact_name }}/run.sh
-        fi
+        # Create a run script for Linux/macOS
+        echo '#!/bin/bash' > dist/${{ matrix.artifact_name }}/run.sh
+        echo 'python3 -m venv venv' >> dist/${{ matrix.artifact_name }}/run.sh
+        echo 'source venv/bin/activate' >> dist/${{ matrix.artifact_name }}/run.sh
+        echo 'pip install -r requirements.txt' >> dist/${{ matrix.artifact_name }}/run.sh
+        echo 'uvicorn app.main:app --host 0.0.0.0 --port 8000' >> dist/${{ matrix.artifact_name }}/run.sh
+        chmod +x dist/${{ matrix.artifact_name }}/run.sh
         
         # Create archive
         cd dist
-        if [[ "${{ runner.os }}" == "Windows" ]]; then
-          Compress-Archive -Path ${{ matrix.artifact_name }} -DestinationPath ${{ matrix.artifact_name }}.zip -Force
-        else
-          tar -czf ${{ matrix.artifact_name }}.tar.gz ${{ matrix.artifact_name }}
-        fi
+        tar -czf ${{ matrix.artifact_name }}.tar.gz ${{ matrix.artifact_name }}
         cd ..
+    
+    - name: Create package for distribution (Windows)
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: |
+        $artifactDir = "dist\${{ matrix.artifact_name }}"
+        New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+        
+        # Copy necessary files
+        Copy-Item -Path "app" -Destination $artifactDir -Recurse -Force
+        Copy-Item -Path "static" -Destination $artifactDir -Recurse -Force
+        Copy-Item -Path "requirements.txt" -Destination $artifactDir -Force
+        Copy-Item -Path "README.md" -Destination $artifactDir -Force
+        
+        # Create a run script for Windows
+        @'
+        @echo off
+        python -m venv venv
+        call venv\Scripts\activate.bat
+        pip install -r requirements.txt
+        uvicorn app.main:app --host 0.0.0.0 --port 8000
+        '@ | Out-File -FilePath "$artifactDir\run.bat" -Encoding ascii
+        
+        # Create zip archive
+        Compress-Archive -Path "dist\${{ matrix.artifact_name }}" -DestinationPath "dist\${{ matrix.artifact_name }}.zip" -Force
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
