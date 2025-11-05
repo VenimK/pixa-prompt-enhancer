@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Style Manager Test</title>
+    <link rel="stylesheet" href="/static/css/style-manager.css">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+        
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        
+        .success {
+            color: #28a745;
+        }
+        
+        .error {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <h1>Style Manager Test</h1>
+    
+    <div class="test-container">
+        <h2>Style Selection</h2>
+        
+        <div class="style-selector">
+            <div class="style-header">
+                <h3>Art Style</h3>
+                <div class="style-preview">No style selected</div>
+            </div>
+            <div class="style-categories">
+                <!-- Categories will be populated by JavaScript -->
+            </div>
+            <div class="style-actions">
+                <button id="apply-style" class="btn btn-primary">Apply Style</button>
+                <button id="clear-style" class="btn btn-outline">Clear</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Test Prompt</h3>
+            <textarea id="test-prompt" style="width: 100%; min-height: 100px; padding: 10px; margin-bottom: 10px;" 
+                     placeholder="Enter a test prompt to see how styles will be applied...">a beautiful landscape</textarea>
+            
+            <div>
+                <button id="test-apply-style" class="btn btn-primary">Test Apply Style</button>
+                <button id="test-clear" class="btn btn-outline">Clear Results</button>
+            </div>
+            
+            <div id="test-results" class="test-results" style="margin-top: 20px;">
+                <!-- Results will be displayed here -->
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Available Styles</h2>
+        <div id="all-styles" class="test-results"></div>
+    </div>
+    
+    <script type="module">
+        import { styleManager } from '/static/js/styleManager.js';
+        
+        // DOM Elements
+        const testPrompt = document.getElementById('test-prompt');
+        const testResults = document.getElementById('test-results');
+        const allStylesContainer = document.getElementById('all-styles');
+        const testApplyBtn = document.getElementById('test-apply-style');
+        const testClearBtn = document.getElementById('test-clear');
+        
+        // Initialize the style manager UI
+        async function initializeStyleManager() {
+            try {
+                // Load styles
+                const success = await styleManager.loadStyles();
+                
+                if (!success) {
+                    console.error('Failed to load styles');
+                    return;
+                }
+                
+                // Render style categories
+                renderStyleCategories();
+                
+                // Display all available styles
+                displayAllStyles();
+                
+                // Set up event listeners
+                setupEventListeners();
+                
+                console.log('Style Manager initialized successfully');
+            } catch (error) {
+                console.error('Error initializing style manager:', error);
+            }
+        }
+        
+        // Render style categories
+        function renderStyleCategories() {
+            const styleCategoriesContainer = document.querySelector('.style-categories');
+            if (!styleCategoriesContainer) return;
+            
+            const categories = styleManager.getCategories();
+            
+            if (categories.length === 0) {
+                styleCategoriesContainer.innerHTML = '<p>No styles found. Please check the console for errors.</p>';
+                return;
+            }
+            
+            categories.forEach(category => {
+                const styles = styleManager.getStylesByCategory(category);
+                
+                const categoryElement = document.createElement('div');
+                categoryElement.className = 'style-category';
+                
+                const categoryTitle = document.createElement('h4');
+                categoryTitle.textContent = category;
+                
+                const optionsContainer = document.createElement('div');
+                optionsContainer.className = 'style-options';
+                
+                styles.forEach(style => {
+                    const optionId = `style-${style.name.toLowerCase().replace(/\s+/g, '-')}`;
+                    
+                    const optionElement = document.createElement('div');
+                    optionElement.className = 'style-option';
+                    
+                    const input = document.createElement('input');
+                    input.type = 'radio';
+                    input.id = optionId;
+                    input.name = 'style-option';
+                    input.value = style.name;
+                    
+                    input.addEventListener('change', () => {
+                        if (input.checked) {
+                            const stylePreview = document.querySelector('.style-preview');
+                            if (stylePreview) {
+                                stylePreview.textContent = style.name;
+                                
+                                // Show a preview of the style
+                                const prompt = testPrompt.value.trim() || 'a beautiful landscape';
+                                const preview = styleManager.applyStyle(prompt, style.name);
+                                stylePreview.title = `Preview: ${preview.substring(0, 100)}...`;
+                            }
+                        }
+                    });
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = optionId;
+                    label.title = style.description || style.name;
+                    label.textContent = style.name;
+                    
+                    optionElement.appendChild(input);
+                    optionElement.appendChild(label);
+                    optionsContainer.appendChild(optionElement);
+                });
+                
+                categoryElement.appendChild(categoryTitle);
+                categoryElement.appendChild(optionsContainer);
+                styleCategoriesContainer.appendChild(categoryElement);
+            });
+        }
+        
+        // Display all available styles
+        function displayAllStyles() {
+            const categories = styleManager.getCategories();
+            let html = '';
+            
+            categories.forEach(category => {
+                const styles = styleManager.getStylesByCategory(category);
+                
+                html += `<h3>${category} (${styles.length} styles)</h3>`;
+                html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px;">';
+                
+                styles.forEach(style => {
+                    html += `
+                        <div style="border: 1px solid #ddd; padding: 10px; border-radius: 4px; background: white;">
+                            <h4 style="margin-top: 0;">${style.name}</h4>
+                            ${style.description ? `<p><em>${style.description}</em></p>` : ''}
+                            <div style="font-size: 0.85em; color: #666; margin: 5px 0;">
+                                <strong>Prompt:</strong> ${style.prompt.replace('{prompt}', 'your prompt')}
+                            </div>
+                            ${style.negative_prompt ? 
+                                `<div style="font-size: 0.85em; color: #666;">
+                                    <strong>Negative:</strong> ${style.negative_prompt}
+                                </div>` 
+                                : ''
+                            }
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            });
+            
+            allStylesContainer.innerHTML = html;
+        }
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            // Apply style button
+            document.getElementById('apply-style')?.addEventListener('click', applyStyle);
+            
+            // Clear style button
+            document.getElementById('clear-style')?.addEventListener('click', clearStyle);
+            
+            // Test apply style button
+            testApplyBtn?.addEventListener('click', testApplyStyle);
+            
+            // Test clear button
+            testClearBtn?.addEventListener('click', () => {
+                testResults.innerHTML = '';
+            });
+        }
+        
+        // Apply the selected style
+        function applyStyle() {
+            const selectedStyle = document.querySelector('input[name="style-option"]:checked');
+            
+            if (!selectedStyle) {
+                alert('Please select a style first');
+                return;
+            }
+            
+            const styleName = selectedStyle.value;
+            const prompt = testPrompt.value.trim() || 'a beautiful landscape';
+            
+            const enhancedPrompt = styleManager.applyStyle(prompt, styleName);
+            const negativePrompt = styleManager.getNegativePrompt(styleName);
+            
+            testResults.innerHTML = `
+                <h3>Applied Style: ${styleName}</h3>
+                <div class="test-section">
+                    <h4>Original Prompt:</h4>
+                    <div class="test-result">${prompt}</div>
+                    
+                    <h4>Enhanced Prompt:</h4>
+                    <div class="test-result">${enhancedPrompt}</div>
+                    
+                    ${negativePrompt ? `
+                        <h4>Negative Prompt:</h4>
+                        <div class="test-result">${negativePrompt}</div>
+                    ` : ''}
+                </div>
+            `;
+            
+            testResults.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Test applying a style
+        function testApplyStyle() {
+            const styles = styleManager.getAllStyles();
+            const prompt = testPrompt.value.trim() || 'a beautiful landscape';
+            
+            if (styles.length === 0) {
+                testResults.innerHTML = '<div class="error">No styles available. Please check the console for errors.</div>';
+                return;
+            }
+            
+            let results = '<h3>Style Test Results</h3>';
+            
+            // Test a few random styles
+            const testCount = Math.min(5, styles.length);
+            const testStyles = [];
+            
+            // Always include the first style
+            if (styles.length > 0) testStyles.push(styles[0]);
+            
+            // Add a few random styles
+            for (let i = 0; i < testCount && i < styles.length; i++) {
+                const randomIndex = Math.floor(Math.random() * styles.length);
+                if (!testStyles.includes(styles[randomIndex])) {
+                    testStyles.push(styles[randomIndex]);
+                }
+            }
+            
+            testStyles.forEach(style => {
+                const enhancedPrompt = styleManager.applyStyle(prompt, style.name);
+                const negativePrompt = styleManager.getNegativePrompt(style.name);
+                
+                results += `
+                    <div class="test-section">
+                        <h4>${style.name} (${style.category})</h4>
+                        <p><em>${style.description || 'No description'}</em></p>
+                        
+                        <h5>Enhanced Prompt:</h5>
+                        <div class="test-result">${enhancedPrompt}</div>
+                        
+                        ${negativePrompt ? `
+                            <h5>Negative Prompt:</h5>
+                            <div class="test-result">${negativePrompt}</div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            testResults.innerHTML = results;
+            testResults.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Clear the selected style
+        function clearStyle() {
+            // Uncheck all radio buttons
+            document.querySelectorAll('input[name="style-option"]').forEach(radio => {
+                radio.checked = false;
+            });
+            
+            // Reset the preview
+            const stylePreview = document.querySelector('.style-preview');
+            if (stylePreview) {
+                stylePreview.textContent = 'No style selected';
+                stylePreview.title = '';
+            }
+            
+            // Clear the test results
+            testResults.innerHTML = '';
+        }
+        
+        // Initialize the style manager when the page loads
+        initializeStyleManager();
+    </script>
+</body>
+</html>

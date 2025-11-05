@@ -66,7 +66,7 @@ app.add_middleware(
 
 # --- Setup ---
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="app/templates")
 UPLOADS_DIR = "uploads"
 
 # --- Pydantic Models ---
@@ -208,6 +208,7 @@ def limit_prompt_length(enhanced_prompt: str, model_type: str) -> str:
 # --- Endpoints ---
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
+    """Render the main page with the current version."""
     log_debug(f"GET / - Home page accessed from {request.client.host}")
     api_key_set = "GOOGLE_API_KEY" in os.environ
     api_key_info = {}
@@ -218,12 +219,31 @@ async def read_root(request: Request):
             masked_key = f"{api_key[:4]}...{api_key[-4:]}"
         else:
             masked_key = "[Invalid key format]"
-        api_key_info = {
-            "provider": "Google Gemini",
-            "masked_key": masked_key
+        api_key_info = {"set": True, "masked_key": masked_key}
+    
+    version = int(time.time())  # Using timestamp as version for cache busting
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "version": version,
+            "api_key_set": api_key_set,
+            "api_key_info": {
+                "provider": "Google Gemini",
+                "masked_key": masked_key if api_key_set else None
+            }
         }
-    version = int(time.time())
-    return templates.TemplateResponse("index.html", {"request": request, "api_key_set": api_key_set, "api_key_info": api_key_info, "version": version})
+    )
+
+@app.get("/style-test", response_class=HTMLResponse)
+async def style_test_page(request: Request):
+    """Render the style test page."""
+    log_debug("GET /style-test - Style test page accessed")
+    version = int(time.time())  # Using timestamp as version for cache busting
+    return templates.TemplateResponse(
+        "style-test.html",
+        {"request": request, "version": version}
+    )
 
 @app.post("/analyze-image", response_model=AnalyzeResponse)
 async def analyze_image_endpoint(image: UploadFile = File(...)):

@@ -1,79 +1,41 @@
-=== Prompt Enhancer Debug Log Started at 2025-11-05 04:09:03.083087 ===
+=== Prompt Enhancer Debug Log Started at 2025-11-05 08:54:08.900670 ===
 Application initialized
 
-[2025-11-05 04:09:03] FastAPI startup event triggered
-[2025-11-05 04:09:07] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 04:09:07] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 04:10:40] 
+[2025-11-05 08:54:08] FastAPI startup event triggered
+[2025-11-05 08:54:14] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 08:54:14] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 08:54:14] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 08:55:31] 
 ============================================================
-[2025-11-05 04:10:40] ENHANCE REQUEST
-[2025-11-05 04:10:40] ============================================================
-[2025-11-05 04:10:40] User Settings:
-[2025-11-05 04:10:40]   - Prompt Type: Image
-[2025-11-05 04:10:40]   - Model: qwen
-[2025-11-05 04:10:40]   - Style: auto
-[2025-11-05 04:10:40]   - Cinematography: auto
-[2025-11-05 04:10:40]   - Lighting: 
-[2025-11-05 04:10:40]   - Motion Effect: Static
-[2025-11-05 04:10:40]   - Image Description: Present (6348 chars)
-[2025-11-05 04:10:40] 
-Original Prompt (344 chars):
-[2025-11-05 04:10:40]   use image for reference
-Predator walking in a mall,  portrait, realistic
-A clean, professional design with perfectly rendered text that is crisp and legible, Ultra HD, 4K, cinematic composition, high ...
-[2025-11-05 04:10:40] 
-Enhanced Prompt (865 chars):
-[2025-11-05 04:10:40]   A full-bodied, imposing Predator walks through a brightly lit, upscale shopping mall. Its unique head features a prominent textured brow and fierce mandibles slightly parted, revealing sharp teeth. Lo...
-[2025-11-05 04:10:40] 
+[2025-11-05 08:55:31] ENHANCE REQUEST
+[2025-11-05 08:55:31] ============================================================
+[2025-11-05 08:55:31] User Settings:
+[2025-11-05 08:55:31]   - Prompt Type: Image
+[2025-11-05 08:55:31]   - Model: default
+[2025-11-05 08:55:31]   - Style: Horror
+[2025-11-05 08:55:31]   - Cinematography: auto
+[2025-11-05 08:55:31]   - Lighting: auto
+[2025-11-05 08:55:31]   - Motion Effect: Static
+[2025-11-05 08:55:31]   - Text Emphasis: The text "183 Styles, choose wisely " with flames ...
+[2025-11-05 08:55:31] 
+Original Prompt (112 chars):
+[2025-11-05 08:55:31]   origami style a cat  . paper art, pleated paper, folded, origami art, pleats, cut and fold, centered composition
+[2025-11-05 08:55:31] 
+Enhanced Prompt (1327 chars):
+[2025-11-05 08:55:31]   A static horror masterpiece. Auto cinematography, auto lighting. Extreme worm's eye view. Foreground: "183 Styles, choose wisely" text, sharp and angular, glows with infernal, flickering blue-purple f...
+[2025-11-05 08:55:31] 
 Model Guidance Used:
-[2025-11-05 04:10:40]    For the Qwen model, focus on clear subject descriptions and compositional instructions. Add 'Ultra HD, 4K, cinematic composition' to enhance quality....
-[2025-11-05 04:10:40] 
+[2025-11-05 08:55:31]   None (default/standard)
+[2025-11-05 08:55:31] 
 Character Limit Check:
-[2025-11-05 04:10:40]   - Model for limit: qwen
-[2025-11-05 04:10:40]   - Checking limit: model_type=qwen, max_length=2000 chars
-[2025-11-05 04:10:40]   ✓ Within limit (865 <= 2000)
-[2025-11-05 04:10:40] 
+[2025-11-05 08:55:31]   - Model for limit: default
+[2025-11-05 08:55:31]   - Checking limit: model_type=default, max_length=2000 chars
+[2025-11-05 08:55:31]   ✓ Within limit (1327 <= 2000)
+[2025-11-05 08:55:31] 
 Final Output:
-[2025-11-05 04:10:40]   - Length: 865 chars
-[2025-11-05 04:10:40]   - Truncated: NO
-[2025-11-05 04:10:40] 
-⏱️  Processing time: 9.69 seconds
-[2025-11-05 04:10:40] ============================================================
+[2025-11-05 08:55:31]   - Length: 1327 chars
+[2025-11-05 08:55:31]   - Truncated: NO
+[2025-11-05 08:55:31] 
+⏱️  Processing time: 9.72 seconds
+[2025-11-05 08:55:31] ============================================================
 
-[2025-11-05 05:13:59] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:13:59] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:13:59] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:38] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:38] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:14:38] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:15:00] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:15:00] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:15:00] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:20:47] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:20:47] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:20:48] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:20:48] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:20:48] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:20:48] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 05:20:48] GET / - Home page accessed from 127.0.0.1
