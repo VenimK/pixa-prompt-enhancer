@@ -2174,6 +2174,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- Shortcuts Modal Logic ---
+    if (els.shortcuts) {
+        els.shortcuts.addEventListener('click', () => {
+            const modal = document.getElementById('shortcuts-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        });
+    }
+
+    // Close modal when clicking the close button
+    const closeModalButtons = document.querySelectorAll('.close-modal');
+    closeModalButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const modal = button.closest('.modal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        });
+    });
+
+    // Close modal when clicking outside the modal content
+    window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+            e.target.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    });
+
     // --- History Panel Logic ---
     if (els.historyPanel) {
         els.historyPanel.addEventListener('mouseenter', () => {

@@ -1,221 +1,79 @@
-=== Prompt Enhancer Debug Log Started at 2025-11-04 07:42:51.443635 ===
+=== Prompt Enhancer Debug Log Started at 2025-11-05 04:09:03.083087 ===
 Application initialized
 
-[2025-11-04 07:42:51] FastAPI startup event triggered
-[2025-11-04 07:43:23] GET / - Home page accessed from 192.168.1.100
-[2025-11-04 07:43:23] GET / - Home page accessed from 192.168.1.100
-[2025-11-04 07:43:23] GET / - Home page accessed from 192.168.1.100
-[2025-11-04 07:44:32] 
+[2025-11-05 04:09:03] FastAPI startup event triggered
+[2025-11-05 04:09:07] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 04:09:07] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 04:10:40] 
 ============================================================
-[2025-11-04 07:44:32] ENHANCE REQUEST
-[2025-11-04 07:44:32] ============================================================
-[2025-11-04 07:44:32] User Settings:
-[2025-11-04 07:44:32]   - Prompt Type: Image
-[2025-11-04 07:44:32]   - Model: qwen
-[2025-11-04 07:44:32]   - Style: Cinematic
-[2025-11-04 07:44:32]   - Cinematography: Wide Shot
-[2025-11-04 07:44:32]   - Lighting: 
-[2025-11-04 07:44:32]   - Motion Effect: Static
-[2025-11-04 07:44:32]   - Image Description: Present (6177 chars)
-[2025-11-04 07:44:32] 
-Original Prompt (184 chars):
-[2025-11-04 07:44:32]   A clean, professional design with perfectly rendered text that is crisp and legible, Ultra HD, 4K, cinematic composition, high fidelity text rendering, perfect typography, high quality
-[2025-11-04 07:44:32] 
-Enhanced Prompt (1301 chars):
-[2025-11-04 07:44:32]   Ultra HD, 4K, cinematic composition, wide shot, eye-level. A powerful 'Hybrid Hunter' character, fusion of Spider-Man and Predator, in a dynamic, combat-ready pose. He wears a form-fitting emerald gre...
-[2025-11-04 07:44:32] 
+[2025-11-05 04:10:40] ENHANCE REQUEST
+[2025-11-05 04:10:40] ============================================================
+[2025-11-05 04:10:40] User Settings:
+[2025-11-05 04:10:40]   - Prompt Type: Image
+[2025-11-05 04:10:40]   - Model: qwen
+[2025-11-05 04:10:40]   - Style: auto
+[2025-11-05 04:10:40]   - Cinematography: auto
+[2025-11-05 04:10:40]   - Lighting: 
+[2025-11-05 04:10:40]   - Motion Effect: Static
+[2025-11-05 04:10:40]   - Image Description: Present (6348 chars)
+[2025-11-05 04:10:40] 
+Original Prompt (344 chars):
+[2025-11-05 04:10:40]   use image for reference
+Predator walking in a mall,  portrait, realistic
+A clean, professional design with perfectly rendered text that is crisp and legible, Ultra HD, 4K, cinematic composition, high ...
+[2025-11-05 04:10:40] 
+Enhanced Prompt (865 chars):
+[2025-11-05 04:10:40]   A full-bodied, imposing Predator walks through a brightly lit, upscale shopping mall. Its unique head features a prominent textured brow and fierce mandibles slightly parted, revealing sharp teeth. Lo...
+[2025-11-05 04:10:40] 
 Model Guidance Used:
-[2025-11-04 07:44:32]    For the Qwen model, focus on clear subject descriptions and compositional instructions. Add 'Ultra HD, 4K, cinematic composition' to enhance quality....
-[2025-11-04 07:44:32] 
+[2025-11-05 04:10:40]    For the Qwen model, focus on clear subject descriptions and compositional instructions. Add 'Ultra HD, 4K, cinematic composition' to enhance quality....
+[2025-11-05 04:10:40] 
 Character Limit Check:
-[2025-11-04 07:44:32]   - Model for limit: qwen
-[2025-11-04 07:44:32]   - Checking limit: model_type=qwen, max_length=2000 chars
-[2025-11-04 07:44:32]   ✓ Within limit (1301 <= 2000)
-[2025-11-04 07:44:32] 
+[2025-11-05 04:10:40]   - Model for limit: qwen
+[2025-11-05 04:10:40]   - Checking limit: model_type=qwen, max_length=2000 chars
+[2025-11-05 04:10:40]   ✓ Within limit (865 <= 2000)
+[2025-11-05 04:10:40] 
 Final Output:
-[2025-11-04 07:44:32]   - Length: 1301 chars
-[2025-11-04 07:44:32]   - Truncated: NO
-[2025-11-04 07:44:32] 
-⏱️  Processing time: 12.64 seconds
-[2025-11-04 07:44:32] ============================================================
+[2025-11-05 04:10:40]   - Length: 865 chars
+[2025-11-05 04:10:40]   - Truncated: NO
+[2025-11-05 04:10:40] 
+⏱️  Processing time: 9.69 seconds
+[2025-11-05 04:10:40] ============================================================
 
-[2025-11-04 07:47:44] GET / - Home page accessed from 192.168.1.100
-[2025-11-04 07:47:44] GET / - Home page accessed from 192.168.1.100
-[2025-11-04 07:47:44] GET / - Home page accessed from 192.168.1.100
-[2025-11-04 07:49:50] 
-============================================================
-[2025-11-04 07:49:50] ENHANCE REQUEST
-[2025-11-04 07:49:50] ============================================================
-[2025-11-04 07:49:50] User Settings:
-[2025-11-04 07:49:50]   - Prompt Type: Image
-[2025-11-04 07:49:50]   - Model: qwen
-[2025-11-04 07:49:50]   - Style: auto
-[2025-11-04 07:49:50]   - Cinematography: auto
-[2025-11-04 07:49:50]   - Lighting: 
-[2025-11-04 07:49:50]   - Motion Effect: Static
-[2025-11-04 07:49:50]   - Image Description: Present (4831 chars)
-[2025-11-04 07:49:50] 
-Original Prompt (365 chars):
-[2025-11-04 07:49:50]   use the image for reference 
-luxury sports car that is riding on the bridge of the river Kwai
-A clean, professional design with perfectly rendered text that is crisp and legible, Ultra HD, 4K, cinemat...
-[2025-11-04 07:49:50] 
-Enhanced Prompt (1255 chars):
-[2025-11-04 07:49:50]   A matte grey luxury sports car, a Lamborghini Gallardo Spyder, drives across the iconic Bridge on the River Kwai. The car features a custom wrap: large white 'Exellent' and light teal 'Music Lover' te...
-[2025-11-04 07:49:50] 
-Model Guidance Used:
-[2025-11-04 07:49:50]    For the Qwen model, focus on clear subject descriptions and compositional instructions. Add 'Ultra HD, 4K, cinematic composition' to enhance quality....
-[2025-11-04 07:49:50] 
-Character Limit Check:
-[2025-11-04 07:49:50]   - Model for limit: qwen
-[2025-11-04 07:49:50]   - Checking limit: model_type=qwen, max_length=2000 chars
-[2025-11-04 07:49:50]   ✓ Within limit (1255 <= 2000)
-[2025-11-04 07:49:50] 
-Final Output:
-[2025-11-04 07:49:50]   - Length: 1255 chars
-[2025-11-04 07:49:50]   - Truncated: NO
-[2025-11-04 07:49:50] 
-⏱️  Processing time: 10.43 seconds
-[2025-11-04 07:49:50] ============================================================
-
-[2025-11-04 08:07:12] GET / - Home page accessed from 192.168.1.100
-[2025-11-04 08:08:06] 
-============================================================
-[2025-11-04 08:08:06] ENHANCE REQUEST
-[2025-11-04 08:08:06] ============================================================
-[2025-11-04 08:08:06] User Settings:
-[2025-11-04 08:08:06]   - Prompt Type: Image
-[2025-11-04 08:08:06]   - Model: qwen
-[2025-11-04 08:08:06]   - Style: auto
-[2025-11-04 08:08:06]   - Cinematography: auto
-[2025-11-04 08:08:06]   - Lighting: 
-[2025-11-04 08:08:06]   - Motion Effect: Static
-[2025-11-04 08:08:06]   - Image Description: Present (5142 chars)
-[2025-11-04 08:08:06] 
-Original Prompt (666 chars):
-[2025-11-04 08:08:06]   use the image for reference 
-An illustration of the Mad Hatter from Alice in Wonderland as an anthropomorphic cat, wearing white ruffled collar and top hat with red feather accents, dressed like Dacou...
-[2025-11-04 08:08:06] 
-Enhanced Prompt (1228 chars):
-[2025-11-04 08:08:06]   Ultra HD, 4K, cinematic composition. A vibrant digital art illustration of an anthropomorphic Mad Hatter cat. The cat, with detailed, gleaming orange fur and white paws, strikes a dynamic high-kick po...
-[2025-11-04 08:08:06] 
-Model Guidance Used:
-[2025-11-04 08:08:06]    For the Qwen model, focus on clear subject descriptions and compositional instructions. Add 'Ultra HD, 4K, cinematic composition' to enhance quality....
-[2025-11-04 08:08:06] 
-Character Limit Check:
-[2025-11-04 08:08:06]   - Model for limit: qwen
-[2025-11-04 08:08:06]   - Checking limit: model_type=qwen, max_length=2000 chars
-[2025-11-04 08:08:06]   ✓ Within limit (1228 <= 2000)
-[2025-11-04 08:08:06] 
-Final Output:
-[2025-11-04 08:08:06]   - Length: 1228 chars
-[2025-11-04 08:08:06]   - Truncated: NO
-[2025-11-04 08:08:06] 
-⏱️  Processing time: 12.88 seconds
-[2025-11-04 08:08:06] ============================================================
-
-[2025-11-04 08:14:14] 
-============================================================
-[2025-11-04 08:14:14] ENHANCE REQUEST
-[2025-11-04 08:14:14] ============================================================
-[2025-11-04 08:14:14] User Settings:
-[2025-11-04 08:14:14]   - Prompt Type: Image
-[2025-11-04 08:14:14]   - Model: qwen
-[2025-11-04 08:14:14]   - Style: auto
-[2025-11-04 08:14:14]   - Cinematography: auto
-[2025-11-04 08:14:14]   - Lighting: 
-[2025-11-04 08:14:14]   - Motion Effect: Static
-[2025-11-04 08:14:14]   - Image Description: Present (5142 chars)
-[2025-11-04 08:14:14] 
-Original Prompt (786 chars):
-[2025-11-04 08:14:14]   use the image for reference 
-A green glass apple, created as a realistic 3D render. Inside the apple is a graceful beautiful banana and plum, seemingly encased in transparent glass. The apple's surfac...
-[2025-11-04 08:14:14] 
-Enhanced Prompt (1078 chars):
-[2025-11-04 08:14:14]   A breathtaking, realistic 3D render of a luminous, transparent emerald green glass apple, perfectly centered and composed at eye-level. Within its pristine form, a beautifully arranged, ripe yellow ba...
-[2025-11-04 08:14:14] 
-Model Guidance Used:
-[2025-11-04 08:14:14]    For the Qwen model, focus on clear subject descriptions and compositional instructions. Add 'Ultra HD, 4K, cinematic composition' to enhance quality....
-[2025-11-04 08:14:14] 
-Character Limit Check:
-[2025-11-04 08:14:14]   - Model for limit: qwen
-[2025-11-04 08:14:14]   - Checking limit: model_type=qwen, max_length=2000 chars
-[2025-11-04 08:14:14]   ✓ Within limit (1078 <= 2000)
-[2025-11-04 08:14:14] 
-Final Output:
-[2025-11-04 08:14:14]   - Length: 1078 chars
-[2025-11-04 08:14:14]   - Truncated: NO
-[2025-11-04 08:14:14] 
-⏱️  Processing time: 14.12 seconds
-[2025-11-04 08:14:14] ============================================================
-
-[2025-11-04 08:20:49] 
-============================================================
-[2025-11-04 08:20:49] ENHANCE REQUEST
-[2025-11-04 08:20:49] ============================================================
-[2025-11-04 08:20:49] User Settings:
-[2025-11-04 08:20:49]   - Prompt Type: Image
-[2025-11-04 08:20:49]   - Model: qwen
-[2025-11-04 08:20:49]   - Style: auto
-[2025-11-04 08:20:49]   - Cinematography: auto
-[2025-11-04 08:20:49]   - Lighting: 
-[2025-11-04 08:20:49]   - Motion Effect: Static
-[2025-11-04 08:20:49]   - Image Description: Present (5142 chars)
-[2025-11-04 08:20:49] 
-Original Prompt (431 chars):
-[2025-11-04 08:20:49]   use the image for reference 
-[Subject description — + action or pose], colorful [effect — smoke, particles, energy, etc.] on a black background, neon light effect, glowing lights, detailed character d...
-[2025-11-04 08:20:49] 
-Enhanced Prompt (924 chars):
-[2025-11-04 08:20:49]   Ultra HD, 4K, cinematic composition. A striking, static image of a majestic, highly stylized golden emblem, resembling a regal crown or crest, centered and floating mid-air. The emblem features a lust...
-[2025-11-04 08:20:49] 
-Model Guidance Used:
-[2025-11-04 08:20:49]    For the Qwen model, focus on clear subject descriptions and compositional instructions. Add 'Ultra HD, 4K, cinematic composition' to enhance quality....
-[2025-11-04 08:20:49] 
-Character Limit Check:
-[2025-11-04 08:20:49]   - Model for limit: qwen
-[2025-11-04 08:20:49]   - Checking limit: model_type=qwen, max_length=2000 chars
-[2025-11-04 08:20:49]   ✓ Within limit (924 <= 2000)
-[2025-11-04 08:20:49] 
-Final Output:
-[2025-11-04 08:20:49]   - Length: 924 chars
-[2025-11-04 08:20:49]   - Truncated: NO
-[2025-11-04 08:20:49] 
-⏱️  Processing time: 12.67 seconds
-[2025-11-04 08:20:49] ============================================================
-
-[2025-11-04 08:29:07] 
-============================================================
-[2025-11-04 08:29:07] ENHANCE REQUEST
-[2025-11-04 08:29:07] ============================================================
-[2025-11-04 08:29:07] User Settings:
-[2025-11-04 08:29:07]   - Prompt Type: Image
-[2025-11-04 08:29:07]   - Model: qwen
-[2025-11-04 08:29:07]   - Style: auto
-[2025-11-04 08:29:07]   - Cinematography: auto
-[2025-11-04 08:29:07]   - Lighting: 
-[2025-11-04 08:29:07]   - Motion Effect: Static
-[2025-11-04 08:29:07]   - Image Description: Present (5089 chars)
-[2025-11-04 08:29:07] 
-Original Prompt (119 chars):
-[2025-11-04 08:29:07]   use the image for reference 
-make the character a man, with a face of a Predator, clear and well-composed, high quality
-[2025-11-04 08:29:07] 
-Enhanced Prompt (1245 chars):
-[2025-11-04 08:29:07]   Ultra HD, 4K, cinematic composition. Full-body portrait of a powerful male character, a modern sci-fi operative. He wears a form-fitting, full-body suit in deep metallic blue with a subtle embossed we...
-[2025-11-04 08:29:07] 
-Model Guidance Used:
-[2025-11-04 08:29:07]    For the Qwen model, focus on clear subject descriptions and compositional instructions. Add 'Ultra HD, 4K, cinematic composition' to enhance quality....
-[2025-11-04 08:29:07] 
-Character Limit Check:
-[2025-11-04 08:29:07]   - Model for limit: qwen
-[2025-11-04 08:29:07]   - Checking limit: model_type=qwen, max_length=2000 chars
-[2025-11-04 08:29:07]   ✓ Within limit (1245 <= 2000)
-[2025-11-04 08:29:07] 
-Final Output:
-[2025-11-04 08:29:07]   - Length: 1245 chars
-[2025-11-04 08:29:07]   - Truncated: NO
-[2025-11-04 08:29:07] 
-⏱️  Processing time: 18.96 seconds
-[2025-11-04 08:29:07] ============================================================
-
+[2025-11-05 05:13:59] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:13:59] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:13:59] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:00] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:38] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:38] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:14:38] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:15:00] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:15:00] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:15:00] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:20:47] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:20:47] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:20:48] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:20:48] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:20:48] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:20:48] GET / - Home page accessed from 127.0.0.1
+[2025-11-05 05:20:48] GET / - Home page accessed from 127.0.0.1
