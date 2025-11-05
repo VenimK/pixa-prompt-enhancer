@@ -66,11 +66,19 @@ jobs:
           npm install
         fi
     
-    - name: Run Python tests
+    - name: Run Python tests (Linux/macOS)
+      if: matrix.os != 'windows-latest'
       shell: bash
       run: |
         source venv/bin/activate
         python -m pytest tests/ || echo "No tests found or tests failed"
+    
+    - name: Run Python tests (Windows)
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: |
+        .\venv\Scripts\Activate.ps1
+        python -m pytest tests/ || Write-Output "No tests found or tests failed"
     
     - name: Lint Python code
       shell: bash
