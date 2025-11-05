@@ -1,0 +1,89 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.9', '3.10', '3.11']
+        exclude:
+          # Skip Python 3.11 on Windows as it might have compatibility issues
+          - os: windows-latest
+            python-version: '3.11'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          # Additional Windows-specific setup if needed
+          echo "Windows specific setup"
+        fi
+    
+    - name: Install Node.js dependencies
+      run: npm ci
+    
+    - name: Run Python tests
+      run: |
+        # Add your test command here, for example:
+        # python -m pytest tests/
+        echo "Running Python tests"
+    
+    - name: Run Node.js tests
+      run: |
+        # Add your test command here, for example:
+        # npm test
+        echo "Running Node.js tests"
+    
+    - name: Lint Python code
+      run: |
+        pip install black flake8
+        black --check .
+        flake8 .
+    
+    - name: Lint JavaScript code
+      run: npx eslint "**/*.js"
+    
+    - name: Verify application starts
+      env:
+        GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      run: |
+        # Start the server in the background
+        nohup uvicorn app.main:app --port 8000 --host 0.0.0.0 > server.log 2>&1 &
+        SERVER_PID=$!
+        
+        # Give the server some time to start
+        sleep 5
+        
+        # Check if the server is running
+        if curl --output /dev/null --silent --head --fail http://localhost:8000; then
+          echo "Server started successfully"
+        else
+          echo "Server failed to start"
+          cat server.log
+          exit 1
+        fi
+        
+        # Kill the server
+        kill $SERVER_PID
