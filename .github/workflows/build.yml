@@ -78,10 +78,46 @@ jobs:
       if: matrix.os == 'windows-latest'
       shell: pwsh
       run: |
-        $ErrorActionPreference = 'Stop'
-        .\venv\Scripts\Activate.ps1
-        python -m pip install pytest pytest-cov
-        python -m pytest tests/ || Write-Output "No tests found or tests failed"
+        $ErrorActionPreference = 'Continue'
+        try {
+            # Activate virtual environment
+            .\venv\Scripts\Activate.ps1
+            
+            # Install test dependencies with retry
+            $maxRetries = 3
+            $retryCount = 0
+            $success = $false
+            
+            do {
+                try {
+                    Write-Host "Installing test dependencies (attempt $($retryCount + 1) of $maxRetries)"
+                    python -m pip install --no-cache-dir pytest pytest-cov
+                    $success = $true
+                } catch {
+                    $retryCount++
+                    if ($retryCount -ge $maxRetries) { throw }
+                    Start-Sleep -Seconds 5
+                }
+            } while (-not $success -and $retryCount -lt $maxRetries)
+            
+            # Run tests with timeout
+            $testProcess = Start-Process -NoNewWindow -PassThru -FilePath python -ArgumentList "-m", "pytest", "tests/"
+            $testProcess | Wait-Process -Timeout 300 -ErrorAction Stop
+            
+            if ($testProcess.ExitCode -ne 0) {
+                Write-Output "Tests failed with exit code $($testProcess.ExitCode)"
+                exit $testProcess.ExitCode
+            }
+        } catch [System.Management.Automation.ActionPreferenceStopException] {
+            Write-Output "Test execution failed: $_"
+            exit 1
+        } catch [System.TimeoutException] {
+            Write-Output "Tests timed out after 5 minutes"
+            exit 1
+        } catch {
+            Write-Output "Unexpected error: $_"
+            exit 1
+        }
     
     - name: Lint Python code
       shell: bash
