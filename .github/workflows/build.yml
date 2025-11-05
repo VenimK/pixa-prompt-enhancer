@@ -66,28 +66,21 @@ jobs:
           npm install
         fi
     
-    - name: Install test dependencies
-      shell: bash
-      run: |
-        if [[ "${{ runner.os }}" == "Windows" ]]; then
-          .\venv\Scripts\pip install pytest pytest-cov
-        else
-          source venv/bin/activate
-          pip install pytest pytest-cov
-        fi
-    
     - name: Run Python tests (Linux/macOS)
       if: matrix.os != 'windows-latest'
       shell: bash
       run: |
         source venv/bin/activate
+        pip install pytest pytest-cov
         python -m pytest tests/ || echo "No tests found or tests failed"
     
     - name: Run Python tests (Windows)
       if: matrix.os == 'windows-latest'
       shell: pwsh
       run: |
+        $ErrorActionPreference = 'Stop'
         .\venv\Scripts\Activate.ps1
+        python -m pip install pytest pytest-cov
         python -m pytest tests/ || Write-Output "No tests found or tests failed"
     
     - name: Lint Python code
