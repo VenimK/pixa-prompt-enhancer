@@ -181,3 +181,5 @@ Vibrant Rim Light,,,"Vibrant Rim Light, {prompt}, bright rim light, high contras
 Volumetric Lighting,,,"Volumetric Lighting, {prompt}, light depth, dramatic atmospheric lighting, Volumetric Lighting","ugly, deformed, noisy, blurry, low contrast"
 Watercolor 2,,,"Watercolor style painting, {prompt}, visible paper texture, colorwash, watercolor","ugly, deformed, noisy, blurry, low contrast, photo, realistic"
 Whimsical and Playful,,,"Whimsical and Playful, {prompt}, imaginative, fantastical, bight colors, stylized, happy, Whimsical and Playful","ugly, deformed, noisy, blurry, low contrast, drab, boring, moody"
+
+lego-style,,,"Lego style {prompt} . blocky, brick-built, colorful, playful, toy-like, studs visible, clean edges, highly detailed","photorealistic, realistic, organic, smooth, blurry, deformed, noisy"
