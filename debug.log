@@ -3,3 +3,40 @@ Application initialized
 
 [2025-11-06 06:09:58] FastAPI startup event triggered
 [2025-11-06 06:10:03] GET / - Home page accessed from 127.0.0.1
+[2025-11-06 06:12:02] GET / - Home page accessed from 127.0.0.1
+[2025-11-06 06:12:02] GET / - Home page accessed from 127.0.0.1
+[2025-11-06 06:13:12] 
+============================================================
+[2025-11-06 06:13:12] ENHANCE REQUEST
+[2025-11-06 06:13:12] ============================================================
+[2025-11-06 06:13:12] User Settings:
+[2025-11-06 06:13:12]   - Prompt Type: Image
+[2025-11-06 06:13:12]   - Model: default
+[2025-11-06 06:13:12]   - Style: auto
+[2025-11-06 06:13:12]   - Cinematography: auto
+[2025-11-06 06:13:12]   - Lighting: auto
+[2025-11-06 06:13:12]   - Motion Effect: Static
+[2025-11-06 06:13:12]   - Text Emphasis: The text "Added GTA Style" with sparkling highligh...
+[2025-11-06 06:13:12]   - Image Description: Present (5151 chars)
+[2025-11-06 06:13:12] 
+Original Prompt (28 chars):
+[2025-11-06 06:13:12]   use the image for reference 
+[2025-11-06 06:13:12] 
+Enhanced Prompt (1351 chars):
+[2025-11-06 06:13:12]   "Grand Theft Auto V" promotional artwork, dynamic, hyper-realistic digital illustration. A confident young fair-skinned woman with blonde wavy hair, striking blue eyes, subtly full lips, wearing a vib...
+[2025-11-06 06:13:12] 
+Model Guidance Used:
+[2025-11-06 06:13:12]   None (default/standard)
+[2025-11-06 06:13:12] 
+Character Limit Check:
+[2025-11-06 06:13:12]   - Model for limit: default
+[2025-11-06 06:13:12]   - Checking limit: model_type=default, max_length=3000 chars
+[2025-11-06 06:13:12]   ✓ Within limit (1351 <= 3000)
+[2025-11-06 06:13:12] 
+Final Output:
+[2025-11-06 06:13:12]   - Length: 1351 chars
+[2025-11-06 06:13:12]   - Truncated: NO
+[2025-11-06 06:13:12] 
+⏱️  Processing time: 9.40 seconds
+[2025-11-06 06:13:12] ============================================================
+
