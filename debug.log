@@ -1,7 +1,5 @@
-=== Prompt Enhancer Debug Log Started at 2025-11-05 14:19:06.818407 ===
+=== Prompt Enhancer Debug Log Started at 2025-11-06 06:09:58.306166 ===
 Application initialized
 
-[2025-11-05 14:19:06] FastAPI startup event triggered
-[2025-11-05 14:19:15] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 14:19:15] GET / - Home page accessed from 127.0.0.1
-[2025-11-05 14:19:15] GET / - Home page accessed from 127.0.0.1
+[2025-11-06 06:09:58] FastAPI startup event triggered
+[2025-11-06 06:10:03] GET / - Home page accessed from 127.0.0.1

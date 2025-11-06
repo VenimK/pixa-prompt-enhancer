@@ -154,19 +154,19 @@ def limit_prompt_length(enhanced_prompt: str, model_type: str) -> str:
     model_limits = {
         # Prompt types
         "wan2": 1000,  # WAN2 has a lower limit to prevent OOM errors
-        "image": 2000,  # Image prompt type default
+        "image": 3000,  # Image prompt type default
         "veo": 2000,  # Video prompt type default
-        # AI Models - all set to 2000 except WAN2
-        "default": 2000,
-        "qwen": 2000,
-        "flux": 2000,
-        "pixart": 2000,
-        "dalle3": 2000,
-        "midjourney": 2000,
-        "sdxl": 2000,
-        "nunchaku": 2000,
-        "kandinsky": 2000,
-        "imagen": 2000,
+        # AI Models - all set to 3000 except WAN2
+        "default": 3000,
+        "qwen": 3000,
+        "flux": 3000,
+        "pixart": 3000,
+        "dalle3": 3000,
+        "midjourney": 3000,
+        "sdxl": 3000,
+        "nunchaku": 3000,
+        "kandinsky": 3000,
+        "imagen": 3000,
     }
 
     # Convert model_type to lowercase for case-insensitive matching

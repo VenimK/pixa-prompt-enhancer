@@ -1919,16 +1919,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Model-specific character limits
     const MODEL_CHAR_LIMITS = {
         'Image': {
-            'default': 2000,
+            'default': 3000,
             'flux': 1200,
-            'qwen': 2000,  // Increased Qwen limit to 2000 characters
-            'nunchaku': 800
+            'qwen': 2500,  // Increased Qwen limit to 2500 characters
+            'nunchaku': 1500
         },
         'VEO': {
-            'default': 800
+            'default': 1000
         },
         'WAN2': {
-            'default': 500
+            'default': 750
         }
     };
     
