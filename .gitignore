@@ -16,3 +16,7 @@ uploads/
 app/.DS_Store
 .DS_Store
 debug.log
+app/static/data/fooocus_styles.csv.bak
+app/static/data/fooocus_styles.csv.bak2
+debug.log
+app/static/data/new_styles.csv

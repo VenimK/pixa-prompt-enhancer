@@ -1,42 +1,82 @@
-=== Prompt Enhancer Debug Log Started at 2025-11-06 06:09:58.306166 ===
+=== Prompt Enhancer Debug Log Started at 2025-11-06 07:30:31.735846 ===
 Application initialized
 
-[2025-11-06 06:09:58] FastAPI startup event triggered
-[2025-11-06 06:10:03] GET / - Home page accessed from 127.0.0.1
-[2025-11-06 06:12:02] GET / - Home page accessed from 127.0.0.1
-[2025-11-06 06:12:02] GET / - Home page accessed from 127.0.0.1
-[2025-11-06 06:13:12] 
+[2025-11-06 07:30:31] FastAPI startup event triggered
+[2025-11-06 07:30:34] GET / - Home page accessed from 127.0.0.1
+[2025-11-06 07:30:34] GET / - Home page accessed from 127.0.0.1
+[2025-11-06 07:30:34] GET / - Home page accessed from 127.0.0.1
+[2025-11-06 07:32:18] GET / - Home page accessed from 127.0.0.1
+[2025-11-06 07:32:19] GET / - Home page accessed from 127.0.0.1
+[2025-11-06 07:32:19] GET / - Home page accessed from 127.0.0.1
+[2025-11-06 07:33:31] 
 ============================================================
-[2025-11-06 06:13:12] ENHANCE REQUEST
-[2025-11-06 06:13:12] ============================================================
-[2025-11-06 06:13:12] User Settings:
-[2025-11-06 06:13:12]   - Prompt Type: Image
-[2025-11-06 06:13:12]   - Model: default
-[2025-11-06 06:13:12]   - Style: auto
-[2025-11-06 06:13:12]   - Cinematography: auto
-[2025-11-06 06:13:12]   - Lighting: auto
-[2025-11-06 06:13:12]   - Motion Effect: Static
-[2025-11-06 06:13:12]   - Text Emphasis: The text "Added GTA Style" with sparkling highligh...
-[2025-11-06 06:13:12]   - Image Description: Present (5151 chars)
-[2025-11-06 06:13:12] 
-Original Prompt (28 chars):
-[2025-11-06 06:13:12]   use the image for reference 
-[2025-11-06 06:13:12] 
-Enhanced Prompt (1351 chars):
-[2025-11-06 06:13:12]   "Grand Theft Auto V" promotional artwork, dynamic, hyper-realistic digital illustration. A confident young fair-skinned woman with blonde wavy hair, striking blue eyes, subtly full lips, wearing a vib...
-[2025-11-06 06:13:12] 
+[2025-11-06 07:33:31] ENHANCE REQUEST
+[2025-11-06 07:33:31] ============================================================
+[2025-11-06 07:33:31] User Settings:
+[2025-11-06 07:33:31]   - Prompt Type: Image
+[2025-11-06 07:33:31]   - Model: default
+[2025-11-06 07:33:31]   - Style: auto
+[2025-11-06 07:33:31]   - Cinematography: auto
+[2025-11-06 07:33:31]   - Lighting: auto
+[2025-11-06 07:33:31]   - Motion Effect: Static
+[2025-11-06 07:33:31]   - Text Emphasis: The text "ClayMation" is prominently displayed. Th...
+[2025-11-06 07:33:31]   - Image Description: Present (4493 chars)
+[2025-11-06 07:33:31] 
+Original Prompt (27 chars):
+[2025-11-06 07:33:31]   use the image for reference
+[2025-11-06 07:33:31] 
+Enhanced Prompt (1529 chars):
+[2025-11-06 07:33:31]   Grand Theft Auto V style, hyper-realistic digital art. A vibrant, glamorous, rebellious scene. With "ClayMation" text clearly legible and prominent.
+
+Composition: Woman slightly right of center, eye-l...
+[2025-11-06 07:33:31] 
 Model Guidance Used:
-[2025-11-06 06:13:12]   None (default/standard)
-[2025-11-06 06:13:12] 
+[2025-11-06 07:33:31]   None (default/standard)
+[2025-11-06 07:33:31] 
 Character Limit Check:
-[2025-11-06 06:13:12]   - Model for limit: default
-[2025-11-06 06:13:12]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-06 06:13:12]   ✓ Within limit (1351 <= 3000)
-[2025-11-06 06:13:12] 
+[2025-11-06 07:33:31]   - Model for limit: default
+[2025-11-06 07:33:31]   - Checking limit: model_type=default, max_length=3000 chars
+[2025-11-06 07:33:31]   ✓ Within limit (1529 <= 3000)
+[2025-11-06 07:33:31] 
 Final Output:
-[2025-11-06 06:13:12]   - Length: 1351 chars
-[2025-11-06 06:13:12]   - Truncated: NO
-[2025-11-06 06:13:12] 
-⏱️  Processing time: 9.40 seconds
-[2025-11-06 06:13:12] ============================================================
+[2025-11-06 07:33:31]   - Length: 1529 chars
+[2025-11-06 07:33:31]   - Truncated: NO
+[2025-11-06 07:33:31] 
+⏱️  Processing time: 12.76 seconds
+[2025-11-06 07:33:31] ============================================================
+
+[2025-11-06 07:33:52] 
+============================================================
+[2025-11-06 07:33:52] ENHANCE REQUEST
+[2025-11-06 07:33:52] ============================================================
+[2025-11-06 07:33:52] User Settings:
+[2025-11-06 07:33:52]   - Prompt Type: Image
+[2025-11-06 07:33:52]   - Model: default
+[2025-11-06 07:33:52]   - Style: auto
+[2025-11-06 07:33:52]   - Cinematography: auto
+[2025-11-06 07:33:52]   - Lighting: auto
+[2025-11-06 07:33:52]   - Motion Effect: Static
+[2025-11-06 07:33:52]   - Text Emphasis: The text "ClayMation" is prominently displayed. Th...
+[2025-11-06 07:33:52]   - Image Description: Present (4493 chars)
+[2025-11-06 07:33:52] 
+Original Prompt (267 chars):
+[2025-11-06 07:33:52]   Claymation style use the image for reference . stop-motion clay animation, tactile textures, hand-sculpted look, Wallace and Gromit style, Laika Studios aesthetic, visible fingerprints, soft lighting,...
+[2025-11-06 07:33:52] 
+Enhanced Prompt (2258 chars):
+[2025-11-06 07:33:52]   Claymation style, stop-motion clay animation, tactile textures, hand-sculpted look, Wallace and Gromit style, Laika Studios aesthetic, visible fingerprints, charming imperfections, nostalgic stop-moti...
+[2025-11-06 07:33:52] 
+Model Guidance Used:
+[2025-11-06 07:33:52]   None (default/standard)
+[2025-11-06 07:33:52] 
+Character Limit Check:
+[2025-11-06 07:33:52]   - Model for limit: default
+[2025-11-06 07:33:52]   - Checking limit: model_type=default, max_length=3000 chars
+[2025-11-06 07:33:52]   ✓ Within limit (2258 <= 3000)
+[2025-11-06 07:33:52] 
+Final Output:
+[2025-11-06 07:33:52]   - Length: 2258 chars
+[2025-11-06 07:33:52]   - Truncated: NO
+[2025-11-06 07:33:52] 
+⏱️  Processing time: 11.15 seconds
+[2025-11-06 07:33:52] ============================================================
 
