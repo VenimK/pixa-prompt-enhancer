@@ -4,10 +4,84 @@ Pixa Prompt Enhancer is a web-based application that helps you create rich and d
 
 ## Features
 
--   **Three Prompting Modes:** Supports Image (Text-to-Image), VEO (Text-to-Video), and WAN2 (Image-to-Video) prompt enhancement.
--   **Creative Controls:** Fine-tune your prompts with various styles, cinematography techniques, and lighting options.
--   **Image-to-Prompt:** Upload an image and the application will analyze it to provide a descriptive starting point for your prompt.
--   **Web Interface:** A simple and intuitive web interface for easy prompt creation.
+- **Multiple Prompting Modes**
+  - Image (Text-to-Image)
+  - VEO (Text-to-Video)
+  - WAN2 (Image-to-Video)
+
+- **Creative Controls**
+  - 100+ Artistic Styles
+  - Cinematography Techniques
+  - Lighting & Composition Options
+  - Text Emphasis Control
+
+- **Smart Features**
+  - Image-to-Prompt Analysis
+  - Style Combination
+  - Prompt Optimization
+  - Character Limit Management
+
+- **User Experience**
+  - Clean Web Interface
+  - Responsive Design
+  - Easy Copy/Paste
+  - Dark/Light Mode
+
+## 🎨 Available Styles
+
+Pixa Prompt Enhancer offers a wide variety of artistic styles to enhance your prompts. Here's a categorized overview of available styles:
+
+<details>
+<summary><strong>🎭 Thematic Styles</strong> (Click to expand)</summary>
+
+- **Animated Series** - Vibrant 2D animation with expressive characters
+- **Classic Sitcom** - 90s multi-camera sitcom aesthetic
+- **Crime Drama** - Moody, neo-noir atmosphere
+- **Cyberpunk Noir** - Neon-drenched futuristic cityscapes
+- **Fantasy Series** - Epic high-fantasy with detailed world-building
+- **Muppet Show** - Whimsical felt puppets and theatrical lighting
+- **Vaporwave** - 80s/90s retro-futurism with pastel gradients
+
+</details>
+
+<details>
+<summary><strong>🎨 Artistic Mediums</strong> (Click to expand)</summary>
+
+- **Biomechanical** - Organic-mechanical fusion
+- **Claymation** - Stop-motion clay animation
+- **Holographic** - Iridescent, light-refracting effects
+- **Neon Sign** - Glowing tube lighting and bokeh
+- **Paper Cutout** - Layered paper art with depth
+- **Stained Glass** - Vibrant cathedral window aesthetic
+- **Watercolor** - Visible paper texture and colorwash
+
+</details>
+
+<details>
+<summary><strong>📸 Photo & Cinematic</strong> (Click to expand)</summary>
+
+- **Film Noir** - Classic black and white cinematography
+- **HDR Photo** - High dynamic range photography
+- **Long Exposure** - Light trails and motion blur
+- **Macro Photography** - Extreme close-up details
+- **Neon Noir** - Cyberpunk-inspired night photography
+- **Tilt-Shift** - Miniature effect photography
+
+</details>
+
+<details>
+<summary><strong>🎮 Game & Digital Art</strong> (Click to expand)</summary>
+
+- **8-Bit Pixel Art** - Retro video game aesthetic
+- **3D Model** - Professional 3D rendering
+- **Anime** - Studio-quality anime style
+- **Cel Shaded** - Comic book/cartoon rendering
+- **Digital Painting** - Painterly digital artwork
+- **Low Poly** - Geometric, angular 3D models
+
+</details>
+
+*Note: This is just a selection of available styles. The full list includes over 100 unique styles that can be combined for endless creative possibilities.*
 
 ## Installation
 
