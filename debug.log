@@ -1,313 +1,42 @@
-=== Prompt Enhancer Debug Log Started at 2025-11-09 14:25:58.413048 ===
+=== Prompt Enhancer Debug Log Started at 2025-11-09 15:03:17.030707 ===
 Application initialized
 
-[2025-11-09 14:25:58] FastAPI startup event triggered
-[2025-11-09 14:29:52] 
+[2025-11-09 15:03:17] FastAPI startup event triggered
+[2025-11-09 15:03:24] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 15:03:25] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 15:07:43] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 15:07:43] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 15:09:09] 
 ============================================================
-[2025-11-09 14:29:52] ENHANCE REQUEST
-[2025-11-09 14:29:52] ============================================================
-[2025-11-09 14:29:52] User Settings:
-[2025-11-09 14:29:52]   - Prompt Type: Image
-[2025-11-09 14:29:52]   - Model: default
-[2025-11-09 14:29:52]   - Style: auto
-[2025-11-09 14:29:52]   - Cinematography: auto
-[2025-11-09 14:29:52]   - Lighting: auto
-[2025-11-09 14:29:52]   - Motion Effect: Static
-[2025-11-09 14:29:52]   - Text Emphasis: The text "Ironman" is prominently displayed on a f...
-[2025-11-09 14:29:52] 
-Original Prompt (242 chars):
-[2025-11-09 14:29:52]   Iron Man tech armor style skull, trash polka –ar 16:9 –style raw –s 750  . sleek metallic red and gold armor, arc reactor glow, high-tech interface, futuristic mechanical details, Marvel Comics aesthe...
-[2025-11-09 14:29:52] 
-Enhanced Prompt (1929 chars):
-[2025-11-09 14:29:52]   A highly detailed Iron Man tech armor style skull, rendered with a dramatic trash polka aesthetic. The skull is composed of sleek metallic red and gold armor plates, intricately designed with futurist...
-[2025-11-09 14:29:52] 
+[2025-11-09 15:09:09] ENHANCE REQUEST
+[2025-11-09 15:09:09] ============================================================
+[2025-11-09 15:09:09] User Settings:
+[2025-11-09 15:09:09]   - Prompt Type: Image
+[2025-11-09 15:09:09]   - Model: default
+[2025-11-09 15:09:09]   - Style: auto
+[2025-11-09 15:09:09]   - Cinematography: auto
+[2025-11-09 15:09:09]   - Lighting: auto
+[2025-11-09 15:09:09]   - Motion Effect: Static
+[2025-11-09 15:09:09]   - Text Emphasis: The text "Deadpool" is prominently displayed on a ...
+[2025-11-09 15:09:09] 
+Original Prompt (235 chars):
+[2025-11-09 15:09:09]   Deadpool mercenary style skull, trash polka –ar 16:9 –style raw –s 750 . red and black costume, dual katanas and guns, fourth-wall breaking, comedic irreverent action pose, Marvel Comics art, merc wit...
+[2025-11-09 15:09:09] 
+Enhanced Prompt (1232 chars):
+[2025-11-09 15:09:09]   A mercenary style Deadpool skull, grinning irreverently, clad in a tattered red and black tactical suit. Dual katanas are crossed behind its back, holstered guns at its hips. The skull strikes a dynam...
+[2025-11-09 15:09:09] 
 Model Guidance Used:
-[2025-11-09 14:29:52]   None (default/standard)
-[2025-11-09 14:29:52] 
+[2025-11-09 15:09:09]   None (default/standard)
+[2025-11-09 15:09:09] 
 Character Limit Check:
-[2025-11-09 14:29:52]   - Model for limit: default
-[2025-11-09 14:29:52]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 14:29:52]   ✓ Within limit (1929 <= 3000)
-[2025-11-09 14:29:52] 
+[2025-11-09 15:09:09]   - Model for limit: default
+[2025-11-09 15:09:09]   - Checking limit: model_type=default, max_length=3000 chars
+[2025-11-09 15:09:09]   ✓ Within limit (1232 <= 3000)
+[2025-11-09 15:09:09] 
 Final Output:
-[2025-11-09 14:29:52]   - Length: 1929 chars
-[2025-11-09 14:29:52]   - Truncated: NO
-[2025-11-09 14:29:52] 
-⏱️  Processing time: 9.41 seconds
-[2025-11-09 14:29:52] ============================================================
-
-[2025-11-09 14:33:05] 
-============================================================
-[2025-11-09 14:33:05] ENHANCE REQUEST
-[2025-11-09 14:33:05] ============================================================
-[2025-11-09 14:33:05] User Settings:
-[2025-11-09 14:33:05]   - Prompt Type: Image
-[2025-11-09 14:33:05]   - Model: default
-[2025-11-09 14:33:05]   - Style: auto
-[2025-11-09 14:33:05]   - Cinematography: auto
-[2025-11-09 14:33:05]   - Lighting: auto
-[2025-11-09 14:33:05]   - Motion Effect: Static
-[2025-11-09 14:33:05]   - Text Emphasis: The text "Wonder Woman" is prominently displayed o...
-[2025-11-09 14:33:05] 
-Original Prompt (251 chars):
-[2025-11-09 14:33:05]   Wonder Woman amazonian warrior style  skull, trash polka –ar 16:9 –style raw –s 750   . powerful heroic pose, red blue and gold costume, lasso of truth, Greek mythology elements, DC Comics art, strong...
-[2025-11-09 14:33:05] 
-Enhanced Prompt (1629 chars):
-[2025-11-09 14:33:05]   A dynamic, high-impact scene featuring Wonder Woman in a powerful, heroic pose, embodying a strong feminine warrior with bold confidence. Her Amazonian warrior style red, blue, and gold costume gleams...
-[2025-11-09 14:33:05] 
-Model Guidance Used:
-[2025-11-09 14:33:05]   None (default/standard)
-[2025-11-09 14:33:05] 
-Character Limit Check:
-[2025-11-09 14:33:05]   - Model for limit: default
-[2025-11-09 14:33:05]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 14:33:05]   ✓ Within limit (1629 <= 3000)
-[2025-11-09 14:33:05] 
-Final Output:
-[2025-11-09 14:33:05]   - Length: 1629 chars
-[2025-11-09 14:33:05]   - Truncated: NO
-[2025-11-09 14:33:05] 
-⏱️  Processing time: 10.99 seconds
-[2025-11-09 14:33:05] ============================================================
-
-[2025-11-09 14:35:15] 
-============================================================
-[2025-11-09 14:35:15] ENHANCE REQUEST
-[2025-11-09 14:35:15] ============================================================
-[2025-11-09 14:35:15] User Settings:
-[2025-11-09 14:35:15]   - Prompt Type: Image
-[2025-11-09 14:35:15]   - Model: default
-[2025-11-09 14:35:15]   - Style: auto
-[2025-11-09 14:35:15]   - Cinematography: auto
-[2025-11-09 14:35:15]   - Lighting: auto
-[2025-11-09 14:35:15]   - Motion Effect: Static
-[2025-11-09 14:35:15]   - Text Emphasis: The text "Wonder Woman" is prominently displayed o...
-[2025-11-09 14:35:15] 
-Original Prompt (247 chars):
-[2025-11-09 14:35:15]   Captain America patriotic hero style skull, trash polka –ar 16:9 –style raw –s 750 . red white and blue costume, iconic shield, star symbol, patriotic heroic pose, Marvel Comics aesthetic, 1940s inspi...
-[2025-11-09 14:35:15] 
-Enhanced Prompt (2027 chars):
-[2025-11-09 14:35:15]   Captain America's skull, bold patriotic hero style, fused with aggressive trash polka art. Distressed cowl, prominent star, subtle red/white/blue hues bleeding into the black brushstrokes, vibrant red...
-[2025-11-09 14:35:15] 
-Model Guidance Used:
-[2025-11-09 14:35:15]   None (default/standard)
-[2025-11-09 14:35:15] 
-Character Limit Check:
-[2025-11-09 14:35:15]   - Model for limit: default
-[2025-11-09 14:35:15]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 14:35:15]   ✓ Within limit (2027 <= 3000)
-[2025-11-09 14:35:15] 
-Final Output:
-[2025-11-09 14:35:15]   - Length: 2027 chars
-[2025-11-09 14:35:15]   - Truncated: NO
-[2025-11-09 14:35:15] 
-⏱️  Processing time: 11.90 seconds
-[2025-11-09 14:35:15] ============================================================
-
-[2025-11-09 14:35:29] 
-============================================================
-[2025-11-09 14:35:29] ENHANCE REQUEST
-[2025-11-09 14:35:29] ============================================================
-[2025-11-09 14:35:29] User Settings:
-[2025-11-09 14:35:29]   - Prompt Type: Image
-[2025-11-09 14:35:29]   - Model: default
-[2025-11-09 14:35:29]   - Style: auto
-[2025-11-09 14:35:29]   - Cinematography: auto
-[2025-11-09 14:35:29]   - Lighting: auto
-[2025-11-09 14:35:29]   - Motion Effect: Static
-[2025-11-09 14:35:29]   - Text Emphasis: The text "Captain America" is prominently displaye...
-[2025-11-09 14:35:29] 
-Original Prompt (247 chars):
-[2025-11-09 14:35:29]   Captain America patriotic hero style skull, trash polka –ar 16:9 –style raw –s 750 . red white and blue costume, iconic shield, star symbol, patriotic heroic pose, Marvel Comics aesthetic, 1940s inspi...
-[2025-11-09 14:35:29] 
-Enhanced Prompt (1435 chars):
-[2025-11-09 14:35:29]   Captain America patriotic hero style skull, a striking fusion of Marvel Comics aesthetic and raw trash polka artistry. The skull, formed from the iconic red, white, and blue cowl and star symbol, embo...
-[2025-11-09 14:35:29] 
-Model Guidance Used:
-[2025-11-09 14:35:29]   None (default/standard)
-[2025-11-09 14:35:29] 
-Character Limit Check:
-[2025-11-09 14:35:29]   - Model for limit: default
-[2025-11-09 14:35:29]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 14:35:29]   ✓ Within limit (1435 <= 3000)
-[2025-11-09 14:35:29] 
-Final Output:
-[2025-11-09 14:35:29]   - Length: 1435 chars
-[2025-11-09 14:35:29]   - Truncated: NO
-[2025-11-09 14:35:29] 
-⏱️  Processing time: 11.79 seconds
-[2025-11-09 14:35:29] ============================================================
-
-[2025-11-09 14:37:49] 
-============================================================
-[2025-11-09 14:37:49] ENHANCE REQUEST
-[2025-11-09 14:37:49] ============================================================
-[2025-11-09 14:37:49] User Settings:
-[2025-11-09 14:37:49]   - Prompt Type: Image
-[2025-11-09 14:37:49]   - Model: default
-[2025-11-09 14:37:49]   - Style: auto
-[2025-11-09 14:37:49]   - Cinematography: auto
-[2025-11-09 14:37:49]   - Lighting: auto
-[2025-11-09 14:37:49]   - Motion Effect: Static
-[2025-11-09 14:37:49]   - Text Emphasis: The text "Captain America" is prominently displaye...
-[2025-11-09 14:37:49] 
-Original Prompt (243 chars):
-[2025-11-09 14:37:49]   Thor god of thunder style skull, trash polka –ar 16:9 –style raw –s 750  . Norse mythology aesthetic, red cape and winged helmet, Mjolnir hammer, lightning effects, Asgardian armor, Marvel Comics art,...
-[2025-11-09 14:37:49] 
-Enhanced Prompt (1590 chars):
-[2025-11-09 14:37:49]   A Thor god of thunder style skull, rendered in aggressive trash polka aesthetic with bold red, black, and white ink splashes, surrounded by crackling electric blue lightning bolts. The skull, adorned ...
-[2025-11-09 14:37:49] 
-Model Guidance Used:
-[2025-11-09 14:37:49]   None (default/standard)
-[2025-11-09 14:37:49] 
-Character Limit Check:
-[2025-11-09 14:37:49]   - Model for limit: default
-[2025-11-09 14:37:49]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 14:37:49]   ✓ Within limit (1590 <= 3000)
-[2025-11-09 14:37:49] 
-Final Output:
-[2025-11-09 14:37:49]   - Length: 1590 chars
-[2025-11-09 14:37:49]   - Truncated: NO
-[2025-11-09 14:37:49] 
-⏱️  Processing time: 8.39 seconds
-[2025-11-09 14:37:49] ============================================================
-
-[2025-11-09 14:39:07] 
-============================================================
-[2025-11-09 14:39:07] ENHANCE REQUEST
-[2025-11-09 14:39:07] ============================================================
-[2025-11-09 14:39:07] User Settings:
-[2025-11-09 14:39:07]   - Prompt Type: Image
-[2025-11-09 14:39:07]   - Model: default
-[2025-11-09 14:39:07]   - Style: auto
-[2025-11-09 14:39:07]   - Cinematography: auto
-[2025-11-09 14:39:07]   - Lighting: auto
-[2025-11-09 14:39:07]   - Motion Effect: Static
-[2025-11-09 14:39:07]   - Text Emphasis: The text "Thor" is prominently displayed on a flow...
-[2025-11-09 14:39:07] 
-Original Prompt (243 chars):
-[2025-11-09 14:39:07]   Thor god of thunder style skull, trash polka –ar 16:9 –style raw –s 750  . Norse mythology aesthetic, red cape and winged helmet, Mjolnir hammer, lightning effects, Asgardian armor, Marvel Comics art,...
-[2025-11-09 14:39:07] 
-Enhanced Prompt (1259 chars):
-[2025-11-09 14:39:07]   Colossal Thor God of Thunder style skull, trash polka art, dominates the scene from a dramatic worm's eye perspective. The skull, crowned with a winged helmet, features a vibrant red cape billowing dy...
-[2025-11-09 14:39:07] 
-Model Guidance Used:
-[2025-11-09 14:39:07]   None (default/standard)
-[2025-11-09 14:39:07] 
-Character Limit Check:
-[2025-11-09 14:39:07]   - Model for limit: default
-[2025-11-09 14:39:07]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 14:39:07]   ✓ Within limit (1259 <= 3000)
-[2025-11-09 14:39:07] 
-Final Output:
-[2025-11-09 14:39:07]   - Length: 1259 chars
-[2025-11-09 14:39:07]   - Truncated: NO
-[2025-11-09 14:39:07] 
-⏱️  Processing time: 10.38 seconds
-[2025-11-09 14:39:07] ============================================================
-
-[2025-11-09 14:41:18] 
-============================================================
-[2025-11-09 14:41:18] ENHANCE REQUEST
-[2025-11-09 14:41:18] ============================================================
-[2025-11-09 14:41:18] User Settings:
-[2025-11-09 14:41:18]   - Prompt Type: Image
-[2025-11-09 14:41:18]   - Model: default
-[2025-11-09 14:41:18]   - Style: auto
-[2025-11-09 14:41:18]   - Cinematography: auto
-[2025-11-09 14:41:18]   - Lighting: auto
-[2025-11-09 14:41:18]   - Motion Effect: Static
-[2025-11-09 14:41:18]   - Text Emphasis: The text "Thor" is prominently displayed on a flow...
-[2025-11-09 14:41:18]   - Image Description: Present (4476 chars)
-[2025-11-09 14:41:18] 
-Original Prompt (273 chars):
-[2025-11-09 14:41:18]   use the colors for reference 
-Thor god of thunder style skull, trash polka –ar 16:9 –style raw –s 750  . Norse mythology aesthetic, red cape and winged helmet, Mjolnir hammer, lightning effects, Asgar...
-[2025-11-09 14:41:18] 
-Enhanced Prompt (1595 chars):
-[2025-11-09 14:41:18]   A striking, stylized Thor god of thunder skull, centrally composed, embodying a powerful, epic divine warrior. The skull, adorned with a magnificent winged helmet and intricate Asgardian armor details...
-[2025-11-09 14:41:18] 
-Model Guidance Used:
-[2025-11-09 14:41:18]   None (default/standard)
-[2025-11-09 14:41:18] 
-Character Limit Check:
-[2025-11-09 14:41:18]   - Model for limit: default
-[2025-11-09 14:41:18]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 14:41:18]   ✓ Within limit (1595 <= 3000)
-[2025-11-09 14:41:18] 
-Final Output:
-[2025-11-09 14:41:18]   - Length: 1595 chars
-[2025-11-09 14:41:18]   - Truncated: NO
-[2025-11-09 14:41:18] 
-⏱️  Processing time: 20.72 seconds
-[2025-11-09 14:41:18] ============================================================
-
-[2025-11-09 14:42:37] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 14:43:29] 
-============================================================
-[2025-11-09 14:43:29] ENHANCE REQUEST
-[2025-11-09 14:43:29] ============================================================
-[2025-11-09 14:43:29] User Settings:
-[2025-11-09 14:43:29]   - Prompt Type: Image
-[2025-11-09 14:43:29]   - Model: default
-[2025-11-09 14:43:29]   - Style: auto
-[2025-11-09 14:43:29]   - Cinematography: auto
-[2025-11-09 14:43:29]   - Lighting: auto
-[2025-11-09 14:43:29]   - Motion Effect: Static
-[2025-11-09 14:43:29]   - Text Emphasis: The text "Black Panther" is prominently displayed ...
-[2025-11-09 14:43:29] 
-Original Prompt (241 chars):
-[2025-11-09 14:43:29]   Black Panther Wakanda style skull, trash polka –ar 16:9 –style raw –s 750 . sleek black vibranium suit, purple energy accents, African futuristic aesthetic, tribal patterns, Marvel Comics art, regal p...
-[2025-11-09 14:43:29] 
-Enhanced Prompt (1615 chars):
-[2025-11-09 14:43:29]   "Black Panther" text prominently displayed on a flowing crimson ribbon, dynamically wrapping around a majestic, intricately detailed Black Panther Wakanda-style skull. The skull is forged from sleek b...
-[2025-11-09 14:43:29] 
-Model Guidance Used:
-[2025-11-09 14:43:29]   None (default/standard)
-[2025-11-09 14:43:29] 
-Character Limit Check:
-[2025-11-09 14:43:29]   - Model for limit: default
-[2025-11-09 14:43:29]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 14:43:29]   ✓ Within limit (1615 <= 3000)
-[2025-11-09 14:43:29] 
-Final Output:
-[2025-11-09 14:43:29]   - Length: 1615 chars
-[2025-11-09 14:43:29]   - Truncated: NO
-[2025-11-09 14:43:29] 
-⏱️  Processing time: 12.36 seconds
-[2025-11-09 14:43:29] ============================================================
-
-[2025-11-09 14:46:18] 
-============================================================
-[2025-11-09 14:46:18] ENHANCE REQUEST
-[2025-11-09 14:46:18] ============================================================
-[2025-11-09 14:46:18] User Settings:
-[2025-11-09 14:46:18]   - Prompt Type: Image
-[2025-11-09 14:46:18]   - Model: default
-[2025-11-09 14:46:18]   - Style: auto
-[2025-11-09 14:46:18]   - Cinematography: auto
-[2025-11-09 14:46:18]   - Lighting: auto
-[2025-11-09 14:46:18]   - Motion Effect: Static
-[2025-11-09 14:46:18]   - Text Emphasis: The text "Spider Man" is prominently displayed on ...
-[2025-11-09 14:46:18] 
-Original Prompt (233 chars):
-[2025-11-09 14:46:18]   Spider-Man comic style skull, trash polka –ar 16:9 –style raw –s 750 . red and blue costume, web-slinging action, dynamic acrobatic pose, New York City backdrop, Marvel Comics art, energetic youthful ...
-[2025-11-09 14:46:18] 
-Enhanced Prompt (1324 chars):
-[2025-11-09 14:46:18]   A highly dynamic and energetic Marvel Comics art style image. The central subject is a Spider-Man skull, rendered in a striking trash polka aesthetic with bold graphic lines, vibrant red and blue ink ...
-[2025-11-09 14:46:18] 
-Model Guidance Used:
-[2025-11-09 14:46:18]   None (default/standard)
-[2025-11-09 14:46:18] 
-Character Limit Check:
-[2025-11-09 14:46:18]   - Model for limit: default
-[2025-11-09 14:46:18]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 14:46:18]   ✓ Within limit (1324 <= 3000)
-[2025-11-09 14:46:18] 
-Final Output:
-[2025-11-09 14:46:18]   - Length: 1324 chars
-[2025-11-09 14:46:18]   - Truncated: NO
-[2025-11-09 14:46:18] 
-⏱️  Processing time: 11.68 seconds
-[2025-11-09 14:46:18] ============================================================
+[2025-11-09 15:09:09]   - Length: 1232 chars
+[2025-11-09 15:09:09]   - Truncated: NO
+[2025-11-09 15:09:09] 
+⏱️  Processing time: 11.60 seconds
+[2025-11-09 15:09:09] ============================================================
 

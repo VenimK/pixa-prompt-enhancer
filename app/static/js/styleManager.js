@@ -125,6 +125,7 @@ class StyleManager {
                         const categoryMap = {
                             'photo': 'Photography',
                             'art': 'Art',
+                            'artstyle': 'Art Styles',
                             'digital': 'Digital Art',
                             'paint': 'Painting',
                             'draw': 'Drawing',
@@ -145,7 +146,8 @@ class StyleManager {
                             'misc': 'Miscellaneous',
                             'sai': 'Stable Diffusion',
                             'cinematic': 'Cinematic',
-                            'papercraft': 'Papercraft'
+                            'papercraft': 'Papercraft',
+                            'superhero': 'Superheroes'
                         };
                         
                         if (categoryMap[possibleCategory]) {
