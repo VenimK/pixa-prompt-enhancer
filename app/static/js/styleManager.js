@@ -126,6 +126,7 @@ class StyleManager {
                             'photo': 'Photography',
                             'art': 'Art',
                             'artstyle': 'Art Styles',
+                            'artist': 'Famous Artists',
                             'digital': 'Digital Art',
                             'paint': 'Painting',
                             'draw': 'Drawing',
@@ -137,7 +138,9 @@ class StyleManager {
                             '3d': '3D',
                             'game': 'Gaming',
                             'movie': 'Movie',
+                            'director': 'Film Directors',
                             'tv': 'TV',
+                            'tvshow': 'TV Shows',
                             'ad': 'Advertisement',
                             'ads': 'Advertisement',
                             'futuristic': 'Futuristic',
@@ -147,7 +150,12 @@ class StyleManager {
                             'sai': 'Stable Diffusion',
                             'cinematic': 'Cinematic',
                             'papercraft': 'Papercraft',
-                            'superhero': 'Superheroes'
+                            'superhero': 'Superheroes',
+                            'music': 'Music Aesthetics',
+                            'era': 'Historical Eras',
+                            'cultural': 'Cultural Styles',
+                            'weather': 'Weather & Atmosphere',
+                            'material': 'Materials & Crafts'
                         };
                         
                         if (categoryMap[possibleCategory]) {
