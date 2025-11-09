@@ -35,7 +35,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const applyStyleBtn = document.getElementById('apply-style');
     const clearStyleBtn = document.getElementById('clear-style');
     
-    let selectedStyle = null;
+    let selectedStyles = [];
+    const MAX_STYLES = 3;
     
     // Render style categories and options
     function renderStyleCategories() {
@@ -60,20 +61,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                 optionElement.className = 'style-option';
                 
                 const input = document.createElement('input');
-                input.type = 'radio';
+                input.type = 'checkbox';
                 input.id = optionId;
                 input.name = 'style-option';
                 input.value = style.name;
                 
                 input.addEventListener('change', () => {
                     if (input.checked) {
-                        selectedStyle = style;
-                        stylePreview.textContent = style.name;
-                        // Show a preview of the style
-                        if (promptInput.value) {
-                            const preview = styleManager.applyStyle(promptInput.value, style.name);
-                            stylePreview.textContent = `${style.name}: ${preview.substring(0, 50)}...`;
+                        // Check if max styles reached
+                        if (selectedStyles.length >= MAX_STYLES) {
+                            input.checked = false;
+                            showToast(`Maximum ${MAX_STYLES} styles allowed`, 'warning');
+                            return;
                         }
+                        selectedStyles.push(style);
+                    } else {
+                        // Remove from selected styles
+                        const index = selectedStyles.findIndex(s => s.name === style.name);
+                        if (index > -1) {
+                            selectedStyles.splice(index, 1);
+                        }
+                    }
+                    
+                    // Update preview
+                    if (selectedStyles.length > 0) {
+                        const styleNames = selectedStyles.map(s => s.name).join(' + ');
+                        stylePreview.textContent = `${selectedStyles.length} style${selectedStyles.length > 1 ? 's' : ''}: ${styleNames}`;
+                    } else {
+                        stylePreview.textContent = 'No style selected';
                     }
                 });
                 
@@ -93,10 +108,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // Apply the selected style to the prompt
+    // Apply the selected style(s) to the prompt
     function applyStyle() {
-        if (!selectedStyle) {
-            showToast('Please select a style first', 'warning');
+        if (selectedStyles.length === 0) {
+            showToast('Please select at least one style', 'warning');
             return;
         }
         
@@ -105,17 +120,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
-        // Apply the style to the prompt
-        const enhancedPrompt = styleManager.applyStyle(promptInput.value, selectedStyle.name);
-        const negativePrompt = styleManager.getNegativePrompt(selectedStyle.name);
+        // Tag-based approach: add style keywords to prompt
+        const basePrompt = promptInput.value;
+        const styleKeywords = selectedStyles.map(s => s.name.toLowerCase() + ' style').join(', ');
+        const enhancedPrompt = `${basePrompt}, ${styleKeywords}`;
+        
+        // Combine negative prompts from all selected styles
+        const allNegativePrompts = selectedStyles
+            .map(s => styleManager.getNegativePrompt(s.name))
+            .filter(p => p) // Remove empty prompts
+            .join(', ');
         
         // Update the prompt and negative prompt
         promptInput.value = enhancedPrompt;
         
-        if (negativePrompt && negativePromptInput) {
+        if (allNegativePrompts && negativePromptInput) {
             negativePromptInput.value = negativePromptInput.value 
-                ? `${negativePromptInput.value}, ${negativePrompt}`
-                : negativePrompt;
+                ? `${negativePromptInput.value}, ${allNegativePrompts}`
+                : allNegativePrompts;
         }
         
         // Trigger input events to update character counts
@@ -124,17 +146,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             negativePromptInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
         
-        showToast(`Applied ${selectedStyle.name} style`, 'success');
+        const styleCount = selectedStyles.length;
+        const styleNames = selectedStyles.map(s => s.name).join(' + ');
+        showToast(`Applied ${styleCount} style${styleCount > 1 ? 's' : ''}: ${styleNames}`, 'success');
     }
     
-    // Clear the selected style
+    // Clear the selected styles
     function clearStyle() {
-        // Uncheck all radio buttons
-        document.querySelectorAll('input[name="style-option"]').forEach(radio => {
-            radio.checked = false;
+        // Uncheck all checkboxes
+        document.querySelectorAll('input[name="style-option"]').forEach(checkbox => {
+            checkbox.checked = false;
         });
         
-        selectedStyle = null;
+        selectedStyles = [];
         stylePreview.textContent = 'No style selected';
     }
     

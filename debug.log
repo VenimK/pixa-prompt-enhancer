@@ -1,320 +1,41 @@
-=== Prompt Enhancer Debug Log Started at 2025-11-09 15:03:17.030707 ===
+=== Prompt Enhancer Debug Log Started at 2025-11-09 15:55:56.508567 ===
 Application initialized
 
-[2025-11-09 15:03:17] FastAPI startup event triggered
-[2025-11-09 15:03:24] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 15:03:25] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 15:07:43] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 15:07:43] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 15:09:09] 
+[2025-11-09 15:55:56] FastAPI startup event triggered
+[2025-11-09 15:56:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 15:56:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 15:56:01] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 15:57:04] 
 ============================================================
-[2025-11-09 15:09:09] ENHANCE REQUEST
-[2025-11-09 15:09:09] ============================================================
-[2025-11-09 15:09:09] User Settings:
-[2025-11-09 15:09:09]   - Prompt Type: Image
-[2025-11-09 15:09:09]   - Model: default
-[2025-11-09 15:09:09]   - Style: auto
-[2025-11-09 15:09:09]   - Cinematography: auto
-[2025-11-09 15:09:09]   - Lighting: auto
-[2025-11-09 15:09:09]   - Motion Effect: Static
-[2025-11-09 15:09:09]   - Text Emphasis: The text "Deadpool" is prominently displayed on a ...
-[2025-11-09 15:09:09] 
-Original Prompt (235 chars):
-[2025-11-09 15:09:09]   Deadpool mercenary style skull, trash polka –ar 16:9 –style raw –s 750 . red and black costume, dual katanas and guns, fourth-wall breaking, comedic irreverent action pose, Marvel Comics art, merc wit...
-[2025-11-09 15:09:09] 
-Enhanced Prompt (1232 chars):
-[2025-11-09 15:09:09]   A mercenary style Deadpool skull, grinning irreverently, clad in a tattered red and black tactical suit. Dual katanas are crossed behind its back, holstered guns at its hips. The skull strikes a dynam...
-[2025-11-09 15:09:09] 
+[2025-11-09 15:57:04] ENHANCE REQUEST
+[2025-11-09 15:57:04] ============================================================
+[2025-11-09 15:57:04] User Settings:
+[2025-11-09 15:57:04]   - Prompt Type: Image
+[2025-11-09 15:57:04]   - Model: default
+[2025-11-09 15:57:04]   - Style: auto
+[2025-11-09 15:57:04]   - Cinematography: auto
+[2025-11-09 15:57:04]   - Lighting: auto
+[2025-11-09 15:57:04]   - Motion Effect: Static
+[2025-11-09 15:57:04]   - Text Emphasis: The text "multi style" with wisps of smoke swirlin...
+[2025-11-09 15:57:04] 
+Original Prompt (107 chars):
+[2025-11-09 15:57:04]   eating diner in the air, era victorian style, material metal sculpture style, superhero black panther style
+[2025-11-09 15:57:04] 
+Enhanced Prompt (1881 chars):
+[2025-11-09 15:57:04]   A grand, ornate Victorian-era airship-diner, sculpted from dark, polished vibranium-like metal, floats majestically above a sprawling, misty cityscape at twilight. Its intricate, filigree-laden archit...
+[2025-11-09 15:57:04] 
 Model Guidance Used:
-[2025-11-09 15:09:09]   None (default/standard)
-[2025-11-09 15:09:09] 
+[2025-11-09 15:57:04]   None (default/standard)
+[2025-11-09 15:57:04] 
 Character Limit Check:
-[2025-11-09 15:09:09]   - Model for limit: default
-[2025-11-09 15:09:09]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 15:09:09]   ✓ Within limit (1232 <= 3000)
-[2025-11-09 15:09:09] 
+[2025-11-09 15:57:04]   - Model for limit: default
+[2025-11-09 15:57:04]   - Checking limit: model_type=default, max_length=3000 chars
+[2025-11-09 15:57:04]   ✓ Within limit (1881 <= 3000)
+[2025-11-09 15:57:04] 
 Final Output:
-[2025-11-09 15:09:09]   - Length: 1232 chars
-[2025-11-09 15:09:09]   - Truncated: NO
-[2025-11-09 15:09:09] 
-⏱️  Processing time: 11.60 seconds
-[2025-11-09 15:09:09] ============================================================
-
-[2025-11-09 15:10:42] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 15:10:43] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 15:10:43] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 15:11:50] 
-============================================================
-[2025-11-09 15:11:50] ENHANCE REQUEST
-[2025-11-09 15:11:50] ============================================================
-[2025-11-09 15:11:50] User Settings:
-[2025-11-09 15:11:50]   - Prompt Type: Image
-[2025-11-09 15:11:50]   - Model: default
-[2025-11-09 15:11:50]   - Style: auto
-[2025-11-09 15:11:50]   - Cinematography: auto
-[2025-11-09 15:11:50]   - Lighting: auto
-[2025-11-09 15:11:50]   - Motion Effect: Static
-[2025-11-09 15:11:50]   - Text Emphasis: The text "Doctor Strange" is prominently displayed...
-[2025-11-09 15:11:50] 
-Original Prompt (250 chars):
-[2025-11-09 15:11:50]   Doctor Strange sorcerer supreme style skull, trash polka –ar 16:9 –style raw –s 750 . mystical levitating cloak of levitation, magical glowing mandalas and runes, Eye of Agamotto amulet, mystic arts a...
-[2025-11-09 15:11:50] 
-Enhanced Prompt (1515 chars):
-[2025-11-09 15:11:50]   A striking, hyper-detailed Doctor Strange skull, rendered in aggressive trash polka style with subtle cosmic cracks revealing internal energy. A mystical, crimson Cloak of Levitation billows dramatica...
-[2025-11-09 15:11:50] 
-Model Guidance Used:
-[2025-11-09 15:11:50]   None (default/standard)
-[2025-11-09 15:11:50] 
-Character Limit Check:
-[2025-11-09 15:11:50]   - Model for limit: default
-[2025-11-09 15:11:50]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 15:11:50]   ✓ Within limit (1515 <= 3000)
-[2025-11-09 15:11:50] 
-Final Output:
-[2025-11-09 15:11:50]   - Length: 1515 chars
-[2025-11-09 15:11:50]   - Truncated: NO
-[2025-11-09 15:11:50] 
-⏱️  Processing time: 8.40 seconds
-[2025-11-09 15:11:50] ============================================================
-
-[2025-11-09 15:14:39] 
-============================================================
-[2025-11-09 15:14:39] ENHANCE REQUEST
-[2025-11-09 15:14:39] ============================================================
-[2025-11-09 15:14:39] User Settings:
-[2025-11-09 15:14:39]   - Prompt Type: Image
-[2025-11-09 15:14:39]   - Model: default
-[2025-11-09 15:14:39]   - Style: auto
-[2025-11-09 15:14:39]   - Cinematography: auto
-[2025-11-09 15:14:39]   - Lighting: auto
-[2025-11-09 15:14:39]   - Motion Effect: Static
-[2025-11-09 15:14:39]   - Text Emphasis: The text "Scarlet Witch" is prominently displayed ...
-[2025-11-09 15:14:39] 
-Original Prompt (230 chars):
-[2025-11-09 15:14:39]   Scarlet Witch chaos magic style skull, trash polka –ar 16:9 –style raw –s 750 . red glowing energy swirls and hex powers, crimson costume and headpiece, reality-warping effects, Marvel Comics art, pow...
-[2025-11-09 15:14:39] 
-Enhanced Prompt (1482 chars):
-[2025-11-09 15:14:39]   A dynamic, high-impact image. Scarlet Witch chaos magic style skull, rendered in striking trash polka art, dominates the middle ground, subtly incorporating elements of her crimson headpiece and costu...
-[2025-11-09 15:14:39] 
-Model Guidance Used:
-[2025-11-09 15:14:39]   None (default/standard)
-[2025-11-09 15:14:39] 
-Character Limit Check:
-[2025-11-09 15:14:39]   - Model for limit: default
-[2025-11-09 15:14:39]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 15:14:39]   ✓ Within limit (1482 <= 3000)
-[2025-11-09 15:14:39] 
-Final Output:
-[2025-11-09 15:14:39]   - Length: 1482 chars
-[2025-11-09 15:14:39]   - Truncated: NO
-[2025-11-09 15:14:39] 
-⏱️  Processing time: 8.92 seconds
-[2025-11-09 15:14:39] ============================================================
-
-[2025-11-09 15:16:06] 
-============================================================
-[2025-11-09 15:16:06] ENHANCE REQUEST
-[2025-11-09 15:16:06] ============================================================
-[2025-11-09 15:16:06] User Settings:
-[2025-11-09 15:16:06]   - Prompt Type: Image
-[2025-11-09 15:16:06]   - Model: default
-[2025-11-09 15:16:06]   - Style: auto
-[2025-11-09 15:16:06]   - Cinematography: auto
-[2025-11-09 15:16:06]   - Lighting: auto
-[2025-11-09 15:16:06]   - Motion Effect: Static
-[2025-11-09 15:16:06]   - Text Emphasis: The text "Venom" is prominently displayed on a flo...
-[2025-11-09 15:16:06] 
-Original Prompt (243 chars):
-[2025-11-09 15:16:06]   Venom symbiote style skull, trash polka –ar 16:9 –style raw –s 750 . black alien symbiote texture, white spider symbol, sharp teeth and long tongue, muscular dark antihero, Marvel Comics art, menacing...
-[2025-11-09 15:16:06] 
-Enhanced Prompt (1516 chars):
-[2025-11-09 15:16:06]   A menacing Venom symbiote style skull dominates the middle ground, rendered with intricate black alien symbiote texture, boasting a wet, reflective sheen. Its stark white spider symbol is emblazoned o...
-[2025-11-09 15:16:06] 
-Model Guidance Used:
-[2025-11-09 15:16:06]   None (default/standard)
-[2025-11-09 15:16:06] 
-Character Limit Check:
-[2025-11-09 15:16:06]   - Model for limit: default
-[2025-11-09 15:16:06]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 15:16:06]   ✓ Within limit (1516 <= 3000)
-[2025-11-09 15:16:06] 
-Final Output:
-[2025-11-09 15:16:06]   - Length: 1516 chars
-[2025-11-09 15:16:06]   - Truncated: NO
-[2025-11-09 15:16:06] 
-⏱️  Processing time: 12.29 seconds
-[2025-11-09 15:16:06] ============================================================
-
-[2025-11-09 15:18:55] 
-============================================================
-[2025-11-09 15:18:55] ENHANCE REQUEST
-[2025-11-09 15:18:55] ============================================================
-[2025-11-09 15:18:55] User Settings:
-[2025-11-09 15:18:55]   - Prompt Type: Image
-[2025-11-09 15:18:55]   - Model: default
-[2025-11-09 15:18:55]   - Style: auto
-[2025-11-09 15:18:55]   - Cinematography: auto
-[2025-11-09 15:18:55]   - Lighting: auto
-[2025-11-09 15:18:55]   - Motion Effect: Static
-[2025-11-09 15:18:55]   - Text Emphasis: The text "Silver Surfer" is prominently displayed ...
-[2025-11-09 15:18:55] 
-Original Prompt (255 chars):
-[2025-11-09 15:18:55]   Silver Surfer cosmic herald style skull, trash polka –ar 16:9 –style raw –s 750 . chrome metallic silver figure, cosmic surfboard, cosmic power cosmic effects, space starfield background, Marvel Comic...
-[2025-11-09 15:18:55] 
-Enhanced Prompt (1343 chars):
-[2025-11-09 15:18:55]   A striking cosmic herald style skull, embodying the Silver Surfer, with aggressive trash polka aesthetics of bold red and black elements contrasting intricate chrome metallic silver. The skull seamles...
-[2025-11-09 15:18:55] 
-Model Guidance Used:
-[2025-11-09 15:18:55]   None (default/standard)
-[2025-11-09 15:18:55] 
-Character Limit Check:
-[2025-11-09 15:18:55]   - Model for limit: default
-[2025-11-09 15:18:55]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 15:18:55]   ✓ Within limit (1343 <= 3000)
-[2025-11-09 15:18:55] 
-Final Output:
-[2025-11-09 15:18:55]   - Length: 1343 chars
-[2025-11-09 15:18:55]   - Truncated: NO
-[2025-11-09 15:18:55] 
-⏱️  Processing time: 10.84 seconds
-[2025-11-09 15:18:55] ============================================================
-
-[2025-11-09 15:25:51] 
-============================================================
-[2025-11-09 15:25:51] ENHANCE REQUEST
-[2025-11-09 15:25:51] ============================================================
-[2025-11-09 15:25:51] User Settings:
-[2025-11-09 15:25:51]   - Prompt Type: Image
-[2025-11-09 15:25:51]   - Model: default
-[2025-11-09 15:25:51]   - Style: auto
-[2025-11-09 15:25:51]   - Cinematography: auto
-[2025-11-09 15:25:51]   - Lighting: auto
-[2025-11-09 15:25:51]   - Motion Effect: Static
-[2025-11-09 15:25:51]   - Text Emphasis: The text "Star Lord" is prominently displayed on a...
-[2025-11-09 15:25:51] 
-Original Prompt (245 chars):
-[2025-11-09 15:25:51]   Star-Lord Guardians of the Galaxy style skull, trash polka –ar 16:9 –style raw –s 750 . space outlaw red leather jacket, element guns, retro 80s walkman vibes, cosmic adventure, Marvel Comics art, Mil...
-[2025-11-09 15:25:51] 
-Enhanced Prompt (1553 chars):
-[2025-11-09 15:25:51]   A Star-Lord inspired skull, trash polka art style. The skull, centered but adhering to a subtle rule of thirds, features a stylized visor and breathing apparatus. Rendered with bold red and black inks...
-[2025-11-09 15:25:51] 
-Model Guidance Used:
-[2025-11-09 15:25:51]   None (default/standard)
-[2025-11-09 15:25:51] 
-Character Limit Check:
-[2025-11-09 15:25:51]   - Model for limit: default
-[2025-11-09 15:25:51]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 15:25:51]   ✓ Within limit (1553 <= 3000)
-[2025-11-09 15:25:51] 
-Final Output:
-[2025-11-09 15:25:51]   - Length: 1553 chars
-[2025-11-09 15:25:51]   - Truncated: NO
-[2025-11-09 15:25:51] 
-⏱️  Processing time: 11.03 seconds
-[2025-11-09 15:25:51] ============================================================
-
-[2025-11-09 15:30:52] 
-============================================================
-[2025-11-09 15:30:52] ENHANCE REQUEST
-[2025-11-09 15:30:52] ============================================================
-[2025-11-09 15:30:52] User Settings:
-[2025-11-09 15:30:52]   - Prompt Type: Image
-[2025-11-09 15:30:52]   - Model: default
-[2025-11-09 15:30:52]   - Style: auto
-[2025-11-09 15:30:52]   - Cinematography: auto
-[2025-11-09 15:30:52]   - Lighting: auto
-[2025-11-09 15:30:52]   - Motion Effect: Static
-[2025-11-09 15:30:52]   - Text Emphasis: The text "Star Lord" is prominently displayed on a...
-[2025-11-09 15:30:52] 
-Original Prompt (244 chars):
-[2025-11-09 15:30:52]   Punisher vigilante style skull, trash polka –ar 16:9 –style raw –s 750 . iconic white skull logo on black, tactical military gear and weapons, dark gritty street-level vigilante, noir atmosphere, Marv...
-[2025-11-09 15:30:52] 
-Enhanced Prompt (1643 chars):
-[2025-11-09 15:30:52]   A grim Punisher vigilante, rendered in a dynamic street-level composition, embodying brutal justice and urban warfare. The central figure, clad in a black tactical plate carrier with visible pouches a...
-[2025-11-09 15:30:52] 
-Model Guidance Used:
-[2025-11-09 15:30:52]   None (default/standard)
-[2025-11-09 15:30:52] 
-Character Limit Check:
-[2025-11-09 15:30:52]   - Model for limit: default
-[2025-11-09 15:30:52]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 15:30:52]   ✓ Within limit (1643 <= 3000)
-[2025-11-09 15:30:52] 
-Final Output:
-[2025-11-09 15:30:52]   - Length: 1643 chars
-[2025-11-09 15:30:52]   - Truncated: NO
-[2025-11-09 15:30:52] 
-⏱️  Processing time: 16.07 seconds
-[2025-11-09 15:30:52] ============================================================
-
-[2025-11-09 15:33:06] 
-============================================================
-[2025-11-09 15:33:06] ENHANCE REQUEST
-[2025-11-09 15:33:06] ============================================================
-[2025-11-09 15:33:06] User Settings:
-[2025-11-09 15:33:06]   - Prompt Type: Image
-[2025-11-09 15:33:06]   - Model: default
-[2025-11-09 15:33:06]   - Style: auto
-[2025-11-09 15:33:06]   - Cinematography: auto
-[2025-11-09 15:33:06]   - Lighting: auto
-[2025-11-09 15:33:06]   - Motion Effect: Static
-[2025-11-09 15:33:06]   - Text Emphasis: The text "Punisher" is prominently displayed on a ...
-[2025-11-09 15:33:06] 
-Original Prompt (244 chars):
-[2025-11-09 15:33:06]   Punisher vigilante style skull, trash polka –ar 16:9 –style raw –s 750 . iconic white skull logo on black, tactical military gear and weapons, dark gritty street-level vigilante, noir atmosphere, Marv...
-[2025-11-09 15:33:06] 
-Enhanced Prompt (1671 chars):
-[2025-11-09 15:33:06]   A bold Punisher skull, trash polka art style, central and imposing. The iconic white skull logo on black is fragmented and stylized with splatters, abstract geometric shapes, and grunge textures in re...
-[2025-11-09 15:33:06] 
-Model Guidance Used:
-[2025-11-09 15:33:06]   None (default/standard)
-[2025-11-09 15:33:06] 
-Character Limit Check:
-[2025-11-09 15:33:06]   - Model for limit: default
-[2025-11-09 15:33:06]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 15:33:06]   ✓ Within limit (1671 <= 3000)
-[2025-11-09 15:33:06] 
-Final Output:
-[2025-11-09 15:33:06]   - Length: 1671 chars
-[2025-11-09 15:33:06]   - Truncated: NO
-[2025-11-09 15:33:06] 
-⏱️  Processing time: 10.46 seconds
-[2025-11-09 15:33:06] ============================================================
-
-[2025-11-09 15:33:31] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 15:33:32] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 15:33:32] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 15:34:51] 
-============================================================
-[2025-11-09 15:34:51] ENHANCE REQUEST
-[2025-11-09 15:34:51] ============================================================
-[2025-11-09 15:34:51] User Settings:
-[2025-11-09 15:34:51]   - Prompt Type: Image
-[2025-11-09 15:34:51]   - Model: default
-[2025-11-09 15:34:51]   - Style: auto
-[2025-11-09 15:34:51]   - Cinematography: auto
-[2025-11-09 15:34:51]   - Lighting: auto
-[2025-11-09 15:34:51]   - Motion Effect: Static
-[2025-11-09 15:34:51]   - Text Emphasis: The text "Yarn" is prominently displayed on a flow...
-[2025-11-09 15:34:51] 
-Original Prompt (205 chars):
-[2025-11-09 15:34:51]   Yarn craft crochet style skull, trash polka –ar 16:9 –style raw –s 750 . soft textile texture, knitted or crocheted, colorful yarn, handmade craft aesthetic, cozy warm materials, visible stitching pat...
-[2025-11-09 15:34:51] 
-Enhanced Prompt (1600 chars):
-[2025-11-09 15:34:51]   A vibrant, intricately crocheted skull, crafted from soft, colorful yarn, dominates the midground. Its surface showcases visible stitching patterns, creating a cozy, handmade craft aesthetic. Trash po...
-[2025-11-09 15:34:51] 
-Model Guidance Used:
-[2025-11-09 15:34:51]   None (default/standard)
-[2025-11-09 15:34:51] 
-Character Limit Check:
-[2025-11-09 15:34:51]   - Model for limit: default
-[2025-11-09 15:34:51]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 15:34:51]   ✓ Within limit (1600 <= 3000)
-[2025-11-09 15:34:51] 
-Final Output:
-[2025-11-09 15:34:51]   - Length: 1600 chars
-[2025-11-09 15:34:51]   - Truncated: NO
-[2025-11-09 15:34:51] 
-⏱️  Processing time: 10.19 seconds
-[2025-11-09 15:34:51] ============================================================
+[2025-11-09 15:57:04]   - Length: 1881 chars
+[2025-11-09 15:57:04]   - Truncated: NO
+[2025-11-09 15:57:04] 
+⏱️  Processing time: 11.61 seconds
+[2025-11-09 15:57:04] ============================================================
 
