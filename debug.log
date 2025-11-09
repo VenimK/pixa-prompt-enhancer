@@ -1,6 +1,59 @@
-=== Prompt Enhancer Debug Log Started at 2025-11-09 13:33:31.469004 ===
+=== Prompt Enhancer Debug Log Started at 2025-11-09 13:41:22.090375 ===
 Application initialized
 
-[2025-11-09 13:33:31] FastAPI startup event triggered
-[2025-11-09 13:33:38] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 13:33:38] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:22] FastAPI startup event triggered
+[2025-11-09 13:41:25] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:25] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:25] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:26] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:26] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:26] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:27] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:27] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:27] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:28] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:28] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:28] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:28] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:28] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:28] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:28] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:28] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:41:28] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:42:57] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:42:57] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:42:57] GET / - Home page accessed from 127.0.0.1
+[2025-11-09 13:43:58] 
+============================================================
+[2025-11-09 13:43:58] ENHANCE REQUEST
+[2025-11-09 13:43:58] ============================================================
+[2025-11-09 13:43:58] User Settings:
+[2025-11-09 13:43:58]   - Prompt Type: Image
+[2025-11-09 13:43:58]   - Model: default
+[2025-11-09 13:43:58]   - Style: auto
+[2025-11-09 13:43:58]   - Cinematography: auto
+[2025-11-09 13:43:58]   - Lighting: auto
+[2025-11-09 13:43:58]   - Motion Effect: Static
+[2025-11-09 13:43:58]   - Text Emphasis: The text "Chibi style" is prominently displayed on...
+[2025-11-09 13:43:58] 
+Original Prompt (221 chars):
+[2025-11-09 13:43:58]   Chibi style drawing, skull, trash polka –ar 16:9 –style raw –s 750 . super deformed characters, oversized head, large expressive eyes, tiny body, cute proportions, simplified features, kawaii, adorabl...
+[2025-11-09 13:43:58] 
+Enhanced Prompt (1473 chars):
+[2025-11-09 13:43:58]   A highly detailed, ultra-kawaii chibi skull illustration in a bold trash polka art style. The skull features an exaggerated oversized head, large glistening expressive eyes that reflect light, and tin...
+[2025-11-09 13:43:58] 
+Model Guidance Used:
+[2025-11-09 13:43:58]   None (default/standard)
+[2025-11-09 13:43:58] 
+Character Limit Check:
+[2025-11-09 13:43:58]   - Model for limit: default
+[2025-11-09 13:43:58]   - Checking limit: model_type=default, max_length=3000 chars
+[2025-11-09 13:43:58]   ✓ Within limit (1473 <= 3000)
+[2025-11-09 13:43:58] 
+Final Output:
+[2025-11-09 13:43:58]   - Length: 1473 chars
+[2025-11-09 13:43:58]   - Truncated: NO
+[2025-11-09 13:43:58] 
+⏱️  Processing time: 12.00 seconds
+[2025-11-09 13:43:58] ============================================================
+
