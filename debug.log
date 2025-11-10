@@ -1,41 +1,7 @@
-=== Prompt Enhancer Debug Log Started at 2025-11-09 15:55:56.508567 ===
+=== Prompt Enhancer Debug Log Started at 2025-11-10 03:03:53.589797 ===
 Application initialized
 
-[2025-11-09 15:55:56] FastAPI startup event triggered
-[2025-11-09 15:56:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 15:56:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 15:56:01] GET / - Home page accessed from 127.0.0.1
-[2025-11-09 15:57:04] 
-============================================================
-[2025-11-09 15:57:04] ENHANCE REQUEST
-[2025-11-09 15:57:04] ============================================================
-[2025-11-09 15:57:04] User Settings:
-[2025-11-09 15:57:04]   - Prompt Type: Image
-[2025-11-09 15:57:04]   - Model: default
-[2025-11-09 15:57:04]   - Style: auto
-[2025-11-09 15:57:04]   - Cinematography: auto
-[2025-11-09 15:57:04]   - Lighting: auto
-[2025-11-09 15:57:04]   - Motion Effect: Static
-[2025-11-09 15:57:04]   - Text Emphasis: The text "multi style" with wisps of smoke swirlin...
-[2025-11-09 15:57:04] 
-Original Prompt (107 chars):
-[2025-11-09 15:57:04]   eating diner in the air, era victorian style, material metal sculpture style, superhero black panther style
-[2025-11-09 15:57:04] 
-Enhanced Prompt (1881 chars):
-[2025-11-09 15:57:04]   A grand, ornate Victorian-era airship-diner, sculpted from dark, polished vibranium-like metal, floats majestically above a sprawling, misty cityscape at twilight. Its intricate, filigree-laden archit...
-[2025-11-09 15:57:04] 
-Model Guidance Used:
-[2025-11-09 15:57:04]   None (default/standard)
-[2025-11-09 15:57:04] 
-Character Limit Check:
-[2025-11-09 15:57:04]   - Model for limit: default
-[2025-11-09 15:57:04]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-09 15:57:04]   ✓ Within limit (1881 <= 3000)
-[2025-11-09 15:57:04] 
-Final Output:
-[2025-11-09 15:57:04]   - Length: 1881 chars
-[2025-11-09 15:57:04]   - Truncated: NO
-[2025-11-09 15:57:04] 
-⏱️  Processing time: 11.61 seconds
-[2025-11-09 15:57:04] ============================================================
-
+[2025-11-10 03:03:53] FastAPI startup event triggered
+[2025-11-10 03:03:58] GET / - Home page accessed from 127.0.0.1
+[2025-11-10 03:03:58] GET / - Home page accessed from 127.0.0.1
+[2025-11-10 03:03:58] GET / - Home page accessed from 127.0.0.1

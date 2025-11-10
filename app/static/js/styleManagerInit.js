@@ -32,6 +32,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const negativePromptInput = document.getElementById('negative-prompt') || { value: '' };
     const stylePreview = document.querySelector('.style-preview');
     const styleCategoriesContainer = document.querySelector('.style-categories');
+    const styleSearchInput = document.getElementById('style-search-input');
+    const styleSearchResults = document.querySelector('.style-search-results');
     const applyStyleBtn = document.getElementById('apply-style');
     const clearStyleBtn = document.getElementById('clear-style');
     
@@ -121,9 +123,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         // Tag-based approach: add style keywords to prompt
-        const basePrompt = promptInput.value;
-        const styleKeywords = selectedStyles.map(s => s.name.toLowerCase() + ' style').join(', ');
-        const enhancedPrompt = `${basePrompt}, ${styleKeywords}`;
+        const basePrompt = promptInput.value.trim();
+        const styleKeywords = selectedStyles.map(s => {
+            const styleName = s.name.toLowerCase();
+            // Don't add "style" if it already ends with "style"
+            return styleName.endsWith('style') ? styleName : styleName + ' style';
+        }).join(', ');
+        
+        // Combine and clean up the prompt (remove duplicate commas and spaces)
+        let enhancedPrompt = `${basePrompt}, ${styleKeywords}`;
+        enhancedPrompt = enhancedPrompt.replace(/,\s*,+/g, ',').replace(/\s+/g, ' ').trim();
         
         // Combine negative prompts from all selected styles
         const allNegativePrompts = selectedStyles
@@ -162,9 +171,75 @@ document.addEventListener('DOMContentLoaded', async () => {
         stylePreview.textContent = 'No style selected';
     }
     
+    // Filter styles based on search query
+    function filterStyles() {
+        const query = styleSearchInput.value.toLowerCase().trim();
+        
+        if (!query) {
+            // Show all categories and styles
+            document.querySelectorAll('.style-category').forEach(category => {
+                category.style.display = 'block';
+            });
+            document.querySelectorAll('.style-option').forEach(option => {
+                option.style.display = 'block';
+            });
+            styleSearchResults.textContent = '';
+            return;
+        }
+        
+        let visibleCount = 0;
+        
+        // Filter through all categories
+        document.querySelectorAll('.style-category').forEach(category => {
+            const categoryTitle = category.querySelector('h4').textContent.toLowerCase();
+            const options = category.querySelectorAll('.style-option');
+            let categoryHasVisible = false;
+            
+            // Check each style in the category
+            options.forEach(option => {
+                const label = option.querySelector('label').textContent.toLowerCase();
+                const matches = label.includes(query) || categoryTitle.includes(query);
+                
+                if (matches) {
+                    option.style.display = 'block';
+                    categoryHasVisible = true;
+                    visibleCount++;
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+            
+            // Show/hide category based on whether it has visible styles
+            category.style.display = categoryHasVisible ? 'block' : 'none';
+        });
+        
+        // Update search results message
+        if (visibleCount === 0) {
+            styleSearchResults.textContent = '❌ No styles found';
+            styleSearchResults.style.color = '#e74c3c';
+        } else {
+            styleSearchResults.textContent = `✓ Found ${visibleCount} style${visibleCount !== 1 ? 's' : ''}`;
+            styleSearchResults.style.color = '#27ae60';
+        }
+    }
+    
     // Event listeners
     applyStyleBtn.addEventListener('click', applyStyle);
     clearStyleBtn.addEventListener('click', clearStyle);
+    
+    // Search functionality
+    if (styleSearchInput) {
+        styleSearchInput.addEventListener('input', filterStyles);
+        
+        // Clear search on Escape key
+        styleSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                styleSearchInput.value = '';
+                filterStyles();
+                styleSearchInput.blur();
+            }
+        });
+    }
     
     // Initialize the style manager UI
     async function initializeStyleManager() {
