@@ -1,40 +1,172 @@
-=== Prompt Enhancer Debug Log Started at 2025-11-10 05:53:08.797349 ===
+=== Prompt Enhancer Debug Log Started at 2025-11-10 06:23:44.771830 ===
 Application initialized
 
-[2025-11-10 05:53:08] FastAPI startup event triggered
-[2025-11-10 05:53:13] GET / - Home page accessed from 127.0.0.1
-[2025-11-10 05:53:13] GET / - Home page accessed from 127.0.0.1
-[2025-11-10 05:53:13] GET / - Home page accessed from 127.0.0.1
-[2025-11-10 05:54:41] 
+[2025-11-10 06:23:44] FastAPI startup event triggered
+[2025-11-10 06:23:47] GET / - Home page accessed from 127.0.0.1
+[2025-11-10 06:23:47] GET / - Home page accessed from 127.0.0.1
+[2025-11-10 06:23:47] GET / - Home page accessed from 127.0.0.1
+[2025-11-10 06:24:21] 
 ============================================================
-[2025-11-10 05:54:41] ENHANCE REQUEST
-[2025-11-10 05:54:41] ============================================================
-[2025-11-10 05:54:41] User Settings:
-[2025-11-10 05:54:41]   - Prompt Type: Image
-[2025-11-10 05:54:41]   - Model: default
-[2025-11-10 05:54:41]   - Style: auto
-[2025-11-10 05:54:41]   - Cinematography: auto
-[2025-11-10 05:54:41]   - Lighting: auto
-[2025-11-10 05:54:41]   - Motion Effect: Static
-[2025-11-10 05:54:41] 
-Original Prompt (239 chars):
-[2025-11-10 05:54:41]   Spawn hellspawn style a beautiful angel in the sky . flowing dark necroplasmic cape with chains, demonic red glowing eyes, skull mask face, hell-spawned creature aesthetic, Image Comics art, supernatu...
-[2025-11-10 05:54:41] 
-Enhanced Prompt (1059 chars):
-[2025-11-10 05:54:41]   Epic, dynamic full shot: A formidable, beautiful angel, corrupted into a hellspawn creature, dominates the turbulent, storm-wracked sky. Worm's eye perspective, low angle, adhering to rule of thirds, ...
-[2025-11-10 05:54:41] 
+[2025-11-10 06:24:21] ENHANCE REQUEST
+[2025-11-10 06:24:21] ============================================================
+[2025-11-10 06:24:21] User Settings:
+[2025-11-10 06:24:21]   - Prompt Type: Image
+[2025-11-10 06:24:21]   - Model: default
+[2025-11-10 06:24:21]   - Style: auto
+[2025-11-10 06:24:21]   - Cinematography: auto
+[2025-11-10 06:24:21]   - Lighting: auto
+[2025-11-10 06:24:21]   - Motion Effect: Static
+[2025-11-10 06:24:21] 
+Original Prompt (109 chars):
+[2025-11-10 06:24:21]   A set of 4 game icons in a single image, autumn theme, featuring an acorn, a hedgehog, a leaf, and a mushroom
+[2025-11-10 06:24:21] 
+Enhanced Prompt (1100 chars):
+[2025-11-10 06:24:21]   A single image featuring a set of four distinct, highly detailed game icons, each embodying a warm autumn theme. The icons are: a perfectly rendered, plump acorn with a textured cap; a charming, styli...
+[2025-11-10 06:24:21] 
 Model Guidance Used:
-[2025-11-10 05:54:41]   None (default/standard)
-[2025-11-10 05:54:41] 
+[2025-11-10 06:24:21]   None (default/standard)
+[2025-11-10 06:24:21] 
 Character Limit Check:
-[2025-11-10 05:54:41]   - Model for limit: default
-[2025-11-10 05:54:41]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-10 05:54:41]   ✓ Within limit (1059 <= 3000)
-[2025-11-10 05:54:41] 
+[2025-11-10 06:24:21]   - Model for limit: default
+[2025-11-10 06:24:21]   - Checking limit: model_type=default, max_length=3000 chars
+[2025-11-10 06:24:21]   ✓ Within limit (1100 <= 3000)
+[2025-11-10 06:24:21] 
 Final Output:
-[2025-11-10 05:54:41]   - Length: 1059 chars
-[2025-11-10 05:54:41]   - Truncated: NO
-[2025-11-10 05:54:41] 
-⏱️  Processing time: 7.63 seconds
-[2025-11-10 05:54:41] ============================================================
+[2025-11-10 06:24:21]   - Length: 1100 chars
+[2025-11-10 06:24:21]   - Truncated: NO
+[2025-11-10 06:24:21] 
+⏱️  Processing time: 8.72 seconds
+[2025-11-10 06:24:21] ============================================================
+
+[2025-11-10 06:24:31] 
+============================================================
+[2025-11-10 06:24:31] ENHANCE REQUEST
+[2025-11-10 06:24:31] ============================================================
+[2025-11-10 06:24:31] User Settings:
+[2025-11-10 06:24:31]   - Prompt Type: Image
+[2025-11-10 06:24:31]   - Model: default
+[2025-11-10 06:24:31]   - Style: auto
+[2025-11-10 06:24:31]   - Cinematography: auto
+[2025-11-10 06:24:31]   - Lighting: auto
+[2025-11-10 06:24:31]   - Motion Effect: Static
+[2025-11-10 06:24:31] 
+Original Prompt (264 chars):
+[2025-11-10 06:24:31]   Sand art style A set of 4 game icons in a single image, autumn theme, featuring an acorn, a hedgehog, a leaf, and a mushroom . layered colored sand, desert sand patterns, bottle sand art, temporary ep...
+[2025-11-10 06:24:31] 
+Enhanced Prompt (926 chars):
+[2025-11-10 06:24:31]   Sand art style, auto style, auto cinematography, auto lighting. Intricate, vibrant sand art, layered colored sands in deep reds, burnt oranges, golden yellows, earthy browns. Four autumn-themed game i...
+[2025-11-10 06:24:31] 
+Model Guidance Used:
+[2025-11-10 06:24:31]   None (default/standard)
+[2025-11-10 06:24:31] 
+Character Limit Check:
+[2025-11-10 06:24:31]   - Model for limit: default
+[2025-11-10 06:24:31]   - Checking limit: model_type=default, max_length=3000 chars
+[2025-11-10 06:24:31]   ✓ Within limit (926 <= 3000)
+[2025-11-10 06:24:31] 
+Final Output:
+[2025-11-10 06:24:31]   - Length: 926 chars
+[2025-11-10 06:24:31]   - Truncated: NO
+[2025-11-10 06:24:31] 
+⏱️  Processing time: 5.87 seconds
+[2025-11-10 06:24:31] ============================================================
+
+[2025-11-10 06:28:31] 
+============================================================
+[2025-11-10 06:28:31] ENHANCE REQUEST
+[2025-11-10 06:28:31] ============================================================
+[2025-11-10 06:28:31] User Settings:
+[2025-11-10 06:28:31]   - Prompt Type: Image
+[2025-11-10 06:28:31]   - Model: default
+[2025-11-10 06:28:31]   - Style: auto
+[2025-11-10 06:28:31]   - Cinematography: auto
+[2025-11-10 06:28:31]   - Lighting: auto
+[2025-11-10 06:28:31]   - Motion Effect: Static
+[2025-11-10 06:28:31] 
+Original Prompt (275 chars):
+[2025-11-10 06:28:31]   Wire sculpture art style A set of 4 game icons in a single image, autumn theme, featuring an acorn, a hedgehog, a leaf, and a mushroom . twisted metal wire, delicate wire lines, abstract wire forms, c...
+[2025-11-10 06:28:31] 
+Enhanced Prompt (1063 chars):
+[2025-11-10 06:28:31]   A static image, a visually rich composition of four distinct game icons in wire sculpture art style. Arranged using rule of thirds, the icons include an acorn, a hedgehog, an autumn leaf, and a mushro...
+[2025-11-10 06:28:31] 
+Model Guidance Used:
+[2025-11-10 06:28:31]   None (default/standard)
+[2025-11-10 06:28:31] 
+Character Limit Check:
+[2025-11-10 06:28:31]   - Model for limit: default
+[2025-11-10 06:28:31]   - Checking limit: model_type=default, max_length=3000 chars
+[2025-11-10 06:28:31]   ✓ Within limit (1063 <= 3000)
+[2025-11-10 06:28:31] 
+Final Output:
+[2025-11-10 06:28:31]   - Length: 1063 chars
+[2025-11-10 06:28:31]   - Truncated: NO
+[2025-11-10 06:28:31] 
+⏱️  Processing time: 11.22 seconds
+[2025-11-10 06:28:31] ============================================================
+
+[2025-11-10 06:29:41] 
+============================================================
+[2025-11-10 06:29:41] ENHANCE REQUEST
+[2025-11-10 06:29:41] ============================================================
+[2025-11-10 06:29:41] User Settings:
+[2025-11-10 06:29:41]   - Prompt Type: Image
+[2025-11-10 06:29:41]   - Model: default
+[2025-11-10 06:29:41]   - Style: auto
+[2025-11-10 06:29:41]   - Cinematography: auto
+[2025-11-10 06:29:41]   - Lighting: auto
+[2025-11-10 06:29:41]   - Motion Effect: Static
+[2025-11-10 06:29:41] 
+Original Prompt (296 chars):
+[2025-11-10 06:29:41]   Embroidery needlework style A set of 4 game icons in a single image, autumn theme, featuring an acorn, a hedgehog, a leaf, and a mushroom . hand-stitched colorful threads, intricate cross-stitch patte...
+[2025-11-10 06:29:41] 
+Enhanced Prompt (1168 chars):
+[2025-11-10 06:29:41]   A set of four intricately embroidered game icons in a single image, autumn theme. Featured are: a plump acorn with textured cap stitches, a friendly hedgehog crafted with spiky threadwork, a vibrant m...
+[2025-11-10 06:29:41] 
+Model Guidance Used:
+[2025-11-10 06:29:41]   None (default/standard)
+[2025-11-10 06:29:41] 
+Character Limit Check:
+[2025-11-10 06:29:41]   - Model for limit: default
+[2025-11-10 06:29:41]   - Checking limit: model_type=default, max_length=3000 chars
+[2025-11-10 06:29:41]   ✓ Within limit (1168 <= 3000)
+[2025-11-10 06:29:41] 
+Final Output:
+[2025-11-10 06:29:41]   - Length: 1168 chars
+[2025-11-10 06:29:41]   - Truncated: NO
+[2025-11-10 06:29:41] 
+⏱️  Processing time: 11.90 seconds
+[2025-11-10 06:29:41] ============================================================
+
+[2025-11-10 06:31:46] 
+============================================================
+[2025-11-10 06:31:46] ENHANCE REQUEST
+[2025-11-10 06:31:46] ============================================================
+[2025-11-10 06:31:46] User Settings:
+[2025-11-10 06:31:46]   - Prompt Type: Image
+[2025-11-10 06:31:46]   - Model: default
+[2025-11-10 06:31:46]   - Style: auto
+[2025-11-10 06:31:46]   - Cinematography: auto
+[2025-11-10 06:31:46]   - Lighting: auto
+[2025-11-10 06:31:46]   - Motion Effect: Static
+[2025-11-10 06:31:46] 
+Original Prompt (293 chars):
+[2025-11-10 06:31:46]   Cardboard craft style A set of 4 game icons in a single image, autumn theme, featuring an acorn, a hedgehog, a leaf, and a mushroom . corrugated cardboard texture, DIY handmade cardboard, brown kraft ...
+[2025-11-10 06:31:46] 
+Enhanced Prompt (993 chars):
+[2025-11-10 06:31:46]   A static, artfully composed image featuring four distinct game icons: a plump acorn, a friendly hedgehog, a textured oak leaf, and a classic toadstool mushroom. Each icon is meticulously crafted from ...
+[2025-11-10 06:31:46] 
+Model Guidance Used:
+[2025-11-10 06:31:46]   None (default/standard)
+[2025-11-10 06:31:46] 
+Character Limit Check:
+[2025-11-10 06:31:46]   - Model for limit: default
+[2025-11-10 06:31:46]   - Checking limit: model_type=default, max_length=3000 chars
+[2025-11-10 06:31:46]   ✓ Within limit (993 <= 3000)
+[2025-11-10 06:31:46] 
+Final Output:
+[2025-11-10 06:31:46]   - Length: 993 chars
+[2025-11-10 06:31:46]   - Truncated: NO
+[2025-11-10 06:31:46] 
+⏱️  Processing time: 9.12 seconds
+[2025-11-10 06:31:46] ============================================================
 
