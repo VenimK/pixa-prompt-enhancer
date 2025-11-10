@@ -122,17 +122,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
-        // Tag-based approach: add style keywords to prompt
-        const basePrompt = promptInput.value.trim();
-        const styleKeywords = selectedStyles.map(s => {
-            const styleName = s.name.toLowerCase();
-            // Don't add "style" if it already ends with "style"
-            return styleName.endsWith('style') ? styleName : styleName + ' style';
-        }).join(', ');
+        // Full template approach: Apply each style's complete template progressively
+        let enhancedPrompt = promptInput.value.trim();
         
-        // Combine and clean up the prompt (remove duplicate commas and spaces)
-        let enhancedPrompt = `${basePrompt}, ${styleKeywords}`;
-        enhancedPrompt = enhancedPrompt.replace(/,\s*,+/g, ',').replace(/\s+/g, ' ').trim();
+        // Apply each style template sequentially (each one wraps the previous result)
+        selectedStyles.forEach(style => {
+            enhancedPrompt = styleManager.applyStyle(enhancedPrompt, style.name);
+        });
         
         // Combine negative prompts from all selected styles
         const allNegativePrompts = selectedStyles
