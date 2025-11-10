@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('dark-mode');
     }
     
+    // --- Image Analysis Collapse State ---
+    let isAnalysisExpanded = false; // Start collapsed to save space
+    
     // --- Prompt History Management ---
     const HISTORY_STORAGE_KEY = 'pixa_prompt_history';
     const MAX_HISTORY_ITEMS = 50;
@@ -221,8 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
         clear: document.getElementById('clear-button'),
         clearImage: document.getElementById('clear-image-button'),
         clearHistory: document.getElementById('clear-history'),
-        shortcuts: document.getElementById('shortcuts-btn'),
-        closeShortcuts: document.querySelector('.close-shortcuts'),
         scrollToTop: document.getElementById('scroll-to-top-btn'),
         share: document.getElementById('share-button'),
         export: document.getElementById('export-button'),
@@ -264,12 +265,12 @@ document.addEventListener('DOMContentLoaded', () => {
         imagePreview: document.getElementById('image-preview'),
         imageProgressContainer: document.getElementById('image-progress-container'),
         imageDescription: document.getElementById('image-description-text'),
+        imageDescriptionWrapper: document.getElementById('image-description'),
         motionEffectContainer: document.getElementById('motion-effect-selector-container'),
         historyPanel: document.querySelector('.history-panel'),
         compareResult: document.getElementById('compare-result'),
         compareResultText: document.getElementById('compare-result-text'),
         historyList: document.getElementById('history-list'),
-        shortcutsOverlay: document.getElementById('shortcuts-overlay'),
         charCounter: document.querySelector('.char-counter'),
         charCount: document.getElementById('char-count'),
         dropZone: document.getElementById('drop-zone'),
@@ -389,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
             els.imageProgressContainer.innerHTML = '';
             els.imageProgressContainer.style.display = 'block';
             els.imageDescription.innerHTML = '';
-            els.imageDescription.parentElement.style.display = 'none';
+            els.imageDescriptionWrapper.style.display = 'none';
             els.imageProgressContainer.appendChild(progressContainer);
             
             // Show image preview
@@ -425,26 +426,50 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Check if the response contains an error message
                         if (data.description && data.description.startsWith('Error:')) {
                             els.imageDescription.innerHTML = `<div class="error-message">${data.description}</div>`;
-                            els.imageDescription.parentElement.style.display = 'block';
+                            els.imageDescriptionWrapper.style.display = 'block';
                             showToast('Image analysis failed: ' + data.description.split(':')[1], 'error');
                         } else {
                             // Success - show the description
                             els.imageDescription.innerHTML = data.description;
-                            els.imageDescription.parentElement.style.display = 'block';
+                            els.imageDescriptionWrapper.style.display = 'block';
                             els.imagePreview.style.display = 'block';
                             showToast('Image analyzed successfully!', 'success');
                             updateProgress(1, 'completed');
                             updateProgress(2, 'active');
+                            
+                            // Recalculate height for collapse/expand functionality
+                            // Start collapsed but calculate full height for smooth expand
+                            setTimeout(() => {
+                                const analysisContent = document.getElementById('analysis-content');
+                                const toggleBtn = document.getElementById('toggle-analysis');
+                                const toggleTextEl = document.getElementById('toggle-text');
+                                const toggleIconEl = document.getElementById('toggle-icon');
+                                
+                                if (analysisContent && toggleBtn) {
+                                    // Store full height for smooth animation later
+                                    analysisContent.dataset.fullHeight = analysisContent.scrollHeight;
+                                    
+                                    // Set to collapsed state initially
+                                    analysisContent.style.maxHeight = '100px';
+                                    analysisContent.classList.add('collapsed');
+                                    isAnalysisExpanded = false;
+                                    
+                                    if (toggleTextEl) toggleTextEl.textContent = 'Show More';
+                                    if (toggleIconEl) toggleIconEl.style.transform = 'rotate(180deg)';
+                                    
+                                    console.log('Image analysis collapse initialized - starts collapsed at 100px');
+                                }
+                            }, 100);
                         }
                     } catch (error) {
                         els.imageDescription.innerHTML = '<div class="error-message">Failed to parse server response</div>';
-                        els.imageDescription.parentElement.style.display = 'block';
+                        els.imageDescriptionWrapper.style.display = 'block';
                         showToast('Image analysis failed: Invalid server response', 'error');
                     }
                 } else {
                     els.imageProgressContainer.innerHTML = ''; // Clear progress on error
                     els.imageDescription.innerHTML = '<div class="error-message">Server error: ' + xhr.status + '</div>';
-                    els.imageDescription.parentElement.style.display = 'block';
+                    els.imageDescriptionWrapper.style.display = 'block';
                     showToast('Image analysis failed: Server error', 'error');
                 }
                 
@@ -457,7 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('XHR network error occurred.');
                 els.imageProgressContainer.innerHTML = ''; // Clear progress on error
                 els.imageDescription.innerHTML = '<div class="error-message">Network error occurred</div>';
-                els.imageDescription.parentElement.style.display = 'block';
+                els.imageDescriptionWrapper.style.display = 'block';
                 showToast('Image analysis failed: Network error', 'error');
                 els.analyze.disabled = false;
                 els.analyze.innerHTML = 'Analyze Image';
@@ -465,7 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             xhr.addEventListener('abort', () => {
                 els.imageDescription.innerHTML = '<div class="error-message">Upload aborted</div>';
-                els.imageDescription.parentElement.style.display = 'block';
+                els.imageDescriptionWrapper.style.display = 'block';
                 showToast('Image analysis aborted', 'warning');
                 els.analyze.disabled = false;
                 els.analyze.innerHTML = 'Analyze Image';
@@ -1451,7 +1476,7 @@ document.addEventListener('DOMContentLoaded', () => {
             els.imagePreview.src = '#';
             els.imagePreview.style.display = 'none';
             els.imageDescription.innerText = '';
-            els.imageDescription.parentElement.style.display = 'none';
+            els.imageDescriptionWrapper.style.display = 'none';
             els.imageProgressContainer.innerHTML = '';
             showToast('Image cleared', 'info');
         });
@@ -2174,37 +2199,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Shortcuts Modal Logic ---
-    if (els.shortcuts) {
-        els.shortcuts.addEventListener('click', () => {
-            const modal = document.getElementById('shortcuts-modal');
-            if (modal) {
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            }
-        });
-    }
-
-    // Close modal when clicking the close button
-    const closeModalButtons = document.querySelectorAll('.close-modal');
-    closeModalButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const modal = button.closest('.modal');
-            if (modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = '';
-            }
-        });
-    });
-
-    // Close modal when clicking outside the modal content
-    window.addEventListener('click', (e) => {
-        if (e.target.classList.contains('modal')) {
-            e.target.style.display = 'none';
-            document.body.style.overflow = '';
-        }
-    });
-
     // --- History Panel Logic ---
     if (els.historyPanel) {
         els.historyPanel.addEventListener('mouseenter', () => {
@@ -2213,30 +2207,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         els.historyPanel.addEventListener('mouseleave', () => {
             els.historyPanel.classList.remove('show');
-        });
-    }
-
-    // --- Shortcuts Overlay Logic ---
-    if (els.shortcuts && els.shortcutsOverlay) {
-        els.shortcuts.addEventListener('click', () => {
-            els.shortcutsOverlay.classList.add('show');
-        });
-        
-        els.closeShortcuts.addEventListener('click', () => {
-            els.shortcutsOverlay.classList.remove('show');
-        });
-        
-        els.shortcutsOverlay.addEventListener('click', (e) => {
-            if (e.target === els.shortcutsOverlay) {
-                els.shortcutsOverlay.classList.remove('show');
-            }
-        });
-
-        // Close on Escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && els.shortcutsOverlay.classList.contains('show')) {
-                els.shortcutsOverlay.classList.remove('show');
-            }
         });
     }
 
@@ -2536,6 +2506,73 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             
             reader.readAsText(file);
+        });
+    }
+    
+    // --- Back to Top Button ---
+    const backToTopBtn = document.getElementById('back-to-top');
+    
+    if (backToTopBtn) {
+        // Show/hide button based on scroll position
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                if (window.pageYOffset > 150) {
+                    backToTopBtn.classList.add('visible');
+                } else {
+                    backToTopBtn.classList.remove('visible');
+                }
+            }, 100);
+        });
+        
+        // Scroll to top when clicked
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+    
+    // --- Image Analysis Collapse/Expand ---
+    const toggleAnalysisBtn = document.getElementById('toggle-analysis');
+    const analysisContent = document.getElementById('analysis-content');
+    const toggleText = document.getElementById('toggle-text');
+    const toggleIcon = document.getElementById('toggle-icon');
+    
+    if (toggleAnalysisBtn && analysisContent) {
+        // Set initial collapsed state (starts collapsed to save space)
+        analysisContent.style.maxHeight = '100px';
+        analysisContent.classList.add('collapsed');
+        toggleText.textContent = 'Show More';
+        toggleIcon.style.transform = 'rotate(180deg)';
+        
+        toggleAnalysisBtn.addEventListener('click', () => {
+            isAnalysisExpanded = !isAnalysisExpanded;
+            
+            if (isAnalysisExpanded) {
+                // Expand
+                analysisContent.style.maxHeight = analysisContent.scrollHeight + 'px';
+                analysisContent.classList.remove('collapsed');
+                toggleText.textContent = 'Show Less';
+                toggleIcon.style.transform = 'rotate(0deg)';
+                console.log('Analysis expanded to full height');
+            } else {
+                // Collapse to 100px preview
+                analysisContent.style.maxHeight = '100px';
+                analysisContent.classList.add('collapsed');
+                toggleText.textContent = 'Show More';
+                toggleIcon.style.transform = 'rotate(180deg)';
+                console.log('Analysis collapsed to 100px preview');
+            }
+        });
+        
+        // Update max-height when window resizes
+        window.addEventListener('resize', () => {
+            if (isAnalysisExpanded) {
+                analysisContent.style.maxHeight = analysisContent.scrollHeight + 'px';
+            }
         });
     }
 });

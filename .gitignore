@@ -12,12 +12,12 @@ __pycache__/
 # Temporary Uploads
 temp_uploads/
 uploads/
+
+# System files
 .DS_Store
-app/.DS_Store
-.DS_Store
+
+# Debug and backup files
 debug.log
 app/static/data/fooocus_styles.csv.bak
 app/static/data/fooocus_styles.csv.bak2
-debug.log
 app/static/data/new_styles.csv
-debug.log

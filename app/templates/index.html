@@ -19,11 +19,15 @@
 </head>
 <body class="fade-in">
     <div id="toast-container" class="toast-container"></div>
+    <button id="back-to-top" class="back-to-top" title="Back to Top">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 15l-6-6-6 6"/>
+        </svg>
+    </button>
     <div class="page-wrapper">
         <nav class="navbar">
             <h1 class="nav-title">PiXa Prompt Enhancer</h1>
             <div class="nav-actions">
-                <button id="shortcuts-btn" class="btn btn-outline" title="Keyboard Shortcuts">⌨️ Shortcuts</button>
                 <label class="theme-switch" for="theme-toggle" title="Toggle Dark Mode">
                     <input type="checkbox" id="theme-toggle" />
                     <span class="slider round"></span>
@@ -43,36 +47,6 @@
             <p><strong>API:</strong> {{ api_key_info.provider }} (Key: {{ api_key_info.masked_key }})</p>
         </div>
         {% endif %}
-
-        <!-- Shortcuts Modal -->
-        <div id="shortcuts-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Keyboard Shortcuts</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="shortcut-grid">
-                        <div class="shortcut-item">
-                            <kbd>Ctrl</kbd> + <kbd>Enter</kbd>
-                            <span>Enhance Prompt</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>Esc</kbd>
-                            <span>Clear Prompt</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>Ctrl</kbd> + <kbd>C</kbd>
-                            <span>Copy Enhanced Prompt</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>Ctrl</kbd> + <kbd>H</kbd>
-                            <span>Toggle History</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
         
         <main class="main-content">
             <div class="card intro-card">
@@ -144,8 +118,18 @@
                             <p style="text-align: center; margin: 0.5rem 0 0; color: var(--text-muted); font-size: 0.875rem;">Analyzing image...</p>
                         </div>
                         <div id="image-description" style="display: none;">
-                            <h4 style="margin: 0 0 0.5rem; font-size: 1rem; color: var(--text-color);">Image Analysis:</h4>
-                            <p id="image-description-text" style="margin: 0; color: var(--text-muted); font-size: 0.9375rem; line-height: 1.5;"></p>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <h4 style="margin: 0; font-size: 1rem; color: var(--text-color);">Image Analysis</h4>
+                                <button id="toggle-analysis" class="btn-text" style="font-size: 0.875rem; color: var(--primary-color); cursor: pointer; background: none; border: none; padding: 0.25rem 0.5rem; display: flex; align-items: center; gap: 0.25rem; font-weight: 500;">
+                                    <span id="toggle-text">Show More</span>
+                                    <svg id="toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition: transform 0.3s ease; transform: rotate(180deg);">
+                                        <path d="M18 15l-6-6-6 6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div id="analysis-content" class="analysis-content" style="overflow: hidden; transition: max-height 0.3s ease;">
+                                <p id="image-description-text" style="margin: 0; color: var(--text-muted); font-size: 0.9375rem; line-height: 1.5;"></p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -188,7 +172,7 @@
                         <div class="style-preview">No style selected</div>
                     </div>
                     <div class="style-search">
-                        <input type="text" id="style-search-input" placeholder="🔍 Search 309 styles..." autocomplete="off">
+                        <input type="text" id="style-search-input" placeholder="🔍 Search styles..." autocomplete="off">
                         <div class="style-search-results"></div>
                     </div>
                     <div class="style-categories">
