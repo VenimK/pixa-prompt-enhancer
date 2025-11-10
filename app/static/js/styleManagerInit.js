@@ -35,10 +35,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const styleSearchInput = document.getElementById('style-search-input');
     const styleSearchResults = document.querySelector('.style-search-results');
     const applyStyleBtn = document.getElementById('apply-style');
+    const removeStylesBtn = document.getElementById('remove-styles');
     const clearStyleBtn = document.getElementById('clear-style');
     
     let selectedStyles = [];
     const MAX_STYLES = 3;
+    let originalPrompt = ''; // Store original prompt before applying styles
+    let originalNegativePrompt = ''; // Store original negative prompt
     
     // Render style categories and options
     function renderStyleCategories() {
@@ -122,8 +125,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
+        // Store original prompts before applying styles
+        originalPrompt = promptInput.value.trim();
+        originalNegativePrompt = negativePromptInput.value || '';
+        
         // Full template approach: Apply each style's complete template progressively
-        let enhancedPrompt = promptInput.value.trim();
+        let enhancedPrompt = originalPrompt;
         
         // Apply each style template sequentially (each one wraps the previous result)
         selectedStyles.forEach(style => {
@@ -140,8 +147,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         promptInput.value = enhancedPrompt;
         
         if (allNegativePrompts && negativePromptInput) {
-            negativePromptInput.value = negativePromptInput.value 
-                ? `${negativePromptInput.value}, ${allNegativePrompts}`
+            negativePromptInput.value = originalNegativePrompt 
+                ? `${originalNegativePrompt}, ${allNegativePrompts}`
                 : allNegativePrompts;
         }
         
@@ -151,9 +158,43 @@ document.addEventListener('DOMContentLoaded', async () => {
             negativePromptInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
         
+        // Show the "Remove Styles" button
+        if (removeStylesBtn) {
+            removeStylesBtn.style.display = 'inline-block';
+        }
+        
         const styleCount = selectedStyles.length;
         const styleNames = selectedStyles.map(s => s.name).join(' + ');
         showToast(`Applied ${styleCount} style${styleCount > 1 ? 's' : ''}: ${styleNames}`, 'success');
+    }
+    
+    // Remove styles and restore original prompt
+    function removeStyles() {
+        if (!originalPrompt) {
+            showToast('No original prompt to restore', 'warning');
+            return;
+        }
+        
+        // Restore original prompts
+        promptInput.value = originalPrompt;
+        negativePromptInput.value = originalNegativePrompt;
+        
+        // Trigger input events to update character counts
+        promptInput.dispatchEvent(new Event('input', { bubbles: true }));
+        if (negativePromptInput.dispatchEvent) {
+            negativePromptInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        
+        // Hide the "Remove Styles" button
+        if (removeStylesBtn) {
+            removeStylesBtn.style.display = 'none';
+        }
+        
+        // Clear stored originals
+        originalPrompt = '';
+        originalNegativePrompt = '';
+        
+        showToast('Original prompt restored', 'success');
     }
     
     // Clear the selected styles
@@ -221,6 +262,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Event listeners
     applyStyleBtn.addEventListener('click', applyStyle);
+    if (removeStylesBtn) {
+        removeStylesBtn.addEventListener('click', removeStyles);
+    }
     clearStyleBtn.addEventListener('click', clearStyle);
     
     // Search functionality

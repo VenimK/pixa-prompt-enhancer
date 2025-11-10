@@ -1,40 +1,40 @@
-=== Prompt Enhancer Debug Log Started at 2025-11-10 05:47:15.413448 ===
+=== Prompt Enhancer Debug Log Started at 2025-11-10 05:53:08.797349 ===
 Application initialized
 
-[2025-11-10 05:47:15] FastAPI startup event triggered
-[2025-11-10 05:47:18] GET / - Home page accessed from 127.0.0.1
-[2025-11-10 05:47:19] GET / - Home page accessed from 127.0.0.1
-[2025-11-10 05:47:19] GET / - Home page accessed from 127.0.0.1
-[2025-11-10 05:48:04] 
+[2025-11-10 05:53:08] FastAPI startup event triggered
+[2025-11-10 05:53:13] GET / - Home page accessed from 127.0.0.1
+[2025-11-10 05:53:13] GET / - Home page accessed from 127.0.0.1
+[2025-11-10 05:53:13] GET / - Home page accessed from 127.0.0.1
+[2025-11-10 05:54:41] 
 ============================================================
-[2025-11-10 05:48:04] ENHANCE REQUEST
-[2025-11-10 05:48:04] ============================================================
-[2025-11-10 05:48:04] User Settings:
-[2025-11-10 05:48:04]   - Prompt Type: Image
-[2025-11-10 05:48:04]   - Model: default
-[2025-11-10 05:48:04]   - Style: auto
-[2025-11-10 05:48:04]   - Cinematography: auto
-[2025-11-10 05:48:04]   - Lighting: auto
-[2025-11-10 05:48:04]   - Motion Effect: Static
-[2025-11-10 05:48:04] 
-Original Prompt (382 chars):
-[2025-11-10 05:48:04]   Ghost Rider spirit of vengeance style Yarn craft crochet style a tree in the forest . soft textile texture, knitted or crocheted, colorful yarn, handmade craft aesthetic, cozy warm materials, visible ...
-[2025-11-10 05:48:04] 
-Enhanced Prompt (1651 chars):
-[2025-11-10 05:48:04]   A menacing, ancient tree dominates the frame, meticulously crafted in soft, chunky yarn crochet style. Its gnarled trunk and branches, rich in deep greens and muted browns, show intricate stitching pa...
-[2025-11-10 05:48:04] 
+[2025-11-10 05:54:41] ENHANCE REQUEST
+[2025-11-10 05:54:41] ============================================================
+[2025-11-10 05:54:41] User Settings:
+[2025-11-10 05:54:41]   - Prompt Type: Image
+[2025-11-10 05:54:41]   - Model: default
+[2025-11-10 05:54:41]   - Style: auto
+[2025-11-10 05:54:41]   - Cinematography: auto
+[2025-11-10 05:54:41]   - Lighting: auto
+[2025-11-10 05:54:41]   - Motion Effect: Static
+[2025-11-10 05:54:41] 
+Original Prompt (239 chars):
+[2025-11-10 05:54:41]   Spawn hellspawn style a beautiful angel in the sky . flowing dark necroplasmic cape with chains, demonic red glowing eyes, skull mask face, hell-spawned creature aesthetic, Image Comics art, supernatu...
+[2025-11-10 05:54:41] 
+Enhanced Prompt (1059 chars):
+[2025-11-10 05:54:41]   Epic, dynamic full shot: A formidable, beautiful angel, corrupted into a hellspawn creature, dominates the turbulent, storm-wracked sky. Worm's eye perspective, low angle, adhering to rule of thirds, ...
+[2025-11-10 05:54:41] 
 Model Guidance Used:
-[2025-11-10 05:48:04]   None (default/standard)
-[2025-11-10 05:48:04] 
+[2025-11-10 05:54:41]   None (default/standard)
+[2025-11-10 05:54:41] 
 Character Limit Check:
-[2025-11-10 05:48:04]   - Model for limit: default
-[2025-11-10 05:48:04]   - Checking limit: model_type=default, max_length=3000 chars
-[2025-11-10 05:48:04]   ✓ Within limit (1651 <= 3000)
-[2025-11-10 05:48:04] 
+[2025-11-10 05:54:41]   - Model for limit: default
+[2025-11-10 05:54:41]   - Checking limit: model_type=default, max_length=3000 chars
+[2025-11-10 05:54:41]   ✓ Within limit (1059 <= 3000)
+[2025-11-10 05:54:41] 
 Final Output:
-[2025-11-10 05:48:04]   - Length: 1651 chars
-[2025-11-10 05:48:04]   - Truncated: NO
-[2025-11-10 05:48:04] 
-⏱️  Processing time: 9.72 seconds
-[2025-11-10 05:48:04] ============================================================
+[2025-11-10 05:54:41]   - Length: 1059 chars
+[2025-11-10 05:54:41]   - Truncated: NO
+[2025-11-10 05:54:41] 
+⏱️  Processing time: 7.63 seconds
+[2025-11-10 05:54:41] ============================================================
 
