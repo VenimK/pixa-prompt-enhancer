@@ -5,6 +5,123 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.classList.add('dark-mode');
         document.body.classList.add('dark-mode');
     }
+
+    // --- Two-slot image selection state ---
+    let selectedFiles = []; // holds up to 2 File objects
+    let autoReAnalyzeOnChange = true;
+    let analyzeDebounceTimer = null;
+
+    function reanalyzeIfEnabled() {
+        if (!autoReAnalyzeOnChange) return;
+        if (!els || !els.analyze) return;
+        if (analyzeDebounceTimer) clearTimeout(analyzeDebounceTimer);
+        analyzeDebounceTimer = setTimeout(() => {
+            // Only trigger if at least one image present
+            if (selectedFiles.length > 0 && !els.analyze.disabled) {
+                els.analyze.click();
+            }
+        }, 500);
+    }
+
+    function validateFile(f) {
+        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (f.size > MAX_FILE_SIZE) return `Image too large (${(f.size/(1024*1024)).toFixed(2)}MB). Max 10MB.`;
+        if (!validTypes.includes(f.type)) return `Invalid file type: ${f.type}.`;
+        return null;
+    }
+
+    function renderSelectedPreviews() {
+        // Slot A
+        if (selectedFiles[0]) {
+            const urlA = URL.createObjectURL(selectedFiles[0]);
+            if (els.imagePreview) {
+                els.imagePreview.src = urlA;
+                els.imagePreview.style.display = 'block';
+            }
+            if (els.imageSlotA) els.imageSlotA.style.display = 'block';
+        } else {
+            if (els.imagePreview) {
+                els.imagePreview.removeAttribute('src');
+                els.imagePreview.style.display = 'none';
+            }
+            if (els.imageSlotA) els.imageSlotA.style.display = 'none';
+        }
+
+        // Slot B
+        if (selectedFiles[1]) {
+            const urlB = URL.createObjectURL(selectedFiles[1]);
+            if (els.imagePreviewB) {
+                els.imagePreviewB.src = urlB;
+                els.imagePreviewB.style.display = 'block';
+            }
+            if (els.imageSlotB) els.imageSlotB.style.display = 'block';
+        } else {
+            if (els.imagePreviewB) {
+                els.imagePreviewB.removeAttribute('src');
+                els.imagePreviewB.style.display = 'none';
+            }
+            if (els.imageSlotB) els.imageSlotB.style.display = 'none';
+        }
+
+        // Add second image prompt
+        if (els.addSecondImage) {
+            els.addSecondImage.style.display = selectedFiles.length === 1 ? 'block' : 'none';
+        }
+
+        // Show/Hide clear button and container
+        if (els.imageResult) els.imageResult.style.display = selectedFiles.length > 0 ? 'block' : 'none';
+        if (els.clearImage) els.clearImage.style.display = selectedFiles.length > 0 ? 'inline-block' : 'none';
+    }
+
+    function addFilesToSlots(fileList) {
+        const incoming = Array.from(fileList);
+        for (const f of incoming) {
+            if (selectedFiles.length >= 2) break;
+            const err = validateFile(f);
+            if (err) { showToast(err, 'error'); continue; }
+            selectedFiles.push(f);
+        }
+        renderSelectedPreviews();
+        // If user replaced an image, auto re-analyze
+        reanalyzeIfEnabled();
+    }
+
+    function replaceSlot(index) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.addEventListener('change', () => {
+            const f = input.files && input.files[0];
+            if (!f) return;
+            const err = validateFile(f);
+            if (err) { showToast(err, 'error'); return; }
+            selectedFiles[index] = f;
+            renderSelectedPreviews();
+            // Auto re-analyze after replacement
+            reanalyzeIfEnabled();
+        });
+        input.click();
+    }
+
+    function removeSlot(index) {
+        if (index === 0) {
+            // Shift B to A if exists
+            selectedFiles = selectedFiles[1] ? [selectedFiles[1]] : [];
+        } else {
+            selectedFiles = selectedFiles[0] ? [selectedFiles[0]] : [];
+        }
+        renderSelectedPreviews();
+        // Auto re-analyze or clear analysis if none left
+        if (selectedFiles.length > 0) {
+            reanalyzeIfEnabled();
+        } else {
+            if (els.imageDescription) els.imageDescription.innerHTML = '';
+            if (els.imageDescriptionWrapper) els.imageDescriptionWrapper.style.display = 'none';
+        }
+    }
+
+    // (listener hookups moved below after 'els' is defined)
     
     // --- Image Analysis Collapse State ---
     let isAnalysisExpanded = false; // Start collapsed to save space
@@ -263,6 +380,14 @@ document.addEventListener('DOMContentLoaded', () => {
         imageUpload: document.getElementById('image-upload'),
         imageResult: document.getElementById('image-result-container'),
         imagePreview: document.getElementById('image-preview'),
+        imagePreviewB: document.getElementById('image-preview-b'),
+        imageSlotA: document.getElementById('image-slot-a'),
+        imageSlotB: document.getElementById('image-slot-b'),
+        replaceA: document.getElementById('replace-a'),
+        removeA: document.getElementById('remove-a'),
+        replaceB: document.getElementById('replace-b'),
+        removeB: document.getElementById('remove-b'),
+        addSecondImage: document.getElementById('add-second-image'),
         imageProgressContainer: document.getElementById('image-progress-container'),
         imageDescription: document.getElementById('image-description-text'),
         imageDescriptionWrapper: document.getElementById('image-description'),
@@ -283,6 +408,60 @@ document.addEventListener('DOMContentLoaded', () => {
         // Theme
         themeToggle: document.getElementById('theme-toggle')
     };
+
+    // --- Hookups that require 'els' ---
+    // File input -> two-slot state
+    if (els.imageUpload) {
+        els.imageUpload.addEventListener('change', () => {
+            const files = els.imageUpload.files;
+            if (!files || files.length === 0) return;
+            addFilesToSlots(files);
+            // Clear native input to allow re-selecting same file later
+            els.imageUpload.value = '';
+        });
+    }
+
+    // Add second image button (delegated to container to catch inner button)
+    if (els.addSecondImage) {
+        els.addSecondImage.addEventListener('click', () => {
+            if (selectedFiles.length >= 2) return;
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.addEventListener('change', () => {
+                if (input.files && input.files[0]) addFilesToSlots([input.files[0]]);
+            });
+            input.click();
+        });
+    }
+
+    // Replace/Remove per-slot controls
+    if (els.replaceA) els.replaceA.addEventListener('click', () => { if (selectedFiles[0]) replaceSlot(0); else showToast('No image in slot A.', 'warning'); });
+    if (els.removeA) els.removeA.addEventListener('click', () => { if (selectedFiles[0]) removeSlot(0); });
+    if (els.replaceB) els.replaceB.addEventListener('click', () => { if (selectedFiles.length === 1) { showToast('Add a second image first.', 'info'); } else if (selectedFiles[1]) { replaceSlot(1); } });
+    if (els.removeB) els.removeB.addEventListener('click', () => { if (selectedFiles[1]) removeSlot(1); });
+
+    // Drag & Drop for the drop zone
+    if (els.dropZone) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+            els.dropZone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        ['dragenter', 'dragover'].forEach(evt => {
+            els.dropZone.addEventListener(evt, () => els.dropZone.classList.add('is-dragover'));
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            els.dropZone.addEventListener(evt, () => els.dropZone.classList.remove('is-dragover'));
+        });
+        els.dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt && dt.files ? dt.files : null;
+            if (!files || files.length === 0) return;
+            addFilesToSlots(files);
+        });
+    }
 
     // --- Toast Notification Logic ---
     function showToast(message, type = 'info', duration = 3000) {
@@ -348,30 +527,38 @@ document.addEventListener('DOMContentLoaded', () => {
         els.analyze.addEventListener('click', async () => {
             console.log('Analyze button clicked or triggered.');
             updateProgress(1, 'active');
-            const file = els.imageUpload.files[0];
-            if (!file) {
+            const files = selectedFiles.length ? selectedFiles : els.imageUpload.files;
+            if (!files || files.length === 0) {
                 console.error('No file selected.');
-                showToast('Please select an image file first.', 'error');
+                showToast('Please select 1 or 2 image files first.', 'error');
                 return;
             }
-            console.log('File selected:', file.name, 'Size:', file.size, 'Type:', file.type);
+            if (files.length > 2) {
+                showToast('Only up to 2 images are supported. Using the first two.', 'warning');
+            }
+            const selected = [ ...files ].slice(0, 2);
+            console.log('Files selected:', selected.map(f => `${f.name} (${f.type}, ${(f.size/1024/1024).toFixed(2)}MB)`).join('; '));
             
             // Check file size
             const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-            if (file.size > MAX_FILE_SIZE) {
-                showToast(`Image file is too large (${(file.size / (1024 * 1024)).toFixed(2)}MB). Maximum size is 10MB.`, 'error');
-                return;
+            for (const f of selected) {
+                if (f.size > MAX_FILE_SIZE) {
+                    showToast(`Image file is too large (${(f.size / (1024 * 1024)).toFixed(2)}MB): ${f.name}. Maximum size is 10MB.`, 'error');
+                    return;
+                }
             }
             
             // Check file type
             const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-            if (!validTypes.includes(file.type)) {
-                showToast(`Invalid file type: ${file.type}. Please upload a JPEG, PNG, GIF, or WebP image.`, 'error');
-                return;
+            for (const f of selected) {
+                if (!validTypes.includes(f.type)) {
+                    showToast(`Invalid file type: ${f.type} for ${f.name}. Please upload a JPEG, PNG, GIF, or WebP image.`, 'error');
+                    return;
+                }
             }
 
             // Show analyzing state
-            showToast('Analyzing image...', 'info');
+            showToast(`Analyzing ${selected.length} image${selected.length > 1 ? 's' : ''}...`, 'info');
             els.imageResult.style.display = 'block';
             els.analyze.disabled = true;
             els.analyze.innerHTML = '<div class="loader-small"></div> Analyzing...';
@@ -393,13 +580,21 @@ document.addEventListener('DOMContentLoaded', () => {
             els.imageDescriptionWrapper.style.display = 'none';
             els.imageProgressContainer.appendChild(progressContainer);
             
-            // Show image preview
-            els.imagePreview.src = URL.createObjectURL(file);
+            // Show image preview(s)
+            els.imagePreview.src = URL.createObjectURL(selected[0]);
             els.imagePreview.style.display = 'block';
+            if (selected[1] && els.imagePreviewB) {
+                els.imagePreviewB.src = URL.createObjectURL(selected[1]);
+                els.imagePreviewB.style.display = 'block';
+            } else if (els.imagePreviewB) {
+                els.imagePreviewB.style.display = 'none';
+                els.imagePreviewB.removeAttribute('src');
+            }
             els.clearImage.style.display = 'inline-block';
 
             const formData = new FormData();
-            formData.append('image', file);
+            // Append files under 'images' field (backend expects list)
+            selected.forEach(f => formData.append('images', f));
             
             // Create XMLHttpRequest for upload with progress
             const xhr = new XMLHttpRequest();
@@ -423,16 +618,34 @@ document.addEventListener('DOMContentLoaded', () => {
                         els.imageProgressContainer.innerHTML = '';
                         els.imageProgressContainer.style.display = 'none';
                         
-                        // Check if the response contains an error message
-                        if (data.description && data.description.startsWith('Error:')) {
-                            els.imageDescription.innerHTML = `<div class="error-message">${data.description}</div>`;
+                        // Handle new multi-image response
+                        const combined = data.combined_description;
+                        const isError = typeof combined === 'string' && combined.startsWith('Error');
+                        if (isError) {
+                            els.imageDescription.innerHTML = `<div class="error-message">${combined}</div>`;
                             els.imageDescriptionWrapper.style.display = 'block';
-                            showToast('Image analysis failed: ' + data.description.split(':')[1], 'error');
+                            showToast('Image analysis failed.', 'error');
                         } else {
-                            // Success - show the description
-                            els.imageDescription.innerHTML = data.description;
+                            // Success - show combined description (and keep per-image for future use)
+                            let html = '';
+                            if (combined) {
+                                html += `<div class="analysis-combined">${combined}</div>`;
+                            }
+                            if (data.image_a_description || data.image_b_description) {
+                                html += '<hr style="opacity:0.2; margin:8px 0;">';
+                                if (data.image_a_description) {
+                                    html += `<div class="analysis-per-image"><strong>Reference A</strong><br>${data.image_a_description}</div>`;
+                                }
+                                if (data.image_b_description) {
+                                    html += `<div class="analysis-per-image" style="margin-top:6px;"><strong>Reference B</strong><br>${data.image_b_description}</div>`;
+                                }
+                            }
+                            els.imageDescription.innerHTML = html || 'No analysis returned.';
                             els.imageDescriptionWrapper.style.display = 'block';
                             els.imagePreview.style.display = 'block';
+                            if (els.imagePreviewB && els.imagePreviewB.src) {
+                                els.imagePreviewB.style.display = 'block';
+                            }
                             showToast('Image analyzed successfully!', 'success');
                             updateProgress(1, 'completed');
                             updateProgress(2, 'active');

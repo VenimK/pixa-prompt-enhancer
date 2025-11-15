@@ -17,6 +17,7 @@ Pixa Prompt Enhancer is a web-based application that helps you create rich and d
 
 - **Smart Features**
   - Image-to-Prompt Analysis
+  - Two-Image Analysis (A/B) with Combined + Per-Image references
   - Style Combination
   - Prompt Optimization
   - Character Limit Management
@@ -151,9 +152,11 @@ If you receive an error like `400 API key not valid`, it usually means the envir
     Navigate to `http://127.0.0.1:8000` in your web browser.
 
 3.  **How to use the application:**
-    -   **Optional: Analyze an Image:**
-        -   Drop an image or click to upload a reference image.
-        -   Click the "Analyze Image" button to get a description of the image. This description will be used to enhance your prompt.
+    -   **Optional: Analyze Image(s):**
+        -   Drag & drop or click to select up to 2 images.
+        -   Use per-slot controls to Replace/Remove A or B. You can also add a second image later.
+        -   Click "Analyze Image". The app returns a structured Combined analysis and labeled "Reference A" / "Reference B" summaries.
+        -   When you replace or remove an image, analysis auto-refreshes to keep references in sync.
     -   **Enhance Your Prompt:**
         -   Select the prompt type (Image, VEO, or WAN2).
         -   Choose an AI model (for Image prompts).
@@ -163,6 +166,36 @@ If you receive an error like `400 API key not valid`, it usually means the envir
         -   For WAN2, select motion effects if desired.
         -   Click the "Enhance Prompt" button.
         -   The enhanced prompt will be displayed in the "Enhanced Prompt" section.
+
+### Two-Image Workflow (A/B)
+
+- **Two slots:** Reference A and Reference B with previews and per-slot Replace/Remove.
+- **Drag & drop:** Add one or two images; a "+ Add second image" button appears when only A is filled.
+- **Analysis output:**
+  - Combined section summarizing overlaps, differences, style/technique, and notable details.
+  - Separate "Reference A" and "Reference B" summaries for precise control.
+- **Auto re-analyze:** Replacing/removing A or B re-runs analysis and updates the references.
+- **Prompting tip:** Use the Combined reference for fusion tasks or pick A/B when you need faithful per-image cues. For product label tasks (e.g., wrap A onto B), specify "full-body shrink-sleeve, edge-to-edge, no aluminum visible" and add negatives like "no label gaps, no transparent ink, no warping".
+
+### Prompt Examples (Reference A onto Reference B)
+
+- **Full wrap (shrink-sleeve)**
+
+```text
+Apply the artwork from Reference A as a 360° full-body shrink-sleeve on the can from Reference B. Edge-to-edge, full-bleed coverage from shoulder to base; no aluminum visible on the cylindrical body. Opaque, high-saturation inks with [matte|glossy] laminate; reflections from the label film only. Seam aligned at the back and invisible from the front. Maintain photorealistic studio product lighting, accurate cylindrical mapping, and a clean neutral background. No label gaps, no transparent ink, no warping or stretching.
+```
+
+- **Front-facing panel label**
+
+```text
+Place the character artwork from Reference A as a centered front-facing label panel on the can from Reference B. Keep the panel rectangular with small margins; do not distort the art. Preserve can highlights and edges, studio product lighting, and a seamless white/grey backdrop. No aluminum showing inside the panel area; no warping.
+```
+
+- **Die-cut matte sticker**
+
+```text
+Apply the character from Reference A as a die-cut matte sticker on the can from Reference B. Subtle sticker edge and micro-shadow; no bending or warping. Retain the can’s metallic reflections and clean studio product style. No transparent ink, no label gaps.
+```
 
 ## Contributing
 

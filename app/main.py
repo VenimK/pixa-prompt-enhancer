@@ -97,6 +97,11 @@ class EnhanceResponse(BaseModel):
 class AnalyzeResponse(BaseModel):
     description: str
 
+class AnalyzeResponseMulti(BaseModel):
+    combined_description: str
+    image_a_description: str | None = None
+    image_b_description: str | None = None
+
 
 # Make sure to set your GOOGLE_API_KEY environment variable.
 # You can get one here: https://aistudio.google.com/app/apikey
@@ -104,7 +109,7 @@ if "GOOGLE_API_KEY" in os.environ:
     genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
 
 
-def run_gemini(prompt: str, image_path: str | None = None):
+def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str] | None = None):
     # The genai.configure call at the top of the file handles the API key.
     # If the key is not set, the model.generate_content call will raise an exception.
     if "GOOGLE_API_KEY" not in os.environ:
@@ -113,7 +118,20 @@ def run_gemini(prompt: str, image_path: str | None = None):
     try:
         model = genai.GenerativeModel("gemini-2.5-flash")
 
-        if image_path:
+        # Multi-image support
+        if image_paths and len(image_paths) > 0:
+            images = []
+            try:
+                for p in image_paths:
+                    images.append(PIL.Image.open(p))
+            except Exception as img_error:
+                return f"Error loading image(s): {img_error}. Please check the image file format and try again."
+
+            try:
+                response = model.generate_content([prompt, *images])
+            except Exception as api_error:
+                return f"Error processing image(s) with Gemini API: {api_error}. One of the images may be too large or in an unsupported format."
+        elif image_path:
             try:
                 image = PIL.Image.open(image_path)
             except Exception as img_error:
@@ -273,51 +291,118 @@ async def style_test_page(request: Request):
     )
 
 
-@app.post("/analyze-image", response_model=AnalyzeResponse)
-async def analyze_image_endpoint(image: UploadFile = File(...)):
+@app.post("/analyze-image", response_model=AnalyzeResponseMulti)
+async def analyze_image_endpoint(images: list[UploadFile] = File(...)):
     try:
-        # Validate image file
-        if not image.filename:
-            return AnalyzeResponse(description="Error: No file provided")
-
-        # Check file extension
-        valid_extensions = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
-        file_ext = os.path.splitext(image.filename.lower())[1]
-        if file_ext not in valid_extensions:
-            return AnalyzeResponse(
-                description=f"Error: Unsupported file format. Please upload an image in one of these formats: {', '.join(valid_extensions)}"
+        # Normalize images list (support single file as well)
+        if not images:
+            return AnalyzeResponseMulti(
+                combined_description="Error: No file provided",
+                image_a_description=None,
+                image_b_description=None,
             )
+        if not isinstance(images, list):
+            images = [images]
+
+        if len(images) > 2:
+            images = images[:2]
+
+        valid_extensions = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
 
         # Create uploads directory if it doesn't exist
         if not os.path.exists(UPLOADS_DIR):
             try:
                 os.makedirs(UPLOADS_DIR)
             except Exception as e:
-                return AnalyzeResponse(
-                    description=f"Error creating upload directory: {e}"
+                return AnalyzeResponseMulti(
+                    combined_description=f"Error creating upload directory: {e}",
+                    image_a_description=None,
+                    image_b_description=None,
+                )
+        saved_paths = []
+        a_desc = None
+        b_desc = None
+
+        # Validate, save, and collect absolute paths
+        for idx, image in enumerate(images):
+            if not getattr(image, "filename", None):
+                return AnalyzeResponseMulti(
+                    combined_description="Error: One of the files has no filename",
+                    image_a_description=None,
+                    image_b_description=None,
+                )
+            file_ext = os.path.splitext(image.filename.lower())[1]
+            if file_ext not in valid_extensions:
+                return AnalyzeResponseMulti(
+                    combined_description=(
+                        f"Error: Unsupported file format for {image.filename}. "
+                        f"Please upload an image in one of these formats: {', '.join(valid_extensions)}"
+                    ),
+                    image_a_description=None,
+                    image_b_description=None,
                 )
 
-        # Save the file
-        try:
-            file_path = os.path.join(UPLOADS_DIR, image.filename)
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(image.file, buffer)
-        except Exception as e:
-            return AnalyzeResponse(description=f"Error saving image file: {e}")
+            try:
+                file_path = os.path.join(UPLOADS_DIR, image.filename)
+                with open(file_path, "wb") as buffer:
+                    shutil.copyfileobj(image.file, buffer)
+                saved_paths.append(os.path.abspath(file_path))
+            except Exception as e:
+                return AnalyzeResponseMulti(
+                    combined_description=f"Error saving image file: {e}",
+                    image_a_description=None,
+                    image_b_description=None,
+                )
 
-        # Get absolute path and analyze
-        absolute_file_path = os.path.abspath(file_path)
-        meta_prompt = "Analyze this image in detail. Provide a comprehensive description covering the main subject, setting, composition, colors, and any notable elements. Be descriptive and thorough."
+        # Build meta-prompts
+        if len(saved_paths) == 1:
+            meta_prompt = (
+                "Analyze this image in detail. Provide a comprehensive description covering the main subject, "
+                "setting, composition, colors, and notable elements. Be descriptive and thorough."
+            )
+            combined = run_gemini(meta_prompt, image_path=saved_paths[0])
+            if combined.startswith("Error") or combined.startswith("An unexpected error"):
+                return AnalyzeResponseMulti(
+                    combined_description=combined,
+                    image_a_description=None,
+                    image_b_description=None,
+                )
+            return AnalyzeResponseMulti(
+                combined_description=combined,
+                image_a_description=None,
+                image_b_description=None,
+            )
+        else:
+            # Per-image short summaries
+            per_image_prompt = (
+                "Briefly summarize this image in 3-5 sentences focusing on subject, style/medium, colors, lighting, and composition."
+            )
+            a_desc = run_gemini(per_image_prompt, image_path=saved_paths[0])
+            b_desc = run_gemini(per_image_prompt, image_path=saved_paths[1])
+            if a_desc.startswith("Error") or a_desc.startswith("An unexpected error"):
+                a_desc = None
+            if b_desc.startswith("Error") or b_desc.startswith("An unexpected error"):
+                b_desc = None
 
-        description = run_gemini(meta_prompt, image_path=absolute_file_path)
+            # Combined comparative analysis
+            combined_prompt = (
+                "You are an assistant generating a combined reference from two images. "
+                "Write a structured analysis with these sections: \n"
+                "- Shared elements (overlaps)\n"
+                "- Differences (distinctive traits of A vs B)\n"
+                "- Style/Technique (medium, rendering)\n"
+                "- Notable details (important cues to preserve)\n"
+                "Be concise but descriptive."
+            )
+            combined = run_gemini(combined_prompt, image_paths=saved_paths[:2])
+            if combined.startswith("Error") or combined.startswith("An unexpected error"):
+                combined = (a_desc or "") + ("\n\n" if a_desc and b_desc else "") + (b_desc or "")
 
-        # Check if the response contains an error message
-        if description.startswith("Error") or description.startswith(
-            "An unexpected error"
-        ):
-            return AnalyzeResponse(description=description)
-
-        return AnalyzeResponse(description=description)
+            return AnalyzeResponseMulti(
+                combined_description=combined,
+                image_a_description=a_desc,
+                image_b_description=b_desc,
+            )
     except Exception as e:
         import traceback
 

@@ -77,7 +77,7 @@
                 <div class="card-body">
                     <div class="form-group">
                         <div class="drop-zone" id="drop-zone">
-                            <input type="file" id="image-upload" accept="image/*" class="drop-zone-input">
+                            <input type="file" id="image-upload" accept="image/*" class="drop-zone-input" multiple>
                             <div class="drop-zone-content">
                                 <div class="drop-zone-icon">
                                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -90,7 +90,7 @@
                                 </div>
                                 <div class="drop-zone-text">
                                     <p class="drop-zone-prompt">Drag & drop an image here, or click to select</p>
-                                    <p class="drop-zone-hint">Supports JPG, PNG, GIF • Max 5MB</p>
+                                    <p class="drop-zone-hint">Supports JPG, PNG, GIF, WebP • Max 10MB each • Up to 2 images</p>
                                 </div>
                             </div>
                         </div>
@@ -108,8 +108,24 @@
                     
                     <!-- Image Analysis Result Container -->
                     <div id="image-result-container" class="image-result-container" style="display: none; margin-top: 1.5rem; padding: 1rem; background: var(--card-bg); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                        <div class="image-preview-container" style="margin-bottom: 1rem; text-align: center;">
-                            <img id="image-preview" src="#" alt="Uploaded preview" style="max-width: 100%; max-height: 300px; border-radius: var(--radius-sm); display: none;">
+                        <div class="image-preview-container" style="margin-bottom: 1rem; text-align: center; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                            <div class="image-slot" id="image-slot-a" style="position:relative; display:none;">
+                                <img id="image-preview" src="#" alt="Uploaded preview A" style="max-width: 100%; max-height: 300px; border-radius: var(--radius-sm); display: none;">
+                                <div class="slot-controls" style="display:flex; gap:6px; justify-content:center; margin-top:6px;">
+                                    <button id="replace-a" class="btn btn-xs btn-outline">Replace A</button>
+                                    <button id="remove-a" class="btn btn-xs btn-outline">Remove A</button>
+                                </div>
+                            </div>
+                            <div class="image-slot" id="image-slot-b" style="position:relative; display:none;">
+                                <img id="image-preview-b" src="#" alt="Uploaded preview B" style="max-width: 100%; max-height: 300px; border-radius: var(--radius-sm); display: none;">
+                                <div class="slot-controls" style="display:flex; gap:6px; justify-content:center; margin-top:6px;">
+                                    <button id="replace-b" class="btn btn-xs btn-outline">Replace B</button>
+                                    <button id="remove-b" class="btn btn-xs btn-outline">Remove B</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="add-second-image" style="display:none; text-align:center; margin-bottom: 0.5rem;">
+                            <button class="btn btn-outline">+ Add second image</button>
                         </div>
                         <div id="image-progress-container" style="display: none; margin-bottom: 1rem;">
                             <div class="progress-bar" style="height: 4px; background: var(--border-color); border-radius: 2px; overflow: hidden;">
