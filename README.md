@@ -177,24 +177,73 @@ If you receive an error like `400 API key not valid`, it usually means the envir
 - **Auto re-analyze:** Replacing/removing A or B re-runs analysis and updates the references.
 - **Prompting tip:** Use the Combined reference for fusion tasks or pick A/B when you need faithful per-image cues. For product label tasks (e.g., wrap A onto B), specify "full-body shrink-sleeve, edge-to-edge, no aluminum visible" and add negatives like "no label gaps, no transparent ink, no warping".
 
+### Wrapping Preset (A → B)
+
+The app includes a **Wrapping Preset** panel in Step 2 with preset flows for:
+- **Full wrap / livery** - Complete vehicle/object wrap
+- **Partial panels** - Selected surfaces only
+- **Decal / sticker** - Die-cut graphics
+- **Product wrap (can/bottle/glass)** - Cylindrical object labeling
+- **Logo / branding** - Logo placement with size/position/pattern controls
+
+#### Options:
+- **Finish:** Glossy vinyl, Matte vinyl, Metallic foil, Paper label, Shrink-wrap film
+- **Scope Preset:** All surfaces, Full 360°, Front label only, Neck band, Cap/lid
+- **Enforce Reference A palette** - Override target colors with source palette
+- **Neutralize B base colors** - Remove original branding/stripes
+- **Logo controls** (when Logo/branding selected):
+  - **Placement:** Center, Top center, Bottom center, Left, Right, Custom
+  - **Size:** Small, Medium, Large, Full coverage, Proportional
+  - **Repeating pattern** - Uniform pattern vs single placement
+
+Click **"Insert Wrapping Prompt"** to generate a structured prompt with PRIORITY constraints, palette enforcement, mapping rules, and negatives.
+
 ### Prompt Examples (Reference A onto Reference B)
 
-- **Full wrap (shrink-sleeve)**
+#### Logo/Branding Examples
 
+- **Single centered logo**
 ```text
-Apply the artwork from Reference A as a 360° full-body shrink-sleeve on the can from Reference B. Edge-to-edge, full-bleed coverage from shoulder to base; no aluminum visible on the cylindrical body. Opaque, high-saturation inks with [matte|glossy] laminate; reflections from the label film only. Seam aligned at the back and invisible from the front. Maintain photorealistic studio product lighting, accurate cylindrical mapping, and a clean neutral background. No label gaps, no transparent ink, no warping or stretching.
+PRIORITY: Use ONLY the Reference A palette on wrapped areas. OVERRIDE any original Reference B colors.
+
+Palette (hard): red, white, black. No other hues.
+
+Place the logo/branding from Reference A onto Reference B at centered on the main surface, medium size, clearly visible.
+
+Maintain exact logo aspect ratio and proportions; no distortion, stretching, or warping; crisp edges and sharp details; correct perspective for surface angle; logo sits flat on surface or conforms to curvature naturally.
+
+Photorealistic logo application with glossy vinyl finish; maintain Reference B lighting, shadows, and reflections; logo colors are vibrant and accurate.
+
+Negatives: no color bleed from B, no banding, no artifacts, no partial recolor.
 ```
 
-- **Front-facing panel label**
-
+- **Repeating logo pattern**
 ```text
-Place the character artwork from Reference A as a centered front-facing label panel on the can from Reference B. Keep the panel rectangular with small margins; do not distort the art. Preserve can highlights and edges, studio product lighting, and a seamless white/grey backdrop. No aluminum showing inside the panel area; no warping.
+Apply the logo/branding from Reference A as a repeating pattern across Reference B, small and subtle.
+
+Pattern repeats uniformly with consistent spacing; maintain logo aspect ratio and orientation; no distortion, warping, or perspective skew on individual logos; pattern follows surface curvature naturally; crisp edges and sharp details on each instance.
+
+Photorealistic logo application with matte vinyl finish; maintain Reference B lighting, shadows, and reflections; logo colors are vibrant and accurate.
 ```
 
-- **Die-cut matte sticker**
+#### Product Wrap Examples
 
+- **Full 360° can/bottle wrap**
 ```text
-Apply the character from Reference A as a die-cut matte sticker on the can from Reference B. Subtle sticker edge and micro-shadow; no bending or warping. Retain the can’s metallic reflections and clean studio product style. No transparent ink, no label gaps.
+Transfer the design from Reference A onto the cylindrical surface of Reference B (can/bottle/glass), covering: full 360° circumference.
+
+Wrap seamlessly around the circumference; correct radial perspective and distortion for curved surface; align logo/artwork to front-center; respect top and bottom rims; no visible seam on front view; no stretching or warping at edges.
+
+Photorealistic product packaging with paper label with smooth adhesion; maintain Reference B lighting, reflections, and camera angle; label conforms perfectly to object shape.
+```
+
+- **Front label only**
+```text
+Transfer the design from Reference A onto the cylindrical surface of Reference B (can/bottle/glass), covering: front label/panel only, avoiding back seam.
+
+Wrap seamlessly around the circumference; correct radial perspective and distortion for curved surface; align logo/artwork to front-center; respect top and bottom rims; no visible seam on front view; no stretching or warping at edges.
+
+Photorealistic product packaging with metallic foil label; maintain Reference B lighting, reflections, and camera angle; label conforms perfectly to object shape.
 ```
 
 ## Contributing

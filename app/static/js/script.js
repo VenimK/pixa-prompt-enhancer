@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('dark-mode');
     }
 
+    // Wrapping preset logic is defined later, after 'els' is declared
+
     // --- Two-slot image selection state ---
     let selectedFiles = []; // holds up to 2 File objects
     let autoReAnalyzeOnChange = true;
@@ -406,7 +408,23 @@ document.addEventListener('DOMContentLoaded', () => {
         step2: document.querySelector('.step[data-step="2"]'),
         
         // Theme
-        themeToggle: document.getElementById('theme-toggle')
+        themeToggle: document.getElementById('theme-toggle'),
+
+        // Wrapping Preset controls
+        wrapType: document.getElementById('wrap-type'),
+        wrapFinish: document.getElementById('wrap-finish'),
+        wrapScopePreset: document.getElementById('wrap-scope-preset'),
+        wrapScope: document.getElementById('wrap-scope'),
+        enforcePalette: document.getElementById('enforce-palette'),
+        paletteList: document.getElementById('palette-list'),
+        neutralizeB: document.getElementById('neutralize-b'),
+        multiStage: document.getElementById('multi-stage'),
+        insertWrapPrompt: document.getElementById('insert-wrap-prompt'),
+        // Logo-specific controls
+        logoControls: document.getElementById('logo-controls'),
+        logoPlacement: document.getElementById('logo-placement'),
+        logoSize: document.getElementById('logo-size'),
+        logoPattern: document.getElementById('logo-pattern')
     };
 
     // --- Hookups that require 'els' ---
@@ -460,6 +478,378 @@ document.addEventListener('DOMContentLoaded', () => {
             const files = dt && dt.files ? dt.files : null;
             if (!files || files.length === 0) return;
             addFilesToSlots(files);
+        });
+    }
+
+    // --- Wrapping Preset Logic ---
+    function extractPaletteFromText(text) {
+        if (!text) return '';
+        const colors = [
+            'black','white','gray','grey','silver','graphite','charcoal',
+            'blue','sky blue','light blue','cyan','aqua','teal',
+            'green','lime','olive','forest green',
+            'red','crimson','burgundy','maroon',
+            'orange','coral','peach',
+            'yellow','gold','amber',
+            'beige','cream','ivory','tan',
+            'pink','magenta','fuchsia',
+            'purple','violet','lavender','indigo',
+            'brown','chocolate','bronze'
+        ];
+        const found = [];
+        const lower = text.toLowerCase();
+        colors.forEach(c => { 
+            if (lower.includes(c) && !found.includes(c)) found.push(c); 
+        });
+        return found.slice(0, 6).join(', ');
+    }
+
+    function detectObjectType(analysisText, scope, scopePreset) {
+        const text = (analysisText + ' ' + scope).toLowerCase();
+        
+        // Opaque/colored glass detection
+        if ((scopePreset && scopePreset === 'glass-opaque') ||
+            text.includes('opaque glass') || text.includes('colored glass') ||
+            text.includes('frosted glass') || text.includes('milk glass') ||
+            text.includes('ceramic glass') || text.includes('painted glass')) {
+            return 'glass-opaque';
+        }
+        
+        // Transparent glass detection
+        if ((scopePreset && (scopePreset === 'glass-bowl' || scopePreset === 'glass-full')) ||
+            text.includes('wine glass') || text.includes('wineglass') ||
+            text.includes('champagne glass') || text.includes('goblet') ||
+            text.includes('cocktail glass') || text.includes('martini glass') ||
+            text.includes('tumbler') || text.includes('drinking glass')) {
+            return 'glass';
+        }
+        
+        // Bottle detection (glass/plastic bottles with necks)
+        if (text.includes('bottle') || text.includes('flask') || 
+            text.includes('wine bottle') || text.includes('beer bottle') ||
+            text.includes('water bottle') || text.includes('soda bottle')) {
+            return 'bottle';
+        }
+        
+        // Can detection (aluminum/metal cylindrical)
+        if (text.includes('aluminum can') || text.includes('beer can') ||
+            text.includes('soda can') || text.includes('energy drink') ||
+            text.includes('beverage can') || text.includes('tin can')) {
+            return 'can';
+        }
+        
+        // Cup/mug detection (opaque drinking vessels)
+        if (text.includes('coffee cup') || text.includes('mug') ||
+            text.includes('teacup') || text.includes('ceramic cup') ||
+            text.includes('disposable cup') || text.includes('paper cup')) {
+            return 'cup';
+        }
+        
+        // Jar detection (wide-mouth containers)
+        if (text.includes('jar') || text.includes('mason jar') ||
+            text.includes('preserve jar') || text.includes('canister')) {
+            return 'jar';
+        }
+        
+        // Tube/squeeze container
+        if (text.includes('tube') || text.includes('squeeze bottle') ||
+            text.includes('toothpaste') || text.includes('cosmetic tube')) {
+            return 'tube';
+        }
+        
+        // Default to generic container
+        return 'container';
+    }
+
+    function buildMultiStagePrompt(wrapType, finish, scope, palette, analysisText, scopePreset) {
+        // Multi-stage prompting for better consistency
+        const extracted = palette || extractPaletteFromText(analysisText);
+        const colors = extracted || 'Reference A colors';
+        
+        // Detect object type
+        const objectType = detectObjectType(analysisText, scope, scopePreset);
+        
+        if (wrapType === 'product') {
+            // Object-specific prompts based on type
+            switch(objectType) {
+                case 'glass-opaque':
+                    return `STAGE 1 - BASE COVERAGE ON OPAQUE GLASS:
+Create Reference B (opaque/colored/frosted glass) with complete surface coverage using the background/base colors from Reference A (${colors}). For opaque glass: replace the glass color entirely with Reference A colors. For frosted glass: apply solid color over frosted surface. Cover the bowl/cup area completely from rim to base - complete coverage with no original glass color visible. Stem and base can remain in original color if present. Solid color foundation - no artwork yet.
+
+STAGE 2 - ADD MAIN ARTWORK:
+Place the primary character/subject from Reference A on the front face of the now-colored opaque glass from Stage 1. Maintain exact proportions and details; correct perspective for glass shape (curved/conical/cylindrical); artwork sits naturally on the colored base. Design wraps around the bowl curvature.
+
+STAGE 3 - ADD DETAILS & FINALIZE:
+Add logos, text, or secondary elements from Reference A. Apply ${finish === 'glossy' ? 'smooth glossy' : finish === 'matte' ? 'matte/frosted' : finish} finish; maintain glass shape and any remaining transparency/translucency on stem/base; photorealistic glassware product shot with studio lighting; clean backdrop.
+
+CRITICAL: Opaque glass body is fully colored (no original color showing). Glass shape preserved. Design covers bowl area completely. Stem/base can stay original if applicable.`;
+
+                case 'glass':
+                    return `STAGE 1 - APPLY BASE DESIGN TO GLASS:
+Take Reference B (glass/wine glass/tumbler) and apply the background/base colors and patterns from Reference A (${colors}) as a printed/etched design ON the glass surface. For transparent glass: design appears as opaque/frosted print. Cover the bowl/cup area completely - no bare/clear glass on the main drinking surface. Maintain glass transparency on stem and base if present.
+
+STAGE 2 - ADD MAIN ARTWORK:
+Place the primary character/subject from Reference A on the front-facing side of the glass bowl from Stage 1. The artwork appears as a high-quality print/decal on the glass surface. Correct perspective for curved/conical glass shape; artwork wraps naturally around the bowl curvature. Character details remain sharp and visible.
+
+STAGE 3 - FINALIZE WITH GLASS PROPERTIES:
+Add logos, text, or secondary elements from Reference A. Apply ${finish === 'glossy' ? 'smooth printed' : finish === 'matte' ? 'frosted/etched' : finish} surface treatment to the design areas. Maintain glass reflections, highlights, and transparency where appropriate; photorealistic glassware product shot with studio lighting; clean backdrop.
+
+CRITICAL: Design is ON the glass surface (printed/etched), not replacing the glass material. Glass shape and transparency are preserved. Full coverage on bowl area with no bare clear spots.`;
+
+                case 'bottle':
+                    return `STAGE 1 - BASE LABEL COVERAGE:
+Create label wrap for Reference B (bottle) using background/base colors from Reference A (${colors}). Cover bottle body from neck to base - complete 360° wrap. For glass bottles: opaque label with no bottle color showing through. For plastic bottles: full-coverage wrap. Top neck and cap can remain visible. Solid color foundation - no artwork yet.
+
+STAGE 2 - ADD MAIN ARTWORK:
+Place the primary character/subject from Reference A centered on the front face of the bottle label from Stage 1. Maintain exact proportions and details; correct perspective for bottle shape (may be cylindrical, tapered, or curved); artwork sits naturally on the colored label base.
+
+STAGE 3 - ADD DETAILS & FINALIZE:
+Add logos, text, or secondary elements from Reference A to appropriate positions (logo near top/shoulder area). Apply ${finish} label finish; photorealistic product bottle shot with studio lighting; clean backdrop. Ensure label edges are clean and wrapped completely around bottle.
+
+CRITICAL: Full label coverage on bottle body with no gaps. Bottle shape (cylindrical/tapered/curved) is preserved. Label wraps seamlessly 360° around bottle.`;
+
+                case 'can':
+                    return `STAGE 1 - BASE COVERAGE:
+Create Reference B (aluminum/metal can) with complete surface coverage using the background/base colors from Reference A (${colors}). Cover EVERY surface: lid/top, shoulder curve, entire cylindrical body (360°), and bottom rim. Zero bare aluminum, silver, or original metal surface visible anywhere. Solid color foundation - no artwork yet.
+
+STAGE 2 - ADD MAIN ARTWORK:
+Place the primary character/subject from Reference A centered on the front face of the now-colored can from Stage 1. Maintain exact proportions and details; correct radial perspective for cylindrical surface; artwork sits naturally on the colored base.
+
+STAGE 3 - ADD DETAILS & FINALIZE:
+Add any logos, text, or secondary elements from Reference A to appropriate positions (logo near top/lid area). Ensure seamless integration with Stage 2 artwork. Apply ${finish} finish; photorealistic product mockup with studio lighting; clean backdrop.
+
+CRITICAL: Each stage builds on the previous. Stage 1 MUST cover entire can including lid/top with no bare metal. Stage 2 adds character. Stage 3 adds finishing details.`;
+
+                case 'cup':
+                    return `STAGE 1 - BASE CUP COVERAGE:
+Create Reference B (cup/mug) with complete surface coverage using the background/base colors from Reference A (${colors}). Cover the cup body 360° from rim to base - complete wrap. Handle remains in original color if present. For ceramic/opaque cups: replace surface color entirely. Solid color foundation - no artwork yet.
+
+STAGE 2 - ADD MAIN ARTWORK:
+Place the primary character/subject from Reference A centered on the front face of the cup from Stage 1. Maintain exact proportions and details; correct perspective for cup shape (cylindrical/tapered); artwork wraps naturally around curved surface.
+
+STAGE 3 - ADD DETAILS & FINALIZE:
+Add logos, text, or secondary elements from Reference A. Apply ${finish} surface finish; photorealistic product cup shot with studio lighting; clean backdrop. Ensure design wraps completely around cup with no gaps.
+
+CRITICAL: Full coverage on cup body with no bare spots. Cup shape and handle preserved. Design wraps 360° seamlessly.`;
+
+                case 'jar':
+                    return `STAGE 1 - JAR LABEL COVERAGE:
+Create label for Reference B (jar) using background/base colors from Reference A (${colors}). Cover jar body from shoulder to base - full 360° wrap. Wide-mouth jar: label covers main cylindrical section. Lid and neck can remain visible. Solid color foundation - no artwork yet.
+
+STAGE 2 - ADD MAIN ARTWORK:
+Place the primary character/subject from Reference A centered on the front face of the jar label from Stage 1. Maintain exact proportions and details; correct perspective for jar shape (usually straight cylindrical); artwork sits naturally on the colored label base.
+
+STAGE 3 - ADD DETAILS & FINALIZE:
+Add logos, text, or secondary elements from Reference A. Apply ${finish} label finish; photorealistic product jar shot with studio lighting; clean backdrop. Ensure label covers jar body completely.
+
+CRITICAL: Full label coverage on jar body with no gaps. Jar shape preserved. Label wraps seamlessly 360°.`;
+
+                case 'tube':
+                    return `STAGE 1 - TUBE WRAP COVERAGE:
+Create Reference B (tube/squeeze container) with complete surface coverage using the background/base colors from Reference A (${colors}). Cover the tube body from opening/cap to bottom seal - full 360° wrap. Cap can remain in original color. Solid color foundation - no artwork yet.
+
+STAGE 2 - ADD MAIN ARTWORK:
+Place the primary character/subject from Reference A on the front face of the tube from Stage 1. Maintain exact proportions and details; account for tube curvature and potential deformation when squeezed; artwork sits naturally on the colored base.
+
+STAGE 3 - ADD DETAILS & FINALIZE:
+Add logos, text, or secondary elements from Reference A. Apply ${finish} finish; photorealistic product tube shot with studio lighting; clean backdrop. Ensure wrap covers tube completely.
+
+CRITICAL: Full coverage on tube body with no bare spots. Tube shape preserved. Design wraps seamlessly around tube.`;
+
+                default:
+                    // Generic container
+                    return `STAGE 1 - BASE COVERAGE:
+Create Reference B (container) with complete surface coverage using the background/base colors from Reference A (${colors}). Cover all visible surfaces with solid color foundation - no artwork yet.
+
+STAGE 2 - ADD MAIN ARTWORK:
+Place the primary character/subject from Reference A on the main visible face from Stage 1. Maintain exact proportions and details; correct perspective for surface shape.
+
+STAGE 3 - ADD DETAILS & FINALIZE:
+Add logos, text, or secondary elements from Reference A. Apply ${finish} finish; photorealistic product shot with studio lighting; clean backdrop.
+
+CRITICAL: Full coverage with no bare spots. Shape preserved. Design applied appropriately for object type.`;
+            }
+        } else if (wrapType === 'logo') {
+            return `STAGE 1 - PREPARE SURFACE:
+Neutralize Reference B surface, replacing any existing colors/patterns with a clean base that accepts the logo placement.
+
+STAGE 2 - PLACE LOGO:
+Apply the logo/branding from Reference A with exact aspect ratio, crisp edges, and correct positioning. ${finish} finish with vibrant colors.
+
+STAGE 3 - INTEGRATE & RENDER:
+Blend logo naturally into Reference B lighting and shadows; photorealistic application; maintain B's form and structure.`;
+        } else {
+            // Full/partial/decal wrap
+            return `STAGE 1 - COLOR FOUNDATION:
+Replace Reference B surface colors with Reference A color palette (${colors}). Maintain B's exact shape and structure while neutralizing original surface colors.
+
+STAGE 2 - APPLY GRAPHICS:
+Transfer graphics, patterns, and artwork from Reference A onto the color-prepared surface from Stage 1. Correct perspective and mapping for surface curvature; no warping.
+
+STAGE 3 - FINALIZE DETAILS:
+Add fine details, text, logos; apply ${finish} finish; photorealistic rendering with proper lighting and reflections.`;
+        }
+    }
+
+    function buildWrappingPrompt() {
+        const wrapType = els.wrapType ? els.wrapType.value : 'full';
+        const finish = els.wrapFinish ? els.wrapFinish.value : 'glossy';
+        const scopePreset = els.wrapScopePreset ? els.wrapScopePreset.value : '';
+        const customScope = (els.wrapScope && els.wrapScope.value.trim()) || '';
+        const enforce = els.enforcePalette ? els.enforcePalette.checked : true;
+        const palette = (els.paletteList && els.paletteList.value.trim()) || '';
+        const neutralize = els.neutralizeB ? els.neutralizeB.checked : true;
+        const multiStage = els.multiStage ? els.multiStage.checked : false;
+
+        // Resolve scope from preset or custom
+        const scopeMap = {
+            'all': 'all visible surfaces',
+            '360': 'full 360° circumference',
+            'full-can': 'full can from lid/top surface down through shoulder, entire body, and bottom rim - complete coverage with no bare metal visible',
+            'body-only': 'cylindrical body only, excluding lid/top and bottom rim',
+            'glass-bowl': 'transparent glass bowl/cup area with design printed on surface - keep stem and base transparent/clear',
+            'glass-full': 'transparent glass full coverage including bowl, stem, and base with printed design',
+            'glass-opaque': 'opaque/colored/frosted glass with complete color replacement on bowl area - replace original glass color entirely',
+            'front': 'front label/panel only, avoiding back seam',
+            'neck': 'neck band region',
+            'cap': 'cap or lid surface only'
+        };
+        const scope = scopePreset ? (scopeMap[scopePreset] || customScope || 'all visible surfaces') : (customScope || 'all visible surfaces');
+
+        const analysisText = els.imageDescription ? els.imageDescription.innerText.trim() : '';
+        
+        // Use multi-stage prompting if enabled
+        if (multiStage) {
+            return buildMultiStagePrompt(wrapType, finish, scope, palette, analysisText, scopePreset);
+        }
+        let paletteLine = '';
+        if (enforce) {
+            const extracted = palette || extractPaletteFromText(analysisText);
+            paletteLine = extracted
+                ? `Palette (hard): ${extracted}. No other hues.`
+                : `Palette (hard): Use only colors from Reference A. No other hues.`;
+        }
+
+        const priority = enforce 
+            ? 'PRIORITY: Use ONLY the Reference A palette on wrapped areas. OVERRIDE any original Reference B colors.' 
+            : '';
+        const neutralizeLine = neutralize 
+            ? 'Replace Reference B surface colors/patterns with Reference A artwork while maintaining Reference B exact shape, form, and structure.' 
+            : '';
+
+        let typeSentence = '';
+        let mapping = '';
+        let rendering = '';
+
+        if (wrapType === 'logo') {
+            // Logo/branding mode
+            const placement = els.logoPlacement ? els.logoPlacement.value : 'center';
+            const size = els.logoSize ? els.logoSize.value : 'medium';
+            const isPattern = els.logoPattern ? els.logoPattern.checked : false;
+
+            const placementMap = {
+                'center': 'centered on the main surface',
+                'top-center': 'top-center position',
+                'bottom-center': 'bottom-center position',
+                'left': 'left side',
+                'right': 'right side',
+                'custom': scope
+            };
+            const placementText = placementMap[placement] || 'centered on the main surface';
+
+            const sizeMap = {
+                'small': 'small and subtle',
+                'medium': 'medium size, clearly visible',
+                'large': 'large and prominent',
+                'full': 'full coverage',
+                'proportional': 'proportionally sized to fit the surface'
+            };
+            const sizeText = sizeMap[size] || 'medium size, clearly visible';
+
+            if (isPattern) {
+                typeSentence = `Apply the logo/branding from Reference A as a repeating pattern across Reference B, ${sizeText}.`;
+                mapping = 'Pattern repeats uniformly with consistent spacing; maintain logo aspect ratio and orientation; no distortion, warping, or perspective skew on individual logos; pattern follows surface curvature naturally; crisp edges and sharp details on each instance.';
+            } else {
+                typeSentence = `Place the logo/branding from Reference A onto Reference B at ${placementText}, ${sizeText}.`;
+                mapping = 'Maintain exact logo aspect ratio and proportions; no distortion, stretching, or warping; crisp edges and sharp details; correct perspective for surface angle; logo sits flat on surface or conforms to curvature naturally.';
+            }
+
+            const finishText = finish === 'metallic' ? 'metallic foil finish' 
+                : finish === 'paper' ? 'printed paper finish'
+                : finish === 'shrink' ? 'embedded in wrap'
+                : finish === 'matte' ? 'matte vinyl finish'
+                : 'glossy vinyl finish';
+            rendering = `Photorealistic logo application with ${finishText}; maintain Reference B lighting, shadows, and reflections; logo colors are vibrant and accurate.`;
+        } else if (wrapType === 'product') {
+            // Product wrap (cylindrical objects)
+            typeSentence = `Transfer the design from Reference A onto the cylindrical surface of Reference B (can/bottle/glass), covering: ${scope}.`;
+            
+            // Enhanced mapping for full-can coverage
+            if (scopePreset === 'full-can') {
+                mapping = 'FULL COVERAGE: Extend artwork from lid/top surface, down through shoulder curve, across entire cylindrical body (360°), to bottom rim. No bare metal, aluminum, or original surface visible anywhere - complete edge-to-edge wrap. Wrap seamlessly around circumference; correct radial perspective and distortion; align primary artwork to front-center; no visible seam on front view; smooth transition over shoulder curve; no stretching, warping, or gaps.';
+            } else {
+                mapping = 'Wrap seamlessly around the circumference; correct radial perspective and distortion for curved surface; align logo/artwork to front-center; respect top and bottom rims; no visible seam on front view; no stretching or warping at edges.';
+            }
+            
+            const finishText = finish === 'metallic' ? 'metallic foil label' 
+                : finish === 'paper' ? 'paper label with smooth adhesion'
+                : finish === 'shrink' ? 'tight shrink-wrap film'
+                : finish === 'matte' ? 'matte vinyl wrap'
+                : 'glossy vinyl wrap';
+            rendering = `Photorealistic product packaging with ${finishText}; maintain Reference B lighting, reflections, and camera angle; label conforms perfectly to object shape.`;
+        } else if (wrapType === 'full') {
+            typeSentence = 'Transfer the full wrap/livery from Reference A onto Reference B.';
+            mapping = 'Correct perspective/UV over curved surfaces; align graphics to panels/faces; respect seams, openings, handles, vents, and edges. No warping or stretching; no crossing gaps; no misaligned graphics or texture swimming.';
+            const finishText = finish === 'metallic' ? 'metallic foil film' : finish === 'matte' ? 'matte vinyl film' : 'glossy vinyl film';
+            rendering = `Photorealistic wrap with a ${finishText} finish; maintain Reference B camera angle and lighting; reflections should follow the active palette.`;
+        } else if (wrapType === 'partial') {
+            typeSentence = `Apply a partial wrap from Reference A onto Reference B covering: ${scope}.`;
+            mapping = 'Correct perspective/UV over curved surfaces; align graphics to panels/faces; respect seams, openings, handles, vents, and edges. No warping or stretching; no crossing gaps; no misaligned graphics or texture swimming.';
+            const finishText = finish === 'metallic' ? 'metallic foil film' : finish === 'matte' ? 'matte vinyl film' : 'glossy vinyl film';
+            rendering = `Photorealistic wrap with a ${finishText} finish; maintain Reference B camera angle and lighting; reflections should follow the active palette.`;
+        } else {
+            // decal
+            typeSentence = `Apply a die-cut decal/sticker from Reference A onto Reference B on: ${scope}.`;
+            mapping = 'Correct perspective/UV over curved surfaces; align graphics to panels/faces; respect seams, openings, handles, vents, and edges. No warping or stretching; no crossing gaps; no misaligned graphics or texture swimming.';
+            const finishText = finish === 'metallic' ? 'metallic foil film' : finish === 'matte' ? 'matte vinyl film' : 'glossy vinyl film';
+            rendering = `Photorealistic decal with a ${finishText} finish; maintain Reference B camera angle and lighting; reflections should follow the active palette.`;
+        }
+
+        let negatives = 'Negatives: no color bleed from B, no banding, no artifacts, no partial recolor.';
+        
+        // Enhanced negatives for full-can coverage
+        if (wrapType === 'product' && scopePreset === 'full-can') {
+            negatives = 'Negatives: NO bare metal, aluminum, or original surface showing on lid/top, shoulder, body, or rims; no gaps in coverage; no unwrapped areas; no color bleed from B; no banding; no artifacts; no partial recolor; no label stops short of lid/top.';
+        }
+
+        return [
+            priority,
+            paletteLine,
+            neutralizeLine,
+            typeSentence,
+            mapping,
+            rendering,
+            negatives
+        ].filter(Boolean).join('\n\n');
+    }
+
+    // Show/hide logo controls based on wrap type
+    if (els.wrapType) {
+        els.wrapType.addEventListener('change', () => {
+            if (els.logoControls) {
+                els.logoControls.style.display = els.wrapType.value === 'logo' ? 'grid' : 'none';
+            }
+        });
+    }
+
+    if (els.insertWrapPrompt) {
+        els.insertWrapPrompt.addEventListener('click', () => {
+            const prompt = buildWrappingPrompt();
+            if (els.prompt) {
+                els.prompt.value = prompt;
+                if (typeof updateCharCount === 'function') updateCharCount();
+                showToast('Wrapping prompt inserted.', 'success');
+            }
         });
     }
 

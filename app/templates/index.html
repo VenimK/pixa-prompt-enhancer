@@ -218,6 +218,114 @@
                         <span id="char-count">0</span>
                     </div>
                 </div>
+
+                <!-- Wrapping Preset (A → B) -->
+                <div class="card" id="wrapping-preset" style="margin-top: 16px;">
+                    <div class="card-header">
+                        <h3 class="card-title">Wrapping Preset (Reference A → Reference B)</h3>
+                    </div>
+                    <div class="card-body" style="display:grid; gap:12px;">
+                        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                            <div class="selector">
+                                <label for="wrap-type">Wrap Type</label>
+                                <select id="wrap-type">
+                                    <option value="full">Full wrap / livery</option>
+                                    <option value="partial">Partial panels</option>
+                                    <option value="decal">Decal / sticker</option>
+                                    <option value="product">Product wrap (can/bottle/glass)</option>
+                                    <option value="logo">Logo / branding</option>
+                                </select>
+                            </div>
+                            <div class="selector">
+                                <label for="wrap-finish">Finish</label>
+                                <select id="wrap-finish">
+                                    <option value="glossy">Glossy vinyl</option>
+                                    <option value="matte">Matte vinyl</option>
+                                    <option value="metallic">Metallic foil</option>
+                                    <option value="paper">Paper label</option>
+                                    <option value="shrink">Shrink-wrap film</option>
+                                </select>
+                            </div>
+                            <div class="selector" style="min-width:240px;flex:1;">
+                                <label for="wrap-scope-preset">Scope Preset</label>
+                                <select id="wrap-scope-preset">
+                                    <option value="">Custom (use text below)</option>
+                                    <option value="all">All visible surfaces</option>
+                                    <option value="360">Full 360° wrap</option>
+                                    <option value="full-can">Full can: shoulder + body + lid/top</option>
+                                    <option value="body-only">Body only (no lid/rims)</option>
+                                    <option value="glass-bowl">Glass (transparent): bowl area</option>
+                                    <option value="glass-full">Glass (transparent): full coverage</option>
+                                    <option value="glass-opaque">Glass (opaque/colored): replace color</option>
+                                    <option value="front">Front label/panel only</option>
+                                    <option value="neck">Neck band</option>
+                                    <option value="cap">Cap/lid only</option>
+                                </select>
+                            </div>
+                            <div class="selector" style="min-width:240px;flex:1;">
+                                <label for="wrap-scope">Custom Scope</label>
+                                <input id="wrap-scope" type="text" placeholder="e.g., hood, doors, fenders">
+                            </div>
+                        </div>
+
+                        <div class="selector" style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="enforce-palette" checked>
+                                Enforce Reference A palette
+                            </label>
+                            <input id="palette-list" type="text" placeholder="Palette from A (comma-separated)" style="flex:1; min-width:260px;">
+                        </div>
+
+                        <div class="selector" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="neutralize-b" checked>
+                                Replace B colors with A (keep B shape)
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="multi-stage">
+                                Multi-stage prompting (better consistency)
+                            </label>
+                        </div>
+
+                        <!-- Logo-specific controls (shown when wrap-type=logo) -->
+                        <div id="logo-controls" style="display:none; gap:12px;">
+                            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label for="logo-placement">Logo Placement</label>
+                                    <select id="logo-placement">
+                                        <option value="center">Center</option>
+                                        <option value="top-center">Top center</option>
+                                        <option value="bottom-center">Bottom center</option>
+                                        <option value="left">Left side</option>
+                                        <option value="right">Right side</option>
+                                        <option value="custom">Custom (use scope field)</option>
+                                    </select>
+                                </div>
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label for="logo-size">Logo Size</label>
+                                    <select id="logo-size">
+                                        <option value="proportional">Proportional (auto)</option>
+                                        <option value="small">Small (subtle)</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="large">Large (prominent)</option>
+                                        <option value="full">Full coverage</option>
+                                    </select>
+                                </div>
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label style="display:flex; align-items:center; gap:8px; margin-top:24px;">
+                                        <input type="checkbox" id="logo-pattern">
+                                        Repeating pattern
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                            <button id="insert-wrap-prompt" class="btn btn-primary">Insert Wrapping Prompt</button>
+                            <span id="wrap-hint" style="color:var(--text-muted); font-size:0.9em;">Uses your A/B analysis above.</span>
+                        </div>
+                    </div>
+                </div>
         <div class="selectors-container">
             <div class="selector" id="text-emphasis-container">
                 <label for="text-emphasis-input">Text to Emphasize:</label>
