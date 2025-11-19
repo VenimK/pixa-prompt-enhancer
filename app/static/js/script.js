@@ -424,7 +424,12 @@ document.addEventListener('DOMContentLoaded', () => {
         logoControls: document.getElementById('logo-controls'),
         logoPlacement: document.getElementById('logo-placement'),
         logoSize: document.getElementById('logo-size'),
-        logoPattern: document.getElementById('logo-pattern')
+        logoPattern: document.getElementById('logo-pattern'),
+        // Sticker pack controls
+        stickerControls: document.getElementById('sticker-controls'),
+        stickerCount: document.getElementById('sticker-count'),
+        stickerStyle: document.getElementById('sticker-style'),
+        stickerVariation: document.getElementById('sticker-variation')
     };
 
     // --- Hookups that require 'els' ---
@@ -741,7 +746,46 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
         let mapping = '';
         let rendering = '';
 
-        if (wrapType === 'logo') {
+        if (wrapType === 'sticker-pack') {
+            // Sticker pack/sheet mode
+            const count = els.stickerCount ? els.stickerCount.value : '9';
+            const style = els.stickerStyle ? els.stickerStyle.value : 'die-cut';
+            const variation = els.stickerVariation ? els.stickerVariation.value : 'poses';
+
+            const styleMap = {
+                'die-cut': 'die-cut stickers with white border outline around each character/element',
+                'no-border': 'die-cut stickers with no border, following exact character/element outline',
+                'rounded': 'rounded square stickers with centered artwork',
+                'circle': 'circular stickers with centered artwork'
+            };
+            const styleText = styleMap[style] || styleMap['die-cut'];
+
+            const variationMap = {
+                'poses': 'different poses, expressions, and gestures',
+                'elements': 'different props, accessories, and elements',
+                'colors': 'different color variants and palettes',
+                'scenes': 'different activities, scenes, and situations'
+            };
+            const variationText = variationMap[variation] || variationMap['poses'];
+
+            typeSentence = `Create a sticker pack/sheet with ${count} individual ${styleText} featuring the character/subject from Reference A in ${variationText}.`;
+            
+            mapping = `Each sticker is a separate die-cut design; transparent/checkered background behind all stickers; stickers arranged in an organized grid layout; each sticker shows a complete, self-contained composition; consistent character style and art quality across all ${count} stickers; varied ${variationText} to create a cohesive collection.`;
+            
+            rendering = 'Photorealistic sticker sheet mockup; clean transparent background (PNG format); glossy vinyl sticker finish with subtle highlights and shadows on white borders; professional die-cut appearance; each sticker could be individually cut out; vibrant colors; sharp details; chibi or cartoon style appropriate for stickers.';
+
+            // Override palette/neutralize lines for sticker mode
+            return [
+                typeSentence,
+                mapping,
+                rendering,
+                `Layout: Arrange ${count} stickers in a grid with even spacing; each sticker maintains consistent scale relative to others.`,
+                `Style consistency: All ${count} stickers use the same art style, line weight, shading technique, and color saturation.`,
+                `Variation: Each sticker shows a unique ${variation === 'poses' ? 'pose/expression' : variation === 'elements' ? 'prop/accessory' : variation === 'colors' ? 'color variant' : 'activity/scene'} - no duplicates.`,
+                'Negatives: no overlapping stickers, no merged designs, no inconsistent art styles, no blurry details, no incomplete stickers, no cut-off elements, no background that isn\'t transparent.'
+            ].filter(Boolean).join('\n\n');
+
+        } else if (wrapType === 'logo') {
             // Logo/branding mode
             const placement = els.logoPlacement ? els.logoPlacement.value : 'center';
             const size = els.logoSize ? els.logoSize.value : 'medium';
@@ -833,11 +877,15 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
         ].filter(Boolean).join('\n\n');
     }
 
-    // Show/hide logo controls based on wrap type
+    // Show/hide logo and sticker controls based on wrap type
     if (els.wrapType) {
         els.wrapType.addEventListener('change', () => {
+            const wrapType = els.wrapType.value;
             if (els.logoControls) {
-                els.logoControls.style.display = els.wrapType.value === 'logo' ? 'grid' : 'none';
+                els.logoControls.style.display = wrapType === 'logo' ? 'grid' : 'none';
+            }
+            if (els.stickerControls) {
+                els.stickerControls.style.display = wrapType === 'sticker-pack' ? 'grid' : 'none';
             }
         });
     }

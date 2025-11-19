@@ -234,6 +234,7 @@
                                     <option value="decal">Decal / sticker</option>
                                     <option value="product">Product wrap (can/bottle/glass)</option>
                                     <option value="logo">Logo / branding</option>
+                                    <option value="sticker-pack">Sticker pack / sheet</option>
                                 </select>
                             </div>
                             <div class="selector">
@@ -316,6 +317,40 @@
                                         <input type="checkbox" id="logo-pattern">
                                         Repeating pattern
                                     </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sticker pack controls (shown when wrap-type=sticker-pack) -->
+                        <div id="sticker-controls" style="display:none; gap:12px;">
+                            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label for="sticker-count">Number of Stickers</label>
+                                    <select id="sticker-count">
+                                        <option value="4">4 stickers (2x2)</option>
+                                        <option value="6">6 stickers (2x3)</option>
+                                        <option value="9" selected>9 stickers (3x3)</option>
+                                        <option value="12">12 stickers (3x4)</option>
+                                        <option value="16">16 stickers (4x4)</option>
+                                    </select>
+                                </div>
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label for="sticker-style">Sticker Style</label>
+                                    <select id="sticker-style">
+                                        <option value="die-cut" selected>Die-cut with white border</option>
+                                        <option value="no-border">Die-cut no border</option>
+                                        <option value="rounded">Rounded square</option>
+                                        <option value="circle">Circular</option>
+                                    </select>
+                                </div>
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label for="sticker-variation">Variation Type</label>
+                                    <select id="sticker-variation">
+                                        <option value="poses" selected>Different poses/expressions</option>
+                                        <option value="elements">Different elements/props</option>
+                                        <option value="colors">Different color variants</option>
+                                        <option value="scenes">Different scenes/activities</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
