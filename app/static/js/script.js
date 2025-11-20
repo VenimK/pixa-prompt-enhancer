@@ -771,14 +771,49 @@ CRITICAL: Full coverage with no bare spots. Shape preserved. Design applied appr
                     }
             }
         } else if (wrapType === 'logo') {
-            return `STAGE 1 - PREPARE SURFACE:
+            // Read logo-specific controls
+            const placement = els.logoPlacement ? els.logoPlacement.value : 'center';
+            const size = els.logoSize ? els.logoSize.value : 'medium';
+            const isPattern = els.logoPattern ? els.logoPattern.checked : false;
+            
+            const placementMap = {
+                'center': 'centered on the main surface',
+                'top-center': 'top-center position',
+                'bottom-center': 'bottom-center position',
+                'left': 'left side',
+                'right': 'right side',
+                'custom': scope
+            };
+            const placementText = placementMap[placement] || 'centered on the main surface';
+            
+            const sizeMap = {
+                'small': 'small and subtle',
+                'medium': 'medium size, clearly visible',
+                'large': 'large and prominent',
+                'full': 'full coverage',
+                'proportional': 'proportionally sized to fit the surface'
+            };
+            const sizeText = sizeMap[size] || 'medium size, clearly visible';
+            
+            if (isPattern) {
+                return `STAGE 1 - PREPARE SURFACE:
+Neutralize Reference B surface, replacing any existing colors/patterns with a clean base.
+
+STAGE 2 - APPLY PATTERN:
+Apply the logo/branding from Reference A as a repeating pattern across Reference B, ${sizeText}. Pattern repeats uniformly with consistent spacing; maintain logo aspect ratio and orientation on each instance.
+
+STAGE 3 - FINALIZE & RENDER:
+${finish} finish with vibrant colors; photorealistic application; maintain Reference B's form and structure; crisp edges and sharp details on each logo instance.`;
+            } else {
+                return `STAGE 1 - PREPARE SURFACE:
 Neutralize Reference B surface, replacing any existing colors/patterns with a clean base that accepts the logo placement.
 
 STAGE 2 - PLACE LOGO:
-Apply the logo/branding from Reference A with exact aspect ratio, crisp edges, and correct positioning. ${finish} finish with vibrant colors.
+Apply the logo/branding from Reference A at ${placementText}, ${sizeText}. Maintain exact aspect ratio, crisp edges, and correct positioning.
 
 STAGE 3 - INTEGRATE & RENDER:
-Blend logo naturally into Reference B lighting and shadows; photorealistic application; maintain B's form and structure.`;
+${finish} finish with vibrant colors; blend logo naturally into Reference B lighting and shadows; photorealistic application; maintain B's form and structure.`;
+            }
         } else {
             // Full/partial/decal wrap
             return `STAGE 1 - COLOR FOUNDATION:
