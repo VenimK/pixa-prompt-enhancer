@@ -71,6 +71,11 @@ document.addEventListener('DOMContentLoaded', () => {
             els.addSecondImage.style.display = selectedFiles.length === 1 ? 'block' : 'none';
         }
 
+        // Show/Hide swap button (only when both images are present)
+        if (els.swapImages) {
+            els.swapImages.style.display = selectedFiles.length === 2 ? 'inline-block' : 'none';
+        }
+
         // Show/Hide clear button and container
         if (els.imageResult) els.imageResult.style.display = selectedFiles.length > 0 ? 'block' : 'none';
         if (els.clearImage) els.clearImage.style.display = selectedFiles.length > 0 ? 'inline-block' : 'none';
@@ -385,6 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
         imagePreviewB: document.getElementById('image-preview-b'),
         imageSlotA: document.getElementById('image-slot-a'),
         imageSlotB: document.getElementById('image-slot-b'),
+        swapImages: document.getElementById('swap-images'),
         replaceA: document.getElementById('replace-a'),
         removeA: document.getElementById('remove-a'),
         replaceB: document.getElementById('replace-b'),
@@ -420,6 +426,9 @@ document.addEventListener('DOMContentLoaded', () => {
         neutralizeB: document.getElementById('neutralize-b'),
         multiStage: document.getElementById('multi-stage'),
         insertWrapPrompt: document.getElementById('insert-wrap-prompt'),
+        // Vehicle-specific controls
+        vehicleControls: document.getElementById('vehicle-controls'),
+        transferVehicleColor: document.getElementById('transfer-vehicle-color'),
         // Logo-specific controls
         logoControls: document.getElementById('logo-controls'),
         logoPlacement: document.getElementById('logo-placement'),
@@ -463,6 +472,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (els.removeA) els.removeA.addEventListener('click', () => { if (selectedFiles[0]) removeSlot(0); });
     if (els.replaceB) els.replaceB.addEventListener('click', () => { if (selectedFiles.length === 1) { showToast('Add a second image first.', 'info'); } else if (selectedFiles[1]) { replaceSlot(1); } });
     if (els.removeB) els.removeB.addEventListener('click', () => { if (selectedFiles[1]) removeSlot(1); });
+    
+    // Swap images button
+    if (els.swapImages) {
+        els.swapImages.addEventListener('click', () => {
+            if (selectedFiles.length === 2) {
+                [selectedFiles[0], selectedFiles[1]] = [selectedFiles[1], selectedFiles[0]];
+                renderSelectedPreviews();
+                reanalyzeIfEnabled();
+                showToast('Images swapped: A ⇄ B', 'success');
+            }
+        });
+    }
 
     // Drag & Drop for the drop zone
     if (els.dropZone) {
@@ -485,6 +506,57 @@ document.addEventListener('DOMContentLoaded', () => {
             addFilesToSlots(files);
         });
     }
+
+    // --- Drag and Drop to Swap Image Slots ---
+    function setupImageSlotSwap() {
+        if (!els.imageSlotA || !els.imageSlotB) return;
+        
+        let draggedSlot = null;
+        
+        // Drag start
+        [els.imageSlotA, els.imageSlotB].forEach(slot => {
+            slot.addEventListener('dragstart', (e) => {
+                draggedSlot = slot;
+                e.dataTransfer.effectAllowed = 'move';
+                slot.style.opacity = '0.4';
+            });
+            
+            slot.addEventListener('dragend', (e) => {
+                slot.style.opacity = '1';
+                draggedSlot = null;
+            });
+            
+            slot.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (slot !== draggedSlot) {
+                    slot.style.outline = '2px dashed var(--primary-color)';
+                }
+            });
+            
+            slot.addEventListener('dragleave', (e) => {
+                slot.style.outline = 'none';
+            });
+            
+            slot.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                slot.style.outline = 'none';
+                
+                // Only swap if dropping on the other slot
+                if (draggedSlot && draggedSlot !== slot && selectedFiles.length === 2) {
+                    // Swap the files in the array
+                    [selectedFiles[0], selectedFiles[1]] = [selectedFiles[1], selectedFiles[0]];
+                    renderSelectedPreviews();
+                    reanalyzeIfEnabled();
+                    showToast('Images swapped', 'success');
+                }
+            });
+        });
+    }
+    
+    // Initialize swap functionality after DOM is ready
+    setupImageSlotSwap();
 
     // --- Wrapping Preset Logic ---
     function extractPaletteFromText(text) {
@@ -662,8 +734,31 @@ Add logos, text, or secondary elements from Reference A. Apply ${finish} finish;
 CRITICAL: Full coverage on tube body with no bare spots. Tube shape preserved. Design wraps seamlessly around tube.`;
 
                 default:
-                    // Generic container
-                    return `STAGE 1 - BASE COVERAGE:
+                    if (analysisText.toLowerCase().includes('car') || analysisText.toLowerCase().includes('vehicle') || 
+                        analysisText.toLowerCase().includes('auto') || analysisText.toLowerCase().includes('automotive')) {
+                        return `STAGE 1 - VEHICLE SURFACE PREP:
+Analyze Reference B (target vehicle). Identify and map all body panels, curves, and contours. Create a clean template that matches the exact shape and dimensions of Reference B.
+
+STAGE 2 - DESIGN TRANSFER:
+Transfer the complete design, colors, and branding from Reference A (source vehicle) onto the template from Stage 1. Match the following elements:
+- Color scheme and gradients
+- Racing stripes or graphic patterns
+- Brand logos and decals
+- Sponsorship graphics
+- Any text or numbering
+
+STAGE 3 - INTEGRATION & RENDERING:
+Apply the design to Reference B with perfect alignment to body lines and curves. Ensure proper perspective and scaling for all elements. Add realistic material properties (${finish} finish) and ensure all graphics follow the vehicle's contours naturally.
+
+CRITICAL: 
+- Maintain Reference B's exact shape, proportions, and perspective
+- All graphics must follow the vehicle's curves and contours precisely
+- Preserve the lighting and environment from Reference B
+- Ensure all text and logos are properly oriented and readable
+- Maintain high resolution and crisp edges on all design elements`;
+                    } else {
+                        // Generic container
+                        return `STAGE 1 - BASE COVERAGE:
 Create Reference B (container) with complete surface coverage using the background/base colors from Reference A (${colors}). Cover all visible surfaces with solid color foundation - no artwork yet.
 
 STAGE 2 - ADD MAIN ARTWORK:
@@ -672,7 +767,8 @@ Place the primary character/subject from Reference A on the main visible face fr
 STAGE 3 - ADD DETAILS & FINALIZE:
 Add logos, text, or secondary elements from Reference A. Apply ${finish} finish; photorealistic product shot with studio lighting; clean backdrop.
 
-CRITICAL: Full coverage with no bare spots. Shape preserved. Design applied appropriately for object type.`;
+CRITICAL: Full coverage with no bare spots. Shape preserved. Design applied appropriately for object type`;
+                    }
             }
         } else if (wrapType === 'logo') {
             return `STAGE 1 - PREPARE SURFACE:
@@ -842,21 +938,169 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
                 : 'glossy vinyl wrap';
             rendering = `Photorealistic product packaging with ${finishText}; maintain Reference B lighting, reflections, and camera angle; label conforms perfectly to object shape.`;
         } else if (wrapType === 'full') {
-            typeSentence = 'Transfer the full wrap/livery from Reference A onto Reference B.';
-            mapping = 'Correct perspective/UV over curved surfaces; align graphics to panels/faces; respect seams, openings, handles, vents, and edges. No warping or stretching; no crossing gaps; no misaligned graphics or texture swimming.';
-            const finishText = finish === 'metallic' ? 'metallic foil film' : finish === 'matte' ? 'matte vinyl film' : 'glossy vinyl film';
-            rendering = `Photorealistic wrap with a ${finishText} finish; maintain Reference B camera angle and lighting; reflections should follow the active palette.`;
+            const finishText = finish === 'metallic' ? 'metallic foil film with reflective properties' 
+                : finish === 'matte' ? 'matte vinyl film with subtle texture' 
+                : 'glossy vinyl film with deep, vibrant colors';
+            
+            typeSentence = `Transfer the complete wrap design from Reference A onto the target object in Reference B, maintaining the original shape and features of Reference B.`;
+            
+            mapping = `CRITICAL INSTRUCTIONS:
+- Transfer the complete design from Reference A to Reference B
+- Maintain the exact shape, proportions, and features of Reference B
+- Preserve the original contours and surface details of Reference B
+- Ensure all design elements follow the object's geometry
+- No distortion or warping of the design
+
+DESIGN TRANSFER:
+- Map all design elements to follow the exact contours of Reference B
+- Maintain proper scale and perspective for all elements
+- Ensure crisp, high-resolution rendering of all design elements
+- Preserve text legibility and logo integrity
+- Match the original design's color scheme and style
+
+RENDERING QUALITY:
+- Photorealistic materials and lighting
+- Accurate reflections that follow the object's curves
+- Proper shadows and ambient occlusion
+- No distortion or warping of design elements
+- Seamless integration with the target object's form`;
+            
+            rendering = `Photorealistic rendering with a ${finishText} finish; maintain Reference B's camera angle, lighting, and environment; reflections should accurately represent the wrap's material properties.`;
         } else if (wrapType === 'partial') {
-            typeSentence = `Apply a partial wrap from Reference A onto Reference B covering: ${scope}.`;
-            mapping = 'Correct perspective/UV over curved surfaces; align graphics to panels/faces; respect seams, openings, handles, vents, and edges. No warping or stretching; no crossing gaps; no misaligned graphics or texture swimming.';
-            const finishText = finish === 'metallic' ? 'metallic foil film' : finish === 'matte' ? 'matte vinyl film' : 'glossy vinyl film';
-            rendering = `Photorealistic wrap with a ${finishText} finish; maintain Reference B camera angle and lighting; reflections should follow the active palette.`;
+            const finishText = finish === 'metallic' ? 'metallic foil film with reflective properties' 
+                : finish === 'matte' ? 'matte vinyl film with subtle texture' 
+                : 'glossy vinyl film with deep, vibrant colors';
+            
+            typeSentence = `Apply a partial wrap from Reference A onto the target object in Reference B covering: ${scope}, while maintaining the original shape and features of Reference B.`;
+            
+            mapping = `CRITICAL INSTRUCTIONS:
+- Apply the design from Reference A ONLY to the specified area: ${scope}
+- Maintain the exact shape, proportions, and features of Reference B
+- Preserve the original contours and surface details of Reference B
+- Ensure all design elements follow the object's geometry
+- No distortion or warping of the design
+
+DESIGN TRANSFER:
+- Map design elements to follow the exact contours of Reference B
+- Maintain proper scale and perspective for all elements
+- Ensure crisp, high-resolution rendering of all design elements
+- Preserve text legibility and logo integrity
+- Match the original design's color scheme and style
+- Create clean, precise edges at the wrap boundaries
+
+RENDERING QUALITY:
+- Photorealistic materials and lighting
+- Accurate reflections that follow the object's curves
+- Proper shadows and ambient occlusion
+- No distortion or warping of design elements
+- Seamless integration with the target object's form`;
+            
+            rendering = `Photorealistic rendering with a ${finishText} finish; maintain Reference B's camera angle, lighting, and environment; reflections should accurately represent the wrap's material properties.`;
+        } else if (wrapType === 'vehicle') {
+            // Enhanced Vehicle wrap mode - optimized for design transfer while preserving target vehicle's color
+            const finishText = finish === 'metallic' ? 'high-gloss metallic vinyl with reflective properties' 
+                : finish === 'matte' ? 'premium matte vinyl with subtle texture' 
+                : 'high-gloss vinyl with deep, vibrant colors';
+            
+            // Check if user wants to transfer the base color from Reference A
+            const transferColor = els.transferVehicleColor && els.transferVehicleColor.checked;
+            console.log('Transfer vehicle color checkbox:', transferColor); // Debug log
+            
+            if (transferColor) {
+                // Transfer everything including base color
+                typeSentence = `Transfer the complete vehicle design from Reference A (source vehicle) onto the target vehicle in Reference B, INCLUDING THE BASE COLOR, design elements, and branding.`;
+                
+                mapping = `CRITICAL INSTRUCTIONS:
+- Transfer the COMPLETE design from Reference A, including:
+  * Base vehicle color
+  * Logos and branding
+  * Graphic patterns and artwork
+  * Decals and text
+  * Design elements and illustrations
+- Maintain Reference B's:
+  * Body shape and contours
+  * Window tint and glass
+  * Wheels and tires
+  * Lights and trim
+  * Interior details
+  * Physical proportions and perspective
+
+DESIGN TRANSFER:
+- Map all design elements and colors to follow Reference B's exact contours
+- Maintain proper scale and perspective for all transferred elements
+- Ensure crisp, high-resolution rendering of all design elements
+- Preserve text legibility and logo integrity
+- Match the original design's complete color scheme and style
+
+RENDERING QUALITY:
+- Photorealistic materials and lighting
+- Accurate reflections that follow the vehicle's curves
+- Proper shadows and ambient occlusion
+- No distortion or warping of design elements
+- Seamless integration with the target vehicle's form`;
+            } else {
+                // Transfer only design elements, preserve Reference B's base color
+                typeSentence = `Transfer ONLY the design elements from Reference A (source vehicle) onto the target vehicle in Reference B, while MAINTAINING Reference B's original base color, body shape, and physical features.`;
+                
+                mapping = `CRITICAL INSTRUCTIONS:
+- PRESERVE Reference B's ORIGINAL BASE COLOR - DO NOT change the vehicle's factory paint color
+- Transfer ONLY the following from Reference A:
+  * Logos and branding
+  * Graphic patterns and artwork
+  * Decals and text
+  * Design elements and illustrations
+- Maintain Reference B's:
+  * Base vehicle color
+  * Body shape and contours
+  * Window tint and glass
+  * Wheels and tires
+  * Lights and trim
+  * Interior details
+
+DESIGN TRANSFER:
+- Map design elements to follow Reference B's exact contours
+- Maintain proper scale and perspective for all transferred elements
+- Ensure crisp, high-resolution rendering of all design elements
+- Preserve text legibility and logo integrity
+- Match the original design's color scheme and style
+
+RENDERING QUALITY:
+- Photorealistic materials and lighting
+- Accurate reflections that follow the vehicle's curves
+- Proper shadows and ambient occlusion
+- No distortion or warping of design elements
+- Seamless integration with the target vehicle's form`;
+            }
+            
+            rendering = `PHOTOREALISTIC RENDERING (STUDIO QUALITY):
+- Professional automotive photography with studio lighting
+- ${finishText} that accurately reflects the vehicle's environment
+- Natural-looking reflections that follow the vehicle's curves
+- Soft, diffused lighting that shows off the wrap's details
+- Subtle ambient occlusion in panel gaps and recessed areas
+- Perfect alignment of all graphics to the vehicle's body lines
+- High dynamic range with deep shadows and bright highlights
+
+TECHNICAL REQUIREMENTS:
+- Minimum 8K resolution for full detail preservation
+- 16-bit color depth for accurate color reproduction
+- Photorealistic materials with proper IOR (Index of Refraction)
+- Physically accurate lighting and reflections
+- No compression artifacts or banding
+- Professional commercial photography quality
+
+POST-PROCESSING:
+- Apply subtle sharpening to enhance detail visibility
+- Ensure consistent white balance across the entire image
+- Add minimal contrast for depth and dimension
+- Apply slight chromatic aberration for realism
+- Include subtle lens distortion if applicable`;
         } else {
             // decal
             typeSentence = `Apply a die-cut decal/sticker from Reference A onto Reference B on: ${scope}.`;
-            mapping = 'Correct perspective/UV over curved surfaces; align graphics to panels/faces; respect seams, openings, handles, vents, and edges. No warping or stretching; no crossing gaps; no misaligned graphics or texture swimming.';
-            const finishText = finish === 'metallic' ? 'metallic foil film' : finish === 'matte' ? 'matte vinyl film' : 'glossy vinyl film';
-            rendering = `Photorealistic decal with a ${finishText} finish; maintain Reference B camera angle and lighting; reflections should follow the active palette.`;
+            mapping = 'Correct perspective/UV over surface; align to natural contours; no warping or stretching; crisp edges; follow surface curvature; no background elements.';
+            const finishText = finish === 'metallic' ? 'metallic vinyl' : finish === 'matte' ? 'matte vinyl' : 'glossy vinyl';
+            rendering = `Photorealistic decal with ${finishText} finish; maintain Reference B lighting and camera angle; cast appropriate shadows; no visible background from Reference A.`;
         }
 
         let negatives = 'Negatives: no color bleed from B, no banding, no artifacts, no partial recolor.';
@@ -877,7 +1121,7 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
         ].filter(Boolean).join('\n\n');
     }
 
-    // Show/hide logo and sticker controls based on wrap type
+    // Show/hide logo, sticker, and vehicle controls based on wrap type
     if (els.wrapType) {
         els.wrapType.addEventListener('change', () => {
             const wrapType = els.wrapType.value;
@@ -886,6 +1130,9 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
             }
             if (els.stickerControls) {
                 els.stickerControls.style.display = wrapType === 'sticker-pack' ? 'grid' : 'none';
+            }
+            if (els.vehicleControls) {
+                els.vehicleControls.style.display = wrapType === 'vehicle' ? 'block' : 'none';
             }
         });
     }
@@ -2054,6 +2301,33 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
             cinematography: 'Extreme Close Up',
             lighting: 'Soft',
             basePrompt: 'An extreme close-up macro photograph revealing intricate details invisible to the naked eye'
+        },
+        
+        // Vehicle Wrap Template
+        vehicleWrap: {
+            promptType: 'Image',
+            style: 'Commercial',
+            cinematography: 'Medium Shot',
+            lighting: 'Studio',
+            basePrompt: `A highly detailed, photorealistic static image of a **TARGET_VEHICLE** in a professional setting. The car maintains its original aerodynamic shape with all distinctive features intact. Its **BASE_COLOR** body is extensively branded with **BRANDING_DETAILS** accurately mapped to its curved surfaces without distortion, similar to the reference design.
+
+COMPOSITION:
+- **Perspective**: Slightly low-angle perspective
+- **Framing**: Dynamic composition with the car as the primary subject
+- **Background**: Clean, professional environment that complements the vehicle
+
+LIGHTING & RENDERING:
+- **Lighting**: Bright, professional studio lighting
+- **Reflections**: Distinct reflections of the environment and branding across the car's **FINISH** finish
+- **Shadows**: Soft shadows that highlight the car's contours
+
+TECHNICAL SPECS:
+- Ultra-high resolution
+- Photorealistic materials and textures
+- Accurate color reproduction
+- Crisp, detailed rendering of all design elements
+
+STYLE: Commercial product photography with emphasis on the vehicle wrap design and branding.`
         }
     };
     

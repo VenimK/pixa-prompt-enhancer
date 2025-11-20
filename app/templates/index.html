@@ -108,16 +108,21 @@
                     
                     <!-- Image Analysis Result Container -->
                     <div id="image-result-container" class="image-result-container" style="display: none; margin-top: 1.5rem; padding: 1rem; background: var(--card-bg); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                        <div class="image-preview-container" style="margin-bottom: 1rem; text-align: center; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-                            <div class="image-slot" id="image-slot-a" style="position:relative; display:none;">
-                                <img id="image-preview" src="#" alt="Uploaded preview A" style="max-width: 100%; max-height: 300px; border-radius: var(--radius-sm); display: none;">
+                        <div class="image-preview-container" style="margin-bottom: 1rem; text-align: center; display:flex; gap:12px; justify-content:center; align-items:center; flex-wrap:wrap;">
+                            <div class="image-slot" id="image-slot-a" draggable="true" style="position:relative; display:none; cursor:move; transition: opacity 0.2s;">
+                                <div style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Reference A (Source)</div>
+                                <img id="image-preview" src="#" alt="Uploaded preview A" style="max-width: 100%; max-height: 300px; border-radius: var(--radius-sm); display: none; pointer-events: none;">
                                 <div class="slot-controls" style="display:flex; gap:6px; justify-content:center; margin-top:6px;">
                                     <button id="replace-a" class="btn btn-xs btn-outline">Replace A</button>
                                     <button id="remove-a" class="btn btn-xs btn-outline">Remove A</button>
                                 </div>
                             </div>
-                            <div class="image-slot" id="image-slot-b" style="position:relative; display:none;">
-                                <img id="image-preview-b" src="#" alt="Uploaded preview B" style="max-width: 100%; max-height: 300px; border-radius: var(--radius-sm); display: none;">
+                            <button id="swap-images" class="btn btn-outline" style="display:none; flex-shrink:0; padding: 8px 12px; cursor:pointer;" title="Swap images between Reference A and Reference B">
+                                <span style="font-size:1.25rem;">⇄</span>
+                            </button>
+                            <div class="image-slot" id="image-slot-b" draggable="true" style="position:relative; display:none; cursor:move; transition: opacity 0.2s;">
+                                <div style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Reference B (Target)</div>
+                                <img id="image-preview-b" src="#" alt="Uploaded preview B" style="max-width: 100%; max-height: 300px; border-radius: var(--radius-sm); display: none; pointer-events: none;">
                                 <div class="slot-controls" style="display:flex; gap:6px; justify-content:center; margin-top:6px;">
                                     <button id="replace-b" class="btn btn-xs btn-outline">Replace B</button>
                                     <button id="remove-b" class="btn btn-xs btn-outline">Remove B</button>
@@ -229,6 +234,7 @@
                             <div class="selector">
                                 <label for="wrap-type">Wrap Type</label>
                                 <select id="wrap-type">
+                                    <option value="vehicle">Vehicle wrap</option>
                                     <option value="full">Full wrap / livery</option>
                                     <option value="partial">Partial panels</option>
                                     <option value="decal">Decal / sticker</option>
@@ -285,6 +291,14 @@
                             <label style="display:flex; align-items:center; gap:8px;">
                                 <input type="checkbox" id="multi-stage">
                                 Multi-stage prompting (better consistency)
+                            </label>
+                        </div>
+
+                        <!-- Vehicle-specific controls (shown when wrap-type=vehicle) -->
+                        <div id="vehicle-controls" style="display:none;">
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="transfer-vehicle-color">
+                                Transfer base color from Reference A (otherwise keep Reference B's color)
                             </label>
                         </div>
 
