@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedFiles = []; // holds up to 2 File objects
     let autoReAnalyzeOnChange = true;
     let analyzeDebounceTimer = null;
+    // Holds last analysis texts for A/B to enable auto object/subject extraction
+    let latestAnalysis = { combined: '', a: '', b: '' };
 
     function reanalyzeIfEnabled() {
         if (!autoReAnalyzeOnChange) return;
@@ -601,18 +603,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return 'glass';
         }
         
+        // Can detection (aluminum/metal cylindrical) - MUST be checked BEFORE bottle
+        if (text.includes(' can ') || text.includes(' can,') || text.includes(' can.') || text.includes(' can\'') ||
+            text.includes('aluminum can') || text.includes('aluminium can') || 
+            text.includes('beer can') || text.includes('soda can') || 
+            text.includes('energy drink') || text.includes('beverage can') || 
+            text.includes('tin can') || text.includes('metal can') || 
+            text.includes('drink can') || text.includes('pop can') ||
+            (text.includes('aluminum') && text.includes('beverage')) ||
+            (text.includes('aluminium') && text.includes('beverage')) ||
+            (text.includes('metal') && text.includes(' can'))) {
+            return 'can';
+        }
+        
         // Bottle detection (glass/plastic bottles with necks)
         if (text.includes('bottle') || text.includes('flask') || 
             text.includes('wine bottle') || text.includes('beer bottle') ||
             text.includes('water bottle') || text.includes('soda bottle')) {
             return 'bottle';
-        }
-        
-        // Can detection (aluminum/metal cylindrical)
-        if (text.includes('aluminum can') || text.includes('beer can') ||
-            text.includes('soda can') || text.includes('energy drink') ||
-            text.includes('beverage can') || text.includes('tin can')) {
-            return 'can';
         }
         
         // Cup/mug detection (opaque drinking vessels)
@@ -827,6 +835,37 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
         }
     }
 
+    // --- Heuristics to extract key object (from B) and subject (from A) ---
+    function extractKeyObjectFromB(analysisB, combined) {
+        const text = (analysisB || combined || '').toLowerCase();
+        if (!text) return null;
+        const objects = [
+            'necklace','pendant','earrings','ring','bracelet','watch','scarf','tie','hat','cap','glasses','sunglasses','mask','helmet','bag','handbag','purse','backpack','belt','brooch','pin','hairpin','headband','shawl','hood','gloves'
+        ];
+        const materials = ['bead','beaded','metal','gold','silver','steel','leather','fabric','silk','wool','cotton','linen','velvet','crystal','gem','stone','pearl','glass'];
+        const colorsRe = /\b([a-z]+\s)?(blue|green|red|yellow|orange|purple|violet|pink|teal|cyan|magenta|gold|silver|black|white|gray|brown|amber|cream)\b/g;
+        const foundObj = objects.find(o => text.includes(o));
+        if (!foundObj) return null;
+        const foundMats = materials.filter(m => text.includes(m));
+        const colors = Array.from(text.matchAll(colorsRe)).map(m => m[0]).slice(0, 6);
+        return {
+            label: foundObj,
+            materials: foundMats,
+            colors
+        };
+    }
+
+    function detectSubjectFromA(analysisA, combined) {
+        const t = (analysisA || combined || '').toLowerCase();
+        if (!t) return null;
+        if (t.includes('woman') || t.includes('female')) return 'woman';
+        if (t.includes('man') || t.includes('male')) return 'man';
+        if (t.includes('boy')) return 'boy';
+        if (t.includes('girl')) return 'girl';
+        if (t.includes('person') || t.includes('portrait') || t.includes('people')) return 'subject';
+        return null;
+    }
+
     function buildWrappingPrompt() {
         const wrapType = els.wrapType ? els.wrapType.value : 'full';
         const finish = els.wrapFinish ? els.wrapFinish.value : 'glossy';
@@ -955,9 +994,43 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
                 : finish === 'matte' ? 'matte vinyl finish'
                 : 'glossy vinyl finish';
             rendering = `Photorealistic logo application with ${finishText}; maintain Reference B lighting, shadows, and reflections; logo colors are vibrant and accurate.`;
+        } else if (wrapType === 'people-object') {
+            // People/Object A→B transfer (e.g., subject from A wearing/holding object from B)
+            const analysisText = els.imageDescription ? els.imageDescription.innerText.trim() : '';
+            const extracted = extractPaletteFromText(analysisText);
+            const paletteLine = extracted ? `Color harmony: match object/material colors to Reference A lighting; optionally reflect palette accents (${extracted}) if plausible.` : `Color harmony: match object/material colors to Reference A lighting; optionally reflect subtle accents from Reference A.`;
+
+            // Try to auto-detect specifics from analysis
+            const subject = detectSubjectFromA(latestAnalysis.a, latestAnalysis.combined) || 'subject';
+            const objInfo = extractKeyObjectFromB(latestAnalysis.b, latestAnalysis.combined);
+            const objectLabel = objInfo ? objInfo.label : 'key object/accessory';
+            const materialHint = objInfo && objInfo.materials.length ? ` Materials: ${objInfo.materials.join(', ')}.` : '';
+            const colorHint = objInfo && objInfo.colors.length ? ` Object colors: ${[...new Set(objInfo.colors)].join(', ')}.` : '';
+
+            typeSentence = `DELTA-ONLY EDIT: Strictly preserve the ${subject} from Reference A exactly (identity, face, expression, skin tone, hair, posture, clothing), the original background, framing/composition, lens characteristics, color grading, and lighting.`;
+            mapping = `Add ONLY the ${objectLabel} from Reference B onto/around the ${subject} from Reference A with precise placement, scale, and perspective. Maintain correct occlusion (object may sit behind hair/clothing edges), natural contact with subtle deformation where physically plausible. Do NOT change any other elements from Reference A.`;
+            rendering = [
+                `Lighting & mood: match Reference A's lighting/exposure/DOF exactly; do not restage or relight the scene. Keep the original background and context from Reference A unchanged.`,
+                paletteLine,
+                `Materials: preserve B's material properties (metal, beads, fabric, leather, etc.) with micro-highlights and reflections; add contact shadows; limit deformation to tiny amounts for realism.` + materialHint + colorHint,
+                `Negatives: do NOT alter facial structure, pose, clothing (beyond contact overlap), hair style/length, background, perspective, camera position, or palette from Reference A. Do NOT import any scene elements from Reference B besides the ${objectLabel}. No vehicles, wraps, decals, restaging, stylization shifts, or color bleed.`
+            ].join(' ');
         } else if (wrapType === 'product') {
-            // Product wrap (cylindrical objects)
-            typeSentence = `Transfer the design from Reference A onto the cylindrical surface of Reference B (can/bottle/glass), covering: ${scope}.`;
+            // Product wrap (cylindrical objects) - detect the actual object type
+            const objectType = detectObjectType(analysisText, scope, scopePreset);
+            const objectNames = {
+                'glass-opaque': 'opaque/frosted glass',
+                'glass': 'glass',
+                'bottle': 'bottle',
+                'can': 'can',
+                'cup': 'cup/mug',
+                'jar': 'jar',
+                'tube': 'tube',
+                'container': 'container'
+            };
+            const objectName = objectNames[objectType] || 'product';
+            
+            typeSentence = `Transfer the design from Reference A onto the surface of Reference B (${objectName}), covering: ${scope}.`;
             
             // Enhanced mapping for full-can coverage
             if (scopePreset === 'full-can') {
@@ -1139,6 +1212,11 @@ POST-PROCESSING:
         }
 
         let negatives = 'Negatives: no color bleed from B, no banding, no artifacts, no partial recolor.';
+        
+        // Enhanced negatives for vehicle wraps
+        if (wrapType === 'vehicle') {
+            negatives = 'Negatives: DO NOT modify Reference B vehicle body shape, proportions, or structure; NO changing the vehicle model or type; NO altering wheel design, lights, or windows; NO removing or changing vehicle features; NO blurry text or logos; NO distorted graphics; NO warped patterns; NO incomplete wrap coverage; NO artifacts or banding; NO unrealistic reflections; NO incorrect perspective; NO color bleed from Reference B onto the wrap design; NO partial application of design elements.';
+        }
         
         // Enhanced negatives for full-can coverage
         if (wrapType === 'product' && scopePreset === 'full-can') {
@@ -1340,6 +1418,12 @@ POST-PROCESSING:
                         
                         // Handle new multi-image response
                         const combined = data.combined_description;
+                        // Persist raw analysis strings for downstream helpers
+                        latestAnalysis = {
+                            combined: combined || '',
+                            a: (data.image_a_description || ''),
+                            b: (data.image_b_description || '')
+                        };
                         const isError = typeof combined === 'string' && combined.startsWith('Error');
                         if (isError) {
                             els.imageDescription.innerHTML = `<div class="error-message">${combined}</div>`;

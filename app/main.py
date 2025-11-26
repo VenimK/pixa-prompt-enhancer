@@ -433,6 +433,40 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
                 enhanced_prompt="Error: Google API key is not set. Please set the GOOGLE_API_KEY environment variable."
             )
 
+        # Detect if this is a vehicle wrap or technical wrapping prompt
+        prompt_lower = request.prompt.lower() if request.prompt else ""
+        # Heuristic: require both a vehicle term AND a wrap/surface-mapping term.
+        # Avoid triggering on negatives (e.g., "no vehicles", "negatives: no vehicles, wraps").
+        vehicle_terms = [
+            "automotive", "vehicle", "car", "sedan", "coupe", "sports coupe",
+            "hatchback", "suv", "truck"
+        ]
+        wrap_terms = [
+            "vehicle wrap", "wrap design", "vinyl wrap", "car wrap", "livery",
+            "body lines", "body panels", "quarter panel", "fender", "hood", "spoiler",
+            "panel", "wrap"
+        ]
+        def contains_term(text: str, terms: list[str]) -> bool:
+            return any(term in text for term in terms)
+
+        def has_negation(text: str) -> bool:
+            # Common negation patterns that show the user explicitly excludes vehicles/wraps
+            neg_patterns = [
+                "no vehicles", "no vehicle", "without vehicles", "without vehicle",
+                "no wraps", "no wrap", "negatives: no vehicles", "negatives: no wrap",
+            ]
+            return any(p in text for p in neg_patterns)
+
+        # Optional hint to avoid vehicle mode when the intent is people/object A→B transfer
+        people_object_hint = "people/object" in prompt_lower or "a→b transfer" in prompt_lower
+
+        is_vehicle_wrap = (
+            contains_term(prompt_lower, vehicle_terms)
+            and contains_term(prompt_lower, wrap_terms)
+            and not has_negation(prompt_lower)
+            and not people_object_hint
+        )
+        
         # --- Build instructions based on user selections ---
         instructions = []
         if request.style and request.style != "None":
@@ -608,8 +642,40 @@ Generate a brief animation prompt now."""
             # Check for specific materials, styles, or compositions in the prompt
             prompt_lower = request.prompt.lower()
 
+            # Vehicle wrap / technical wrapping - preserve critical instructions
+            if is_vehicle_wrap:
+                meta_prompt = f"""You are enhancing a technical vehicle wrap prompt. The user has provided detailed, precise instructions that MUST be preserved EXACTLY.
+
+CRITICAL REQUIREMENTS - DO NOT MODIFY:
+1. Keep EVERY technical requirement exactly as written (design transfer, mapping, rendering specs, negatives)
+2. Preserve the EXACT structure including all section headings (PRECISE DESIGN TRANSFER, VEHICLE SPECIFICS, TECHNICAL SPECS, etc.)
+3. Keep ALL instructions about "Reference A" and "Reference B" word-for-word
+4. Do NOT remove or rewrite any constraints, rules, or technical specifications
+5. Do NOT change any negative prompts or "do not" instructions
+
+YOUR ENHANCEMENT TASK:
+- Add vivid, descriptive language about the vehicle's appearance (sleek, aerodynamic, sculpted, etc.)
+- Add descriptive details about the wrap design colors and patterns
+- Make the scene more vivid with atmospheric details
+- If style preferences are provided{instruction_text}, add them as SUPPLEMENTARY atmosphere only
+- Remove any markdown formatting like ** or __ from the original prompt
+
+PRESERVE COMPLETELY:
+✓ All bullet points and list structures
+✓ All "CRITICAL", "PRESERVE", "MAINTAIN", "DO NOT" instructions  
+✓ All technical specifications and measurements
+✓ All references to "Reference A" and "Reference B"
+✓ The exact meaning and intent of every constraint
+
+{image_context}{text_emphasis}
+
+Original technical prompt to enhance (preserve structure, add descriptions):
+'{request.prompt}'
+
+Output the enhanced prompt now, keeping ALL technical requirements intact."""
+
             # Material-specific handling
-            if "yarn" in prompt_lower and any(
+            elif "yarn" in prompt_lower and any(
                 word in prompt_lower for word in ["animal", "creature", "wildlife"]
             ):
                 meta_prompt = f"You are a creative assistant for a text-to-image model specializing in yarn art. Your goal is to create a detailed prompt for an image where the main subject is an animal ENTIRELY made of yarn - not a real animal, but a yarn sculpture/creation that looks like an animal. Describe the yarn's texture, colors, stitching details, and how the yarn construction gives the animal character. Make sure to emphasize that this is a yarn creation, not a real animal with yarn elements.{instruction_text}{model_guidance} Include details about the setting and lighting that would best showcase this yarn creation.{image_context}{text_emphasis} IMPORTANT: Keep your enhanced prompt under {char_limit} characters total. Do not add conversational fluff. User's idea: '{request.prompt}'"
