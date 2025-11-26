@@ -295,6 +295,15 @@
                             </label>
                         </div>
 
+                        <!-- People/Object override: choose detected objects from B -->
+                        <div id="object-override-container" class="selector" style="display:none; flex-direction:column; gap:8px;">
+                            <label for="object-override">Object(s) from Reference B (override detection)</label>
+                            <select id="object-override" multiple size="6" style="min-width:240px; max-width:520px;">
+                                <!-- Options populated from image analysis -->
+                            </select>
+                            <small style="color:var(--text-muted);">Tip: Hold Cmd/Ctrl to select multiple. Leave empty to auto-detect.</small>
+                        </div>
+
                         <!-- Vehicle-specific controls (shown when wrap-type=vehicle) -->
                         <div id="vehicle-controls" style="display:none;">
                             <label style="display:flex; align-items:center; gap:8px;">

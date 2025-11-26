@@ -1,3 +1,4 @@
+    
 document.addEventListener('DOMContentLoaded', () => {
     // --- Initialize Theme Early ---
     const savedTheme = localStorage.getItem('darkMode');
@@ -428,6 +429,8 @@ document.addEventListener('DOMContentLoaded', () => {
         neutralizeB: document.getElementById('neutralize-b'),
         multiStage: document.getElementById('multi-stage'),
         insertWrapPrompt: document.getElementById('insert-wrap-prompt'),
+        objectOverrideContainer: document.getElementById('object-override-container'),
+        objectOverride: document.getElementById('object-override'),
         // Vehicle-specific controls
         vehicleControls: document.getElementById('vehicle-controls'),
         transferVehicleColor: document.getElementById('transfer-vehicle-color'),
@@ -442,6 +445,71 @@ document.addEventListener('DOMContentLoaded', () => {
         stickerStyle: document.getElementById('sticker-style'),
         stickerVariation: document.getElementById('sticker-variation')
     };
+
+    // Populate object override select with detected candidates from Reference B
+    function populateObjectOverrideOptions(subjectHint) {
+        if (!els.objectOverride) return;
+        // Clear previous
+        els.objectOverride.innerHTML = '';
+        const text = (latestAnalysis.b || latestAnalysis.combined || '').toLowerCase();
+        if (!text) return;
+
+        const tiers = [
+            ['necklace','pendant','scarf','turtleneck','headband','hairpin','earrings','glasses','sunglasses','hat','cap','brooch'],
+            ['bracelet','watch','ring','belt','pin'],
+            ['overcoat','coat','jacket','shirt','blouse','dress','shawl','hood','handbag','bag','purse','backpack','pants','trousers','boots','shoe','sandal','flip-flop','boot','sneaker','trainer','gloves']
+        ];
+        const hasWord = (w) => {
+            const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const re = new RegExp(`\\b${escaped}\\b`, 'i');
+            return re.test(text);
+        };
+
+        const candidates = [];
+        for (const tier of tiers) {
+            for (const obj of tier) {
+                if (hasWord(obj) && !candidates.includes(obj)) candidates.push(obj);
+            }
+        }
+
+        // Fallback to a few generic choices if nothing detected
+        const list = candidates.length ? candidates : ['necklace','earrings','bracelet','ring','scarf','turtleneck','handbag','overcoat'];
+        for (const label of list) {
+            const opt = document.createElement('option');
+            opt.value = label;
+            opt.textContent = label;
+            els.objectOverride.appendChild(opt);
+        }
+    }
+
+    function toggleObjectOverrideVisibility() {
+        if (!els.objectOverrideContainer || !els.wrapType) return;
+        const isPeopleObject = els.wrapType.value === 'people-object';
+        els.objectOverrideContainer.style.display = isPeopleObject ? 'flex' : 'none';
+        if (isPeopleObject) {
+            const subj = detectSubjectFromA(latestAnalysis.a, latestAnalysis.combined) || 'subject';
+            populateObjectOverrideOptions(subj);
+        }
+    }
+
+    // Apply saved theme state and wire up the toggle
+    applySavedTheme();
+    if (els.themeToggle) {
+        els.themeToggle.checked = (localStorage.getItem('darkMode') === 'true');
+        els.themeToggle.addEventListener('change', function() {
+            const isDark = this.checked;
+            document.documentElement.classList.toggle('dark-mode', isDark);
+            document.body.classList.toggle('dark-mode', isDark);
+            localStorage.setItem('darkMode', isDark);
+            showToast(isDark ? ' Dark mode enabled' : ' Light mode enabled', 'info', 2000);
+        });
+    }
+
+    // Hook wrap-type change for object override UI
+    if (els.wrapType) {
+        els.wrapType.addEventListener('change', toggleObjectOverrideVisibility);
+        toggleObjectOverrideVisibility();
+    }
 
     // --- Hookups that require 'els' ---
     // File input -> two-slot state
@@ -840,19 +908,65 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
         const text = (analysisB || combined || '').toLowerCase();
         if (!text) return null;
         const objects = [
-            'necklace','pendant','earrings','ring','bracelet','watch','scarf','tie','hat','cap','glasses','sunglasses','mask','helmet','bag','handbag','purse','backpack','belt','brooch','pin','hairpin','headband','shawl','hood','gloves'
+            'necklace','pendant','earrings','ring','bracelet','watch','scarf','turtleneck','tie','hat','cap','glasses','sunglasses','mask','helmet',
+            'handbag','bag','purse','backpack','belt','brooch','pin','hairpin','headband','shawl','hood','gloves',
+            'overcoat','coat','jacket','shirt','blouse','dress','pants','trousers','boots','shoe','sandal','flip-flop','boot','sneaker','trainer'
         ];
         const materials = ['bead','beaded','metal','gold','silver','steel','leather','fabric','silk','wool','cotton','linen','velvet','crystal','gem','stone','pearl','glass'];
-        const colorsRe = /\b([a-z]+\s)?(blue|green|red|yellow|orange|purple|violet|pink|teal|cyan|magenta|gold|silver|black|white|gray|brown|amber|cream)\b/g;
-        const foundObj = objects.find(o => text.includes(o));
+        // Only return pure color words (no preceding tokens)
+        const colorsRe = /\b(blue|green|red|yellow|orange|purple|violet|pink|teal|cyan|magenta|gold|silver|black|white|gray|grey|brown|amber|cream|beige)\b/g;
+
+        const hasWord = (w) => {
+            // Escape regex special chars in word
+            const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const re = new RegExp(`\\b${escaped}\\b`, 'i');
+            return re.test(text);
+        };
+
+        const foundObj = objects.find(o => hasWord(o));
         if (!foundObj) return null;
-        const foundMats = materials.filter(m => text.includes(m));
+        const foundMats = materials.filter(m => hasWord(m));
         const colors = Array.from(text.matchAll(colorsRe)).map(m => m[0]).slice(0, 6);
         return {
             label: foundObj,
             materials: foundMats,
             colors
         };
+    }
+
+    // Prioritized extraction for human subjects: prefer wearable accessories near face/neck
+    function extractKeyObjectFromBWithPriority(subject, analysisB, combined) {
+        const text = (analysisB || combined || '').toLowerCase();
+        if (!text) return null;
+        const hasWord = (w) => {
+            const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const re = new RegExp(`\\b${escaped}\\b`, 'i');
+            return re.test(text);
+        };
+
+        // Candidate lists by priority for human portrait edits
+        const tiers = [
+            // Highest: around-neck/face
+            ['necklace','pendant','scarf','turtleneck','headband','hairpin','earrings','glasses','sunglasses','hat','cap','brooch'],
+            // Medium: hand/wrist small items
+            ['bracelet','watch','ring','belt','pin'],
+            // Lower: larger apparel that restages look
+            ['overcoat','coat','jacket','shirt','blouse','dress','shawl','hood','handbag','bag','purse','backpack','pants','trousers','boots','shoe','sandal','flip-flop','boot','sneaker','trainer','gloves']
+        ];
+
+        // If not a clear human subject, fallback to general extractor
+        const isHuman = subject && ['woman','man','girl','boy','subject','person'].includes(subject);
+        if (!isHuman) return extractKeyObjectFromB(analysisB, combined);
+
+        for (const tier of tiers) {
+            const found = tier.find(o => hasWord(o));
+            if (found) {
+                // Reuse material/color extraction from base
+                const base = extractKeyObjectFromB(analysisB, combined) || { materials: [], colors: [] };
+                return { label: found, materials: base.materials || [], colors: base.colors || [] };
+            }
+        }
+        return extractKeyObjectFromB(analysisB, combined);
     }
 
     function detectSubjectFromA(analysisA, combined) {
@@ -1002,13 +1116,19 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
 
             // Try to auto-detect specifics from analysis
             const subject = detectSubjectFromA(latestAnalysis.a, latestAnalysis.combined) || 'subject';
-            const objInfo = extractKeyObjectFromB(latestAnalysis.b, latestAnalysis.combined);
-            const objectLabel = objInfo ? objInfo.label : 'key object/accessory';
+            // Read user overrides (allow multiple)
+            const selectedObjects = els.objectOverride ? Array.from(els.objectOverride.selectedOptions).map(o => o.value) : [];
+            const objInfo = selectedObjects.length === 0
+                ? extractKeyObjectFromBWithPriority(subject, latestAnalysis.b, latestAnalysis.combined)
+                : { label: selectedObjects[0], materials: [], colors: [] };
+            const objectLabel = selectedObjects.length > 1
+                ? `these objects: ${selectedObjects.join(', ')}`
+                : (objInfo ? objInfo.label : 'key object/accessory');
             const materialHint = objInfo && objInfo.materials.length ? ` Materials: ${objInfo.materials.join(', ')}.` : '';
             const colorHint = objInfo && objInfo.colors.length ? ` Object colors: ${[...new Set(objInfo.colors)].join(', ')}.` : '';
 
             typeSentence = `DELTA-ONLY EDIT: Strictly preserve the ${subject} from Reference A exactly (identity, face, expression, skin tone, hair, posture, clothing), the original background, framing/composition, lens characteristics, color grading, and lighting.`;
-            mapping = `Add ONLY the ${objectLabel} from Reference B onto/around the ${subject} from Reference A with precise placement, scale, and perspective. Maintain correct occlusion (object may sit behind hair/clothing edges), natural contact with subtle deformation where physically plausible. Do NOT change any other elements from Reference A.`;
+            mapping = `Add ONLY the ${objectLabel} from Reference B onto/around the ${subject} from Reference A with precise placement, scale, and perspective. Maintain correct occlusion (object(s) may sit behind hair/clothing edges), natural contact with subtle deformation where physically plausible. Do NOT change any other elements from Reference A.`;
             rendering = [
                 `Lighting & mood: match Reference A's lighting/exposure/DOF exactly; do not restage or relight the scene. Keep the original background and context from Reference A unchanged.`,
                 paletteLine,
@@ -1287,22 +1407,11 @@ POST-PROCESSING:
         const isDarkMode = localStorage.getItem('darkMode') === 'true';
         document.documentElement.classList.toggle('dark-mode', isDarkMode);
         document.body.classList.toggle('dark-mode', isDarkMode);
-        if (els.themeToggle) {
-            els.themeToggle.checked = isDarkMode;
-        }
+        const toggleEl = document.getElementById('theme-toggle');
+        if (toggleEl) toggleEl.checked = isDarkMode;
     }
 
-    if (els.themeToggle) {
-        els.themeToggle.addEventListener('change', function() {
-            const isDark = this.checked;
-            document.documentElement.classList.toggle('dark-mode', isDark);
-            document.body.classList.toggle('dark-mode', isDark);
-            localStorage.setItem('darkMode', isDark);
-            
-            // Show a toast notification
-            showToast(isDark ? '🌙 Dark mode enabled' : '☀️ Light mode enabled', 'info', 2000);
-        });
-    }
+    // Theme toggle listener is set after 'els' is created below
 
     // --- Progress Steps Logic ---
     function updateProgress(stepNumber, status) {
@@ -1453,6 +1562,8 @@ POST-PROCESSING:
                             showToast('Image analyzed successfully!', 'success');
                             updateProgress(1, 'completed');
                             updateProgress(2, 'active');
+                            // Refresh override candidates if relevant
+                            toggleObjectOverrideVisibility();
                             
                             // Recalculate height for collapse/expand functionality
                             // Start collapsed but calculate full height for smooth expand
