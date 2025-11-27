@@ -88,6 +88,7 @@ class EnhanceRequest(BaseModel):
     motion_effect: str | None = None
     text_emphasis: str | None = None
     model: str | None = None  # AI model selection (flux, qwen, nunchaku, etc.)
+    wrap_mode: str | None = None  # 'vehicle' | 'people-object' | 'none'
 
 
 class EnhanceResponse(BaseModel):
@@ -442,9 +443,11 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
             "hatchback", "suv", "truck"
         ]
         wrap_terms = [
-            "vehicle wrap", "wrap design", "vinyl wrap", "car wrap", "livery",
+            "vehicle wrap", "wrap design", "vinyl wrap", "car wrap", "livery", "wrap"
+        ]
+        body_terms = [
             "body lines", "body panels", "quarter panel", "fender", "hood", "spoiler",
-            "panel", "wrap"
+            "door", "bonnet", "trunk", "bumper", "side skirt", "roof"
         ]
         def contains_term(text: str, terms: list[str]) -> bool:
             return any(term in text for term in terms)
@@ -460,12 +463,28 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
         # Optional hint to avoid vehicle mode when the intent is people/object A→B transfer
         people_object_hint = "people/object" in prompt_lower or "a→b transfer" in prompt_lower
 
+        vehicle_present = contains_term(prompt_lower, vehicle_terms)
+        wrap_present = contains_term(prompt_lower, wrap_terms)
+        body_hits = sum(1 for t in body_terms if t in prompt_lower)
+
+        # Start with heuristic, then override with explicit wrap_mode if provided
+        # Stricter rule: need explicit wrap AND (vehicle OR >=2 body panel terms)
         is_vehicle_wrap = (
-            contains_term(prompt_lower, vehicle_terms)
-            and contains_term(prompt_lower, wrap_terms)
+            wrap_present
+            and (vehicle_present or body_hits >= 2)
             and not has_negation(prompt_lower)
             and not people_object_hint
         )
+
+        # Explicit wrap_mode overrides heuristics to prevent mixing modes
+        if request.wrap_mode:
+            mode = request.wrap_mode.lower()
+            if mode == "vehicle":
+                is_vehicle_wrap = True
+                people_object_hint = False
+            elif mode == "people-object":
+                is_vehicle_wrap = False
+                people_object_hint = True
         
         # --- Build instructions based on user selections ---
         instructions = []
@@ -642,8 +661,38 @@ Generate a brief animation prompt now."""
             # Check for specific materials, styles, or compositions in the prompt
             prompt_lower = request.prompt.lower()
 
+            # People/Object A→B transfer detection (delta-only intent)
+            is_people_object = (
+                "people/object" in prompt_lower
+                or "delta-only edit" in prompt_lower
+                or ("add only the" in prompt_lower and "from reference b" in prompt_lower and "from reference a" in prompt_lower)
+            )
+
+            if is_people_object and not is_vehicle_wrap:
+                meta_prompt = f"""You are enhancing a delta-only edit prompt that transfers an object from Reference B onto the subject in Reference A. Your job is to keep the original photo from Reference A intact and ONLY add the specified object from Reference B.
+
+CRITICAL CONSTRAINTS (PRESERVE EXACTLY):
+- Use Reference A as the base canvas and keep its background, framing/composition, perspective/lens look, color grading, and lighting unchanged.
+- Preserve the subject's identity, face, expression, skin tone, hair, posture, and clothing from Reference A.
+- DO NOT recreate or restage Reference B. DO NOT import Reference B background, layout, or composition.
+
+OBJECT TRANSFER RULES:
+- Add ONLY the specified object(s) from Reference B with precise placement, scale, and perspective onto/around the subject from Reference A.
+- Maintain correct occlusion (object can sit behind hair/clothing edges) and natural contact with subtle deformation if physically plausible.
+- Preserve B's material properties (metal, beads, fabric, leather, etc.) with micro-highlights, reflections, and contact shadows.
+
+NEGATIVES:
+- No flat-lay or product-only composition. No restaging or relighting. No vehicles or wraps. No stylization shifts. No color bleed from B.
+
+{image_context}{text_emphasis}
+
+User's idea:
+'{request.prompt}'
+
+Keep the output under {char_limit} characters. Output the enhanced prompt now."""
+
             # Vehicle wrap / technical wrapping - preserve critical instructions
-            if is_vehicle_wrap:
+            elif is_vehicle_wrap:
                 meta_prompt = f"""You are enhancing a technical vehicle wrap prompt. The user has provided detailed, precise instructions that MUST be preserved EXACTLY.
 
 CRITICAL REQUIREMENTS - DO NOT MODIFY:
