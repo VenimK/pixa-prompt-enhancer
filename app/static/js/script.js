@@ -429,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
         neutralizeB: document.getElementById('neutralize-b'),
         multiStage: document.getElementById('multi-stage'),
         accessoriesOnly: document.getElementById('accessories-only'),
+        plainEnhance: document.getElementById('plain-enhance'),
         insertWrapPrompt: document.getElementById('insert-wrap-prompt'),
         objectOverrideContainer: document.getElementById('object-override-container'),
         objectOverride: document.getElementById('object-override'),
@@ -447,6 +448,66 @@ document.addEventListener('DOMContentLoaded', () => {
         stickerVariation: document.getElementById('sticker-variation')
     };
 
+    // --- Plain Enhance persistence and UI toggle ---
+    function togglePlainEnhanceUI() {
+        const on = !!(els.plainEnhance && els.plainEnhance.checked);
+        
+        // Hide elements by finding their parent label or container, but NOT the shared selector
+        const hideLabel = (el) => {
+            if (!el) return;
+            const label = el.closest('label');
+            if (label) label.style.display = (on ? 'none' : '');
+        };
+        
+        const hideContainer = (el) => {
+            if (!el) return;
+            el.style.display = (on ? 'none' : '');
+        };
+        
+        // Hide wrap-related UI when Plain Enhance is ON
+        // Hide sibling checkboxes in the same row (use hideLabel for individual labels)
+        hideLabel(els.neutralizeB);
+        hideLabel(els.multiStage);
+        hideLabel(els.accessoriesOnly);
+        
+        // Hide other wrap control containers
+        hideContainer(els.objectOverrideContainer);
+        hideContainer(els.vehicleControls);
+        hideContainer(els.logoControls);
+        hideContainer(els.stickerControls);
+        
+        // Hide wrap-type selector and related controls (find their parent .selector)
+        if (els.wrapType) {
+            const wrapSelector = els.wrapType.closest('.selector');
+            if (wrapSelector) wrapSelector.style.display = (on ? 'none' : '');
+        }
+        
+        // Hide palette controls
+        if (els.enforcePalette) {
+            const paletteSelector = els.enforcePalette.closest('.selector');
+            if (paletteSelector) paletteSelector.style.display = (on ? 'none' : '');
+        }
+        
+        // Hide insert button
+        if (els.insertWrapPrompt) {
+            const btnContainer = els.insertWrapPrompt.parentElement;
+            if (btnContainer) btnContainer.style.display = (on ? 'none' : '');
+        }
+    }
+
+    // Initialize Plain Enhance state (default ON) and persist
+    if (els.plainEnhance) {
+        const savedPlain = localStorage.getItem('plainEnhance');
+        // Default to true if not set
+        const shouldBeOn = savedPlain === null ? true : (savedPlain === 'true');
+        els.plainEnhance.checked = shouldBeOn;
+        togglePlainEnhanceUI();
+        els.plainEnhance.addEventListener('change', () => {
+            localStorage.setItem('plainEnhance', els.plainEnhance.checked ? 'true' : 'false');
+            togglePlainEnhanceUI();
+        });
+    }
+
     // Populate object override select with detected candidates from Reference B
     function populateObjectOverrideOptions(subjectHint) {
         if (!els.objectOverride) return;
@@ -459,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // High-priority accessories around head/neck
             ['necklace','pendant','scarf','turtleneck','mask','headband','hairpin','earrings','glasses','sunglasses','hat','cap','brooch'],
             // Hand/wrist/waist small items
-            ['bracelet','watch','ring','belt','pin'],
+            ['bracelet','watch','ring','belt','pin','wallet','cardholder'],
             // Larger outfit/apparel (may restage the look)
             ['overcoat','suit','cape','gauntlets','coat','jacket','shirt','blouse','bodysuit','dress','shawl','hood','handbag','bag','purse','backpack','pants','trousers','boots','shoe','sandal','flip-flop','boot','sneaker','trainer','gloves']
         ];
@@ -480,8 +541,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Fallback to a few generic choices if nothing detected
         const list = candidates.length ? candidates : (accessoriesOnly
-            ? ['necklace','earrings','bracelet','ring','scarf','turtleneck','belt','watch']
-            : ['necklace','earrings','bracelet','ring','scarf','turtleneck','handbag','overcoat']
+            ? ['necklace','earrings','bracelet','ring','scarf','turtleneck','belt','watch','wallet','cardholder']
+            : ['necklace','earrings','bracelet','ring','scarf','turtleneck','handbag','wallet','cardholder','overcoat']
         );
         for (const label of list) {
             const opt = document.createElement('option');
@@ -922,7 +983,7 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
         if (!text) return null;
         const objects = [
             'necklace','pendant','earrings','ring','bracelet','watch','scarf','turtleneck','tie','hat','cap','glasses','sunglasses','mask','helmet',
-            'handbag','bag','purse','backpack','belt','brooch','pin','hairpin','headband','shawl','hood','gloves',
+            'handbag','bag','purse','backpack','wallet','cardholder','belt','brooch','pin','hairpin','headband','shawl','hood','gloves',
             'overcoat','coat','jacket','shirt','blouse','dress','pants','trousers','boots','shoe','sandal','flip-flop','boot','sneaker','trainer'
         ];
         const materials = ['bead','beaded','metal','gold','silver','steel','leather','fabric','silk','wool','cotton','linen','velvet','crystal','gem','stone','pearl','glass'];
@@ -962,7 +1023,7 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
             // Highest: around-neck/face
             ['necklace','pendant','scarf','turtleneck','headband','hairpin','earrings','glasses','sunglasses','hat','cap','brooch'],
             // Medium: hand/wrist small items
-            ['bracelet','watch','ring','belt','pin'],
+            ['bracelet','watch','ring','belt','pin','wallet','cardholder'],
             // Lower: larger apparel that restages look
             ['overcoat','coat','jacket','shirt','blouse','dress','shawl','costume','hood','handbag','bag','purse','backpack','pants','trousers','boots','shoe','sandal','flip-flop','boot','sneaker','trainer','gloves']
         ];
@@ -1163,10 +1224,11 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
             mapping = `Add ONLY the ${objectLabel} from Reference B onto/around the ${subject} from Reference A with precise placement, scale, and perspective. Maintain correct occlusion (object(s) may sit behind hair/clothing edges), natural contact with subtle deformation where physically plausible. Do NOT change any other elements from Reference A.` + (accessoriesOnly ? ' Limit to accessories and small wearables; no full outfit replacement.' : '');
             rendering = [
                 `Anchor: Use Reference A as the base canvas. Do NOT recreate or restage Reference B. Do NOT use any background or composition from Reference B.`,
+                `Framing: keep the original framing/composition and camera distance from Reference A; maintain the same field of view. Do NOT crop, zoom-in, punch-in, or reframe. No close-ups.`,
                 `Lighting & mood: match Reference A's lighting/exposure/DOF exactly; do not restage or relight the scene. Keep the original background and context from Reference A unchanged.`,
                 paletteLine,
                 `Materials: preserve B's material properties (metal, beads, fabric, leather, etc.) with micro-highlights and reflections; add contact shadows; limit deformation to tiny amounts for realism.` + materialHint + colorHint,
-                `Negatives: do NOT alter facial structure, pose, clothing (beyond contact overlap), hair style/length, background, perspective, camera position, or palette from Reference A. Do NOT import any scene elements from Reference B besides the ${objectLabel}. No flat-lay, no product-only composition, no vehicles, wraps, decals, restaging, stylization shifts, or color bleed.` + (accessoriesOnly ? ' No suits, capes, bodysuits, coats, jackets, shirts, pants, shoes.' : '')
+                `Negatives: do NOT alter facial structure, pose, clothing (beyond contact overlap), hair style/length, background, perspective, camera position, or palette from Reference A. Do NOT import any scene elements from Reference B besides the ${objectLabel}. No flat-lay, no product-only composition, no vehicles, wraps, decals, restaging, stylization shifts, or color bleed. No crop, no zoom-in, no close-up, no reframe.` + (accessoriesOnly ? ' No suits, capes, bodysuits, coats, jackets, shirts, pants, shoes.' : '')
             ].join(' ');
         } else if (wrapType === 'product') {
             // Product wrap (cylindrical objects) - detect the actual object type
@@ -1734,9 +1796,13 @@ POST-PROCESSING:
 
             try {
                 console.log('Making API call to /enhance...');
-                const wrapMode = (els.wrapType && els.wrapType.value === 'vehicle') ? 'vehicle'
-                    : (els.wrapType && els.wrapType.value === 'people-object') ? 'people-object'
-                    : 'none';
+                // Determine wrap mode; Plain Enhance overrides to 'none'
+                let wrapMode = 'none';
+                if (!(els.plainEnhance && els.plainEnhance.checked)) {
+                    wrapMode = (els.wrapType && els.wrapType.value === 'vehicle') ? 'vehicle'
+                        : (els.wrapType && els.wrapType.value === 'people-object') ? 'people-object'
+                        : 'none';
+                }
 
                 console.log('Request data:', {
                     prompt: formattedPrompt,
