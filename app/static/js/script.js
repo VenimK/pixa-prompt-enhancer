@@ -522,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Hand/wrist/waist small items
             ['bracelet','watch','ring','belt','pin','wallet','cardholder'],
             // Larger outfit/apparel (may restage the look)
-            ['overcoat','suit','cape','gauntlets','coat','jacket','shirt','blouse','bodysuit','dress','shawl','hood','handbag','bag','purse','backpack','pants','trousers','boots','shoe','sandal','flip-flop','boot','sneaker','trainer','gloves']
+            ['overcoat','suit','cape','gauntlets','coat','jacket','shirt','blouse','bodysuit','dress','shawl','hood','handbag','bag','purse','backpack','pants','trousers','jeans','boots','shoe','sandal','flip-flop','boot','sneaker','trainer','gloves']
         ];
         const hasWord = (w) => {
             const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -984,9 +984,9 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
         const objects = [
             'necklace','pendant','earrings','ring','bracelet','watch','scarf','turtleneck','tie','hat','cap','glasses','sunglasses','mask','helmet',
             'handbag','bag','purse','backpack','wallet','cardholder','belt','brooch','pin','hairpin','headband','shawl','hood','gloves',
-            'overcoat','coat','jacket','shirt','blouse','dress','pants','trousers','boots','shoe','sandal','flip-flop','boot','sneaker','trainer'
+            'overcoat','coat','jacket','shirt','blouse','dress','pants','trousers','jeans','boots','shoe','sandal','flip-flop','boot','sneaker','trainer'
         ];
-        const materials = ['bead','beaded','metal','gold','silver','steel','leather','fabric','silk','wool','cotton','linen','velvet','crystal','gem','stone','pearl','glass'];
+        const materials = ['bead','beaded','metal','gold','silver','steel','leather','fabric','silk','wool','cotton','linen','denim','velvet','crystal','gem','stone','pearl','glass'];
         // Only return pure color words (no preceding tokens)
         const colorsRe = /\b(blue|green|red|yellow|orange|purple|violet|pink|teal|cyan|magenta|gold|silver|black|white|gray|grey|brown|amber|cream|beige)\b/g;
 
@@ -1025,7 +1025,7 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
             // Medium: hand/wrist small items
             ['bracelet','watch','ring','belt','pin','wallet','cardholder'],
             // Lower: larger apparel that restages look
-            ['overcoat','coat','jacket','shirt','blouse','dress','shawl','costume','hood','handbag','bag','purse','backpack','pants','trousers','boots','shoe','sandal','flip-flop','boot','sneaker','trainer','gloves']
+            ['overcoat','coat','jacket','shirt','blouse','dress','shawl','costume','hood','handbag','bag','purse','backpack','pants','trousers','jeans','boots','shoe','sandal','flip-flop','boot','sneaker','trainer','gloves']
         ];
 
         // If not a clear human subject, fallback to general extractor
