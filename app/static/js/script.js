@@ -522,7 +522,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Hand/wrist/waist small items
             ['bracelet','watch','ring','belt','pin','wallet','cardholder'],
             // Larger outfit/apparel (may restage the look)
-            ['overcoat','suit','cape','gauntlets','coat','jacket','shirt','blouse','bodysuit','dress','shawl','hood','handbag','bag','purse','backpack','pants','trousers','jeans','boots','shoe','sandal','flip-flop','boot','sneaker','trainer','gloves']
+            ['overcoat','suit','cape','gauntlets','coat','jacket','blazer','cardigan','sweater','pullover','hoodie','sweatshirt','vest','parka','raincoat','windbreaker','poncho','trench coat',
+             'shirt','blouse','polo','t-shirt','tee','tank top','tank','camisole','tube top','crop top','bodysuit',
+             'dress','gown','maxi dress','mini dress','midi dress','jumpsuit','romper','playsuit','shawl','hood',
+             'handbag','bag','purse','backpack','pants','trousers','jeans','skirt','shorts','leggings','joggers','sweatpants','culottes','capris','overall','dungarees',
+             'boots','boot','ankle boots','knee-high boots','thigh-high boots','shoe','loafers','heels','pumps','stilettos','platforms','wedges','oxfords','moccasins','sandal','flip-flop','sneaker','trainer','slippers','clogs','espadrilles','gloves']
         ];
         const hasWord = (w) => {
             const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -982,9 +986,13 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
         const text = (analysisB || combined || '').toLowerCase();
         if (!text) return null;
         const objects = [
-            'necklace','pendant','earrings','ring','bracelet','watch','scarf','turtleneck','tie','hat','cap','glasses','sunglasses','mask','helmet',
-            'handbag','bag','purse','backpack','wallet','cardholder','belt','brooch','pin','hairpin','headband','shawl','hood','gloves',
-            'overcoat','coat','jacket','shirt','blouse','dress','pants','trousers','jeans','boots','shoe','sandal','flip-flop','boot','sneaker','trainer'
+            'necklace','pendant','earrings','ring','bracelet','watch','scarf','turtleneck','tie','bow tie','hat','cap','glasses','sunglasses','mask','helmet','bandana',
+            'handbag','bag','purse','backpack','wallet','cardholder','belt','brooch','pin','hairpin','headband','shawl','hood','gloves','tie clip','cufflinks','suspenders','sash',
+            'overcoat','coat','jacket','blazer','cardigan','sweater','pullover','hoodie','sweatshirt','vest','parka','raincoat','windbreaker','poncho','trench coat',
+            'shirt','blouse','polo','t-shirt','tee','tank top','tank','camisole','tube top','crop top','bodysuit',
+            'dress','gown','maxi dress','mini dress','midi dress','jumpsuit','romper','playsuit',
+            'pants','trousers','jeans','skirt','shorts','leggings','joggers','sweatpants','culottes','capris','overall','dungarees',
+            'boots','boot','ankle boots','knee-high boots','thigh-high boots','shoe','loafers','heels','pumps','stilettos','platforms','wedges','oxfords','moccasins','sandal','flip-flop','sneaker','trainer','slippers','clogs','espadrilles'
         ];
         const materials = ['bead','beaded','metal','gold','silver','steel','leather','fabric','silk','wool','cotton','linen','denim','velvet','crystal','gem','stone','pearl','glass'];
         // Only return pure color words (no preceding tokens)
@@ -1025,7 +1033,11 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
             // Medium: hand/wrist small items
             ['bracelet','watch','ring','belt','pin','wallet','cardholder'],
             // Lower: larger apparel that restages look
-            ['overcoat','coat','jacket','shirt','blouse','dress','shawl','costume','hood','handbag','bag','purse','backpack','pants','trousers','jeans','boots','shoe','sandal','flip-flop','boot','sneaker','trainer','gloves']
+            ['overcoat','coat','jacket','blazer','cardigan','sweater','pullover','hoodie','sweatshirt','vest','parka','raincoat','windbreaker','poncho','trench coat',
+             'shirt','blouse','polo','t-shirt','tee','tank top','tank','camisole','tube top','crop top','bodysuit',
+             'dress','gown','maxi dress','mini dress','midi dress','jumpsuit','romper','playsuit','shawl','costume','hood',
+             'handbag','bag','purse','backpack','pants','trousers','jeans','skirt','shorts','leggings','joggers','sweatpants','culottes','capris','overall','dungarees',
+             'boots','boot','ankle boots','knee-high boots','thigh-high boots','shoe','loafers','heels','pumps','stilettos','platforms','wedges','oxfords','moccasins','sandal','flip-flop','sneaker','trainer','slippers','clogs','espadrilles','gloves']
         ];
 
         // If not a clear human subject, fallback to general extractor
@@ -1217,18 +1229,49 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
             const objectLabel = selectedObjects.length > 1
                 ? `these objects: ${selectedObjects.join(', ')}`
                 : (objInfo ? objInfo.label : 'key object/accessory');
+            // Build phrase that adds 'the' only for a single object
+            const objectPhrase = selectedObjects.length > 1 ? objectLabel : `the ${objectLabel}`;
+            // Optional: derive a concise descriptor for apparel from Reference B analysis
+            let descriptor = '';
+            try {
+                const bTxt = (latestAnalysis && latestAnalysis.b ? latestAnalysis.b : '').toLowerCase();
+                const addIf = (cond, str) => { if (cond && !descriptor.includes(str)) descriptor += (descriptor ? ', ' : '') + str; };
+                if (bTxt) {
+                    const isDress = /\bwrap\s+dress\b|\bdress\b/.test(bTxt) && /dress/.test(objectLabel);
+                    const isTop = /\b(top|blouse|shirt|tank|tee|t-shirt)\b/.test(objectLabel);
+                    const isPants = /\b(pants|trousers|jeans)\b/.test(objectLabel);
+                    const isSkirt = /\bskirt\b/.test(objectLabel);
+
+                    // Common garment attributes
+                    addIf(/v[-\s]?neck\b/.test(bTxt), 'v-neck');
+                    addIf(/crew\s*neck|round\s*neck|scoop\s*neck/.test(bTxt), 'round neckline');
+                    addIf(/short[-\s]?sleeve/.test(bTxt), 'short-sleeved');
+                    addIf(/long[-\s]?sleeve/.test(bTxt), 'long-sleeved');
+                    addIf(/sleeveless/.test(bTxt), 'sleeveless');
+                    addIf(/tie[-\s]?waist|belt(ed)?\s+waist/.test(bTxt), 'tie-waist');
+                    addIf(/wrap\b/.test(bTxt) && (isDress || isTop || isSkirt), 'wrap style');
+                    addIf(/abstract\s+print|pattern/.test(bTxt), 'abstract print');
+                    addIf(/stripe(d)?/.test(bTxt), 'striped');
+                    addIf(/plaid|check(ed)?/.test(bTxt), 'checked');
+                    addIf(/polka\s*dot|dot(ted)?/.test(bTxt), 'polka-dot');
+                    // Color cues
+                    addIf(/orange/.test(bTxt), 'orange');
+                    addIf(/white|off[-\s]?white|cream/.test(bTxt), 'white/cream');
+                }
+            } catch(_) { /* noop */ }
+            const descriptorText = descriptor ? ` (${descriptor})` : '';
             const materialHint = objInfo && objInfo.materials.length ? ` Materials: ${objInfo.materials.join(', ')}.` : '';
             const colorHint = objInfo && objInfo.colors.length ? ` Object colors: ${[...new Set(objInfo.colors)].join(', ')}.` : '';
 
             typeSentence = `DELTA-ONLY EDIT: Strictly preserve the ${subject} from Reference A exactly (identity, face, expression, skin tone, hair, posture, clothing), the original background, framing/composition, lens characteristics, color grading, and lighting.`;
-            mapping = `Add ONLY the ${objectLabel} from Reference B onto/around the ${subject} from Reference A with precise placement, scale, and perspective. Maintain correct occlusion (object(s) may sit behind hair/clothing edges), natural contact with subtle deformation where physically plausible. Do NOT change any other elements from Reference A.` + (accessoriesOnly ? ' Limit to accessories and small wearables; no full outfit replacement.' : '');
+            mapping = `Add ONLY ${objectPhrase}${descriptorText} from Reference B onto/around the ${subject} from Reference A with precise placement, scale, and perspective. Maintain correct occlusion (object(s) may sit behind hair/clothing edges), natural contact with subtle deformation where physically plausible. Do NOT change any other elements from Reference A.` + (accessoriesOnly ? ' Limit to accessories and small wearables; no full outfit replacement.' : '');
             rendering = [
                 `Anchor: Use Reference A as the base canvas. Do NOT recreate or restage Reference B. Do NOT use any background or composition from Reference B.`,
                 `Framing: keep the original framing/composition and camera distance from Reference A; maintain the same field of view. Do NOT crop, zoom-in, punch-in, or reframe. No close-ups.`,
                 `Lighting & mood: match Reference A's lighting/exposure/DOF exactly; do not restage or relight the scene. Keep the original background and context from Reference A unchanged.`,
                 paletteLine,
                 `Materials: preserve B's material properties (metal, beads, fabric, leather, etc.) with micro-highlights and reflections; add contact shadows; limit deformation to tiny amounts for realism.` + materialHint + colorHint,
-                `Negatives: do NOT alter facial structure, pose, clothing (beyond contact overlap), hair style/length, background, perspective, camera position, or palette from Reference A. Do NOT import any scene elements from Reference B besides the ${objectLabel}. No flat-lay, no product-only composition, no vehicles, wraps, decals, restaging, stylization shifts, or color bleed. No crop, no zoom-in, no close-up, no reframe.` + (accessoriesOnly ? ' No suits, capes, bodysuits, coats, jackets, shirts, pants, shoes.' : '')
+                `Negatives: do NOT alter facial structure, pose, clothing (beyond contact overlap), hair style/length, background, perspective, camera position, or palette from Reference A. Do NOT import any scene elements from Reference B besides ${objectPhrase}. No flat-lay, no product-only composition, no vehicles, wraps, decals, restaging, stylization shifts, or color bleed. No crop, no zoom-in, no close-up, no reframe.` + (accessoriesOnly ? ' No suits, capes, bodysuits, coats, jackets, shirts, pants, shoes.' : '')
             ].join(' ');
         } else if (wrapType === 'product') {
             // Product wrap (cylindrical objects) - detect the actual object type
