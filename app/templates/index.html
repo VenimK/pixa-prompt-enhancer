@@ -376,13 +376,44 @@
                                     </select>
                                 </div>
                                 <div class="selector" style="flex:1; min-width:180px;">
+                                    <label for="sticker-character-style">Sticker Character Style</label>
+                                    <select id="sticker-character-style">
+                                        <option value="match-reference" selected>Match Reference A</option>
+                                        <option value="cartoon">Cartoon</option>
+                                        <option value="chibi">Chibi (super deformed)</option>
+                                        <option value="semi-realistic">Semi-realistic</option>
+                                    </select>
+                                </div>
+                                <div class="selector" style="flex:1; min-width:180px;">
                                     <label for="sticker-variation">Variation Type</label>
                                     <select id="sticker-variation">
                                         <option value="poses" selected>Different poses/expressions</option>
                                         <option value="elements">Different elements/props</option>
                                         <option value="colors">Different color variants</option>
                                         <option value="scenes">Different scenes/activities</option>
+                                        <option value="emotions">Different emotions/moods</option>
+                                        <option value="outfits">Different outfits/costumes</option>
+                                        <option value="seasons">Seasonal variations</option>
+                                        <option value="interactions">Interacting with objects</option>
+                                        <option value="weather">Weather/time variations</option>
+                                        <option value="styles">Different art styles</option>
+                                        <option value="actions">Action/movement variations</option>
+                                        <option value="hobbies">Hobbies/sports activities</option>
+                                        <option value="gestures">Hand gestures/signs</option>
+                                        <option value="occupations">Occupations/professions</option>
+                                        <option value="text-bubbles">Text bubbles/messages</option>
                                     </select>
+                                </div>
+                            </div>
+                            <!-- Text bubble messages input (shown when variation=text-bubbles) -->
+                            <div id="bubble-text-container" style="display:none; margin-top:12px;">
+                                <label for="bubble-text" style="display:block; margin-bottom:6px; font-weight:500;">
+                                    Text for Bubbles <span style="color:var(--text-muted); font-size:0.9em;">(separate with commas)</span>
+                                </label>
+                                <input type="text" id="bubble-text" placeholder="e.g., Hello!, Thanks!, Yay!, Wow!, LOL, OK!, Bye!, Love it!, No way!" 
+                                       style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font-size:0.95em;">
+                                <div style="color:var(--text-muted); font-size:0.85em; margin-top:4px;">
+                                    Leave empty for generic varied messages
                                 </div>
                             </div>
                         </div>

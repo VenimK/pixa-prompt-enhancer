@@ -445,7 +445,10 @@ document.addEventListener('DOMContentLoaded', () => {
         stickerControls: document.getElementById('sticker-controls'),
         stickerCount: document.getElementById('sticker-count'),
         stickerStyle: document.getElementById('sticker-style'),
-        stickerVariation: document.getElementById('sticker-variation')
+        stickerCharacterStyle: document.getElementById('sticker-character-style'),
+        stickerVariation: document.getElementById('sticker-variation'),
+        bubbleTextContainer: document.getElementById('bubble-text-container'),
+        bubbleText: document.getElementById('bubble-text')
     };
 
     // --- Plain Enhance persistence and UI toggle ---
@@ -1120,6 +1123,7 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
             // Sticker pack/sheet mode
             const count = els.stickerCount ? els.stickerCount.value : '9';
             const style = els.stickerStyle ? els.stickerStyle.value : 'die-cut';
+            const characterStyle = els.stickerCharacterStyle ? els.stickerCharacterStyle.value : 'match-reference';
             const variation = els.stickerVariation ? els.stickerVariation.value : 'poses';
 
             const styleMap = {
@@ -1134,15 +1138,41 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
                 'poses': 'different poses, expressions, and gestures',
                 'elements': 'different props, accessories, and elements',
                 'colors': 'different color variants and palettes',
-                'scenes': 'different activities, scenes, and situations'
+                'scenes': 'different activities, scenes, and situations',
+                'emotions': 'different emotions, moods, and feelings',
+                'outfits': 'different outfits, costumes, and clothing styles',
+                'seasons': 'seasonal variations and holiday themes',
+                'interactions': 'interacting with different objects and items',
+                'weather': 'different weather conditions and times of day',
+                'styles': 'different art styles and rendering techniques',
+                'actions': 'different actions and movements (jumping, running, dancing, flying, sitting)',
+                'hobbies': 'different hobbies, sports, and recreational activities',
+                'gestures': 'different hand gestures, signs, and hand poses',
+                'occupations': 'different professions, jobs, and work uniforms',
+                'text-bubbles': 'with different speech bubbles, thought bubbles, and text messages'
             };
-            const variationText = variationMap[variation] || variationMap['poses'];
+            
+            let variationText = variationMap[variation] || variationMap['poses'];
+            
+            // If text-bubbles variation is selected and custom text is provided, use it
+            if (variation === 'text-bubbles' && els.bubbleText && els.bubbleText.value.trim()) {
+                const customTexts = els.bubbleText.value.trim();
+                variationText = `with speech bubbles or thought bubbles containing these messages: ${customTexts}`;
+            }
 
             typeSentence = `Create a sticker pack/sheet with ${count} individual ${styleText} featuring the character/subject from Reference A in ${variationText}.`;
             
             mapping = `Each sticker is a separate die-cut design; transparent/checkered background behind all stickers; stickers arranged in an organized grid layout; each sticker shows a complete, self-contained composition; consistent character style and art quality across all ${count} stickers; varied ${variationText} to create a cohesive collection.`;
-            
-            rendering = 'Photorealistic sticker sheet mockup; clean transparent background (PNG format); glossy vinyl sticker finish with subtle highlights and shadows on white borders; professional die-cut appearance; each sticker could be individually cut out; vibrant colors; sharp details; chibi or cartoon style appropriate for stickers.';
+
+            const characterStyleMap = {
+                'match-reference': 'Match the character/subject style from Reference A (do not force chibi).',
+                'cartoon': 'Cartoon style character rendering (not chibi unless explicitly requested).',
+                'chibi': 'Chibi style (super deformed): oversized head, large expressive eyes, tiny body, cute proportions.',
+                'semi-realistic': 'Semi-realistic character rendering with clean stylized features (not chibi).'
+            };
+            const characterStyleText = characterStyleMap[characterStyle] || characterStyleMap['match-reference'];
+
+            rendering = `Photorealistic sticker sheet mockup; clean transparent background (PNG format); glossy vinyl sticker finish with subtle highlights and shadows on white borders; professional die-cut appearance; each sticker could be individually cut out; vibrant colors; sharp details; ${characterStyleText}`;
 
             // Override palette/neutralize lines for sticker mode
             return [
@@ -1151,7 +1181,24 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
                 rendering,
                 `Layout: Arrange ${count} stickers in a grid with even spacing; each sticker maintains consistent scale relative to others.`,
                 `Style consistency: All ${count} stickers use the same art style, line weight, shading technique, and color saturation.`,
-                `Variation: Each sticker shows a unique ${variation === 'poses' ? 'pose/expression' : variation === 'elements' ? 'prop/accessory' : variation === 'colors' ? 'color variant' : 'activity/scene'} - no duplicates.`,
+                `Variation: Each sticker shows a unique ${
+                    variation === 'poses' ? 'pose/expression' :
+                    variation === 'elements' ? 'prop/accessory' :
+                    variation === 'colors' ? 'color variant' :
+                    variation === 'scenes' ? 'activity/scene' :
+                    variation === 'emotions' ? 'emotion/mood' :
+                    variation === 'outfits' ? 'outfit/costume' :
+                    variation === 'seasons' ? 'seasonal theme' :
+                    variation === 'interactions' ? 'object interaction' :
+                    variation === 'weather' ? 'weather/time condition' :
+                    variation === 'styles' ? 'art style' :
+                    variation === 'actions' ? 'action/movement' :
+                    variation === 'hobbies' ? 'hobby/sport' :
+                    variation === 'gestures' ? 'hand gesture' :
+                    variation === 'occupations' ? 'occupation/profession' :
+                    variation === 'text-bubbles' ? 'text bubble/message' :
+                    'variation'
+                } - no duplicates.`,
                 'Negatives: no overlapping stickers, no merged designs, no inconsistent art styles, no blurry details, no incomplete stickers, no cut-off elements, no background that isn\'t transparent.'
             ].filter(Boolean).join('\n\n');
 
@@ -1502,9 +1549,22 @@ POST-PROCESSING:
             if (els.stickerControls) {
                 els.stickerControls.style.display = wrapType === 'sticker-pack' ? 'grid' : 'none';
             }
+            // Show/hide bubble text input based on variation type
+            if (els.bubbleTextContainer && els.stickerVariation) {
+                const showBubbleText = wrapType === 'sticker-pack' && els.stickerVariation.value === 'text-bubbles';
+                els.bubbleTextContainer.style.display = showBubbleText ? 'block' : 'none';
+            }
             if (els.vehicleControls) {
                 els.vehicleControls.style.display = wrapType === 'vehicle' ? 'block' : 'none';
             }
+        });
+    }
+
+    // Show/hide bubble text input when sticker variation changes
+    if (els.stickerVariation && els.bubbleTextContainer) {
+        els.stickerVariation.addEventListener('change', () => {
+            const showBubbleText = els.wrapType && els.wrapType.value === 'sticker-pack' && els.stickerVariation.value === 'text-bubbles';
+            els.bubbleTextContainer.style.display = showBubbleText ? 'block' : 'none';
         });
     }
 
