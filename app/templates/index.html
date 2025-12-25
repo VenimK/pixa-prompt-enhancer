@@ -171,6 +171,7 @@
                         <option value="default" title="Standard prompt formatting without model-specific optimizations">Default</option>
                         <optgroup label="Photorealistic Models">
                             <option value="flux" title="Optimized for photorealistic imagery with detailed technical specifications. Best for photography-style images with fine details.">Flux (Photorealistic)</option>
+                            <option value="z-image-turbo" title="Fast photorealistic image model. Uses standard prompt formatting unless customized.">Z-Image Turbo</option>
                             <option value="pixart" title="Excellent for detailed compositions with strong artistic direction. Good balance of realism and artistic flair.">PixArt (Detailed)</option>
                             <option value="dalle3" title="Excellent for following complex instructions and generating coherent scenes with accurate text rendering.">DALL-E 3 (Coherent)</option>
                         </optgroup>
@@ -383,6 +384,41 @@
                                         <option value="chibi">Chibi (super deformed)</option>
                                         <option value="semi-realistic">Semi-realistic</option>
                                     </select>
+                                </div>
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label for="sticker-sheet-output">Sticker Sheet Output</label>
+                                    <select id="sticker-sheet-output">
+                                        <option value="realistic" selected>Realistic sheet mockup</option>
+                                        <option value="transparent">Transparent PNG assets</option>
+                                    </select>
+                                </div>
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label for="sticker-cut-type">Cut Type</label>
+                                    <select id="sticker-cut-type">
+                                        <option value="kiss-cut" selected>Kiss-cut (on backing paper)</option>
+                                        <option value="die-cut">Die-cut (fully separated)</option>
+                                    </select>
+                                </div>
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label for="sticker-border-thickness">Border Thickness</label>
+                                    <select id="sticker-border-thickness">
+                                        <option value="thin">Thin</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="thick">Thick</option>
+                                    </select>
+                                </div>
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label for="sticker-camera">Camera Angle</label>
+                                    <select id="sticker-camera">
+                                        <option value="top-down" selected>Top-down flat lay</option>
+                                        <option value="slight-angle">Slight angle (product photo)</option>
+                                    </select>
+                                </div>
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label style="display:flex; align-items:center; gap:8px; margin-top:24px;">
+                                        <input type="checkbox" id="sticker-inner-keyline">
+                                        Inner keyline (thin outline inside border)
+                                    </label>
                                 </div>
                                 <div class="selector" style="flex:1; min-width:180px;">
                                     <label for="sticker-variation">Variation Type</label>

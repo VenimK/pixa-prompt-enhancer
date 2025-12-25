@@ -446,6 +446,11 @@ document.addEventListener('DOMContentLoaded', () => {
         stickerCount: document.getElementById('sticker-count'),
         stickerStyle: document.getElementById('sticker-style'),
         stickerCharacterStyle: document.getElementById('sticker-character-style'),
+        stickerSheetOutput: document.getElementById('sticker-sheet-output'),
+        stickerCutType: document.getElementById('sticker-cut-type'),
+        stickerBorderThickness: document.getElementById('sticker-border-thickness'),
+        stickerCamera: document.getElementById('sticker-camera'),
+        stickerInnerKeyline: document.getElementById('sticker-inner-keyline'),
         stickerVariation: document.getElementById('sticker-variation'),
         bubbleTextContainer: document.getElementById('bubble-text-container'),
         bubbleText: document.getElementById('bubble-text')
@@ -1124,6 +1129,11 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
             const count = els.stickerCount ? els.stickerCount.value : '9';
             const style = els.stickerStyle ? els.stickerStyle.value : 'die-cut';
             const characterStyle = els.stickerCharacterStyle ? els.stickerCharacterStyle.value : 'match-reference';
+            const sheetOutput = els.stickerSheetOutput ? els.stickerSheetOutput.value : 'realistic';
+            const cutType = els.stickerCutType ? els.stickerCutType.value : 'kiss-cut';
+            const borderThickness = els.stickerBorderThickness ? els.stickerBorderThickness.value : 'medium';
+            const camera = els.stickerCamera ? els.stickerCamera.value : 'top-down';
+            const innerKeyline = !!(els.stickerInnerKeyline && els.stickerInnerKeyline.checked);
             const variation = els.stickerVariation ? els.stickerVariation.value : 'poses';
 
             const styleMap = {
@@ -1161,8 +1171,12 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
             }
 
             typeSentence = `Create a sticker pack/sheet with ${count} individual ${styleText} featuring the character/subject from Reference A in ${variationText}.`;
-            
-            mapping = `Each sticker is a separate die-cut design; transparent/checkered background behind all stickers; stickers arranged in an organized grid layout; each sticker shows a complete, self-contained composition; consistent character style and art quality across all ${count} stickers; varied ${variationText} to create a cohesive collection.`;
+
+            const mappingBackgroundText = sheetOutput === 'transparent'
+                ? 'transparent background behind all stickers'
+                : 'white matte backing paper behind all stickers (release liner)';
+
+            mapping = `Each sticker is a separate die-cut design; ${mappingBackgroundText}; stickers arranged in an organized grid layout; each sticker shows a complete, self-contained composition; consistent character style and art quality across all ${count} stickers; varied ${variationText} to create a cohesive collection.`;
 
             const characterStyleMap = {
                 'match-reference': 'Match the character/subject style from Reference A (do not force chibi).',
@@ -1172,15 +1186,380 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
             };
             const characterStyleText = characterStyleMap[characterStyle] || characterStyleMap['match-reference'];
 
-            rendering = `Photorealistic sticker sheet mockup; clean transparent background (PNG format); glossy vinyl sticker finish with subtle highlights and shadows on white borders; professional die-cut appearance; each sticker could be individually cut out; vibrant colors; sharp details; ${characterStyleText}`;
+            const borderThicknessMap = {
+                thin: 'thin uniform white border (approx 2–3mm)',
+                medium: 'medium uniform white border (approx 3–5mm)',
+                thick: 'thick uniform white border (approx 6–10mm)'
+            };
+            const borderThicknessText = borderThicknessMap[borderThickness] || borderThicknessMap.medium;
+            const keylineText = innerKeyline ? 'Add a thin dark inner keyline just inside the white border for separation.' : '';
+
+            const cameraText = camera === 'slight-angle'
+                ? 'Slight 10–15° angle product photo of the sticker sheet.'
+                : 'Top-down flat lay product photo of the sticker sheet.';
+
+            const cutTypeText = cutType === 'die-cut'
+                ? 'Die-cut (cut-through) stickers with clean cut edges.'
+                : 'Kiss-cut outlines visible around each sticker; stickers remain on backing paper.';
+
+            const outputText = sheetOutput === 'transparent'
+                ? 'Transparent background with clean alpha (no checkerboard). Export-ready PNG sticker assets arranged in a neat grid.'
+                : 'Printed sticker sheet on white matte backing paper (release liner), with subtle paper texture and visible sheet edges.';
+
+            rendering = `Photorealistic sticker sheet mockup; ${outputText}; ${cameraText} Soft studio lighting with gentle realistic shadows; glossy vinyl sticker surface with subtle specular highlights; ${cutTypeText} ${borderThicknessText}; crisp cut lines; no jagged edges; vibrant colors; sharp details; ${characterStyleText} ${keylineText}`.trim();
+
+            const allowWardrobeChange = (variation === 'outfits' || variation === 'occupations' || variation === 'seasons');
+
+            const stickerNegatives = sheetOutput === 'transparent'
+                ? `Negatives: no overlapping stickers, no merged designs, no inconsistent art styles, no blurry details, no incomplete stickers, no cut-off elements, no watermark, no UI, no background scene, no checkerboard pattern; no different character/person; ${allowWardrobeChange ? 'no identity change; keep the same person.' : 'no outfit changes;'} no hat removal; no hairstyle changes.`
+                : `Negatives: no overlapping stickers, no merged designs, no inconsistent art styles, no blurry details, no incomplete stickers, no cut-off elements, no watermark, no UI, no busy background scene; do not remove backing paper; do not make stickers float; no extreme perspective distortion; no different character/person; ${allowWardrobeChange ? 'no identity change; keep the same person.' : 'no outfit changes;'} no hat removal; no hairstyle changes.`;
+
+            const identityLock = (characterStyle === 'match-reference')
+                ? (allowWardrobeChange
+                    ? 'Identity lock: Use the exact same character from Reference A in every sticker. Keep the same person identity, face/head shape, body type, skin tone, and signature accessories (including hat and bag/strap). Wardrobe may change ONLY according to the selected variation plan (outfits/seasonal styling/occupation uniform).'
+                    : 'Identity lock: Use the exact same character from Reference A in every sticker. Keep the same person identity, face/head shape, hat, clothing layers, accessories (including bag/strap), and shoes. Do not change age, body type, skin tone, or wardrobe. Only change pose/expression/scene as instructed.')
+                : '';
+
+            const fullRedrawInstruction = 'Edit instruction: Replace the entire image with the described sticker sheet mockup composition. Do not preserve the original single-photo framing/background; perform a full scene/layout transformation into a sticker sheet.';
+
+            const styleConsistencyLine = (variation === 'styles')
+                ? (sheetOutput === 'realistic'
+                    ? `Style variation: All ${count} stickers must remain photorealistic, but each sticker should have a distinct photographic look (e.g., lens choice, depth of field, color grading) while keeping the same character identity and wardrobe.`
+                    : `Style variation: Each sticker should use a distinct art style/rendering technique while keeping the same character identity and wardrobe.`)
+                : ((sheetOutput === 'realistic' && (characterStyle === 'match-reference' || characterStyle === 'semi-realistic'))
+                    ? `Realism consistency: All ${count} stickers must match the same realistic photographic rendering (no illustration/line-art). Consistent fabric textures, skin detail, lighting direction, and lens look across the whole sheet.`
+                    : `Style consistency: All ${count} stickers use the same art style, line weight, shading technique, and color saturation.`);
+
+            const n = Math.max(1, parseInt(count, 10) || 9);
+            const scenePool = [
+                'walking down a city street',
+                'sitting on a bench',
+                'standing by a window and looking out',
+                'holding a coffee cup',
+                'standing in an empty room',
+                'reading a book',
+                'checking a phone',
+                'waiting at a crosswalk',
+                'carrying a tote bag',
+                'opening a door',
+                'leaning against a wall',
+                'riding an escalator',
+                'looking at a storefront',
+                'tying shoelaces',
+                'holding an umbrella',
+                'watering a small plant'
+            ];
+
+            const hobbyPool = [
+                'jogging (sportswear)',
+                'cycling with a bicycle',
+                'playing basketball with a basketball',
+                'playing soccer with a soccer ball',
+                'playing tennis with a tennis racket',
+                'skateboarding with a skateboard',
+                'playing guitar with a guitar',
+                'taking photos with a camera',
+                'painting with a small brush/palette',
+                'reading a book',
+                'working on a laptop',
+                'cooking while holding a spatula',
+                'doing yoga/stretching on a mat',
+                'hiking with a small backpack',
+                'gardening with a watering can',
+                'playing chess at a table'
+            ];
+
+            const actionPool = [
+                'jumping',
+                'running',
+                'walking briskly',
+                'sitting casually',
+                'standing with hands in pockets',
+                'waving',
+                'pointing',
+                'giving a thumbs-up',
+                'looking over shoulder',
+                'leaning against a wall',
+                'crouching',
+                'stretching arms',
+                'checking a phone',
+                'holding a coffee cup',
+                'reading a book',
+                'tying shoelaces'
+            ];
+
+            const posePool = [
+                'standing, hands in pockets, slight head tilt',
+                'walking forward, mid-step',
+                'sitting casually, relaxed shoulders',
+                'leaning against a wall, one foot up',
+                'crouching down, looking at the ground',
+                'turning back over the shoulder',
+                'arms crossed, neutral expression',
+                'hands on hips, confident stance',
+                'one hand adjusting the cap brim',
+                'kneeling on one knee',
+                'looking at a watch (no phone)',
+                'holding jacket collar slightly',
+                'stretching one arm overhead',
+                'sitting on steps, elbows on knees',
+                'standing with weight on one leg',
+                'light jog pose (no props)'
+            ];
+
+            const elementPool = [
+                'holding a coffee cup',
+                'holding a book',
+                'holding a phone',
+                'carrying a tote bag',
+                'holding an umbrella',
+                'wearing sunglasses',
+                'wearing headphones',
+                'holding a camera',
+                'holding a skateboard',
+                'holding a soccer ball',
+                'holding a basketball',
+                'holding a tennis racket',
+                'holding a small potted plant',
+                'holding a takeaway bag',
+                'holding keys in hand',
+                'holding a water bottle'
+            ];
+
+            const emotionPool = [
+                'calm and neutral',
+                'slight smile',
+                'laughing softly',
+                'serious and focused',
+                'thoughtful/pensive',
+                'surprised',
+                'confident',
+                'curious',
+                'tired',
+                'excited',
+                'bored',
+                'determined',
+                'relaxed',
+                'shy',
+                'proud',
+                'friendly'
+            ];
+
+            const outfitPool = [
+                'casual streetwear (same hat, different jacket)',
+                'smart casual (same hat, blazer over shirt)',
+                'winter outfit (coat + scarf)',
+                'rain outfit (rain jacket)',
+                'summer outfit (light jacket or no jacket)',
+                'sporty outfit (track jacket)',
+                'workwear outfit (utility jacket)',
+                'night-out outfit (darker refined look)',
+                'minimal monochrome outfit',
+                'denim-on-denim outfit',
+                'hoodie layered under jacket',
+                'sweater outfit (knit sweater)',
+                'overshirt outfit (flannel/overshirt)',
+                'puffer jacket outfit',
+                'short-sleeve over long-sleeve layered',
+                'light trench coat outfit'
+            ];
+
+            const seasonPool = [
+                'spring: light jacket, fresh daylight',
+                'summer: warmer light, lighter layers',
+                'autumn: layered jacket, warm tones',
+                'winter: coat + scarf, cold breath visible',
+                'rainy day: wet ground reflections, rain jacket',
+                'snowy day: soft snow ambience, winter coat',
+                'windy day: jacket slightly billowing',
+                'golden hour: warm sunset light',
+                'overcast day: soft diffused light',
+                'night: streetlights and subtle bokeh',
+                'foggy morning: light haze',
+                'bright midday: crisp shadows',
+                'early morning: cool tones',
+                'late afternoon: warm highlights',
+                'holiday season: subtle festive vibe (no text)',
+                'heatwave: sweat sheen, light layers'
+            ];
+
+            const interactionPool = [
+                'opening a door',
+                'pressing an elevator button',
+                'reading a sign',
+                'looking at a map',
+                'picking up a small package',
+                'tying shoelaces',
+                'sitting and writing in a notebook',
+                'holding a coffee cup',
+                'checking a phone',
+                'paying at a counter (no visible branding)',
+                'waiting for a bus',
+                'carrying groceries in a bag',
+                'opening an umbrella',
+                'taking a photo with a camera',
+                'waving to someone off-camera',
+                'petting a small dog (if possible)'
+            ];
+
+            const weatherPool = [
+                'sunny day, crisp shadows',
+                'overcast day, diffused lighting',
+                'rainy day, wet ground reflections',
+                'light drizzle with umbrella',
+                'foggy atmosphere',
+                'snowy day ambience',
+                'windy day (jacket moving)',
+                'golden hour sunlight',
+                'blue hour twilight',
+                'night streetlights and bokeh',
+                'hot day heat haze (subtle)',
+                'cold day with faint breath',
+                'cloudy with soft shadows',
+                'sunset backlight rim light',
+                'indoor warm lighting',
+                'indoor cool daylight'
+            ];
+
+            const gesturePool = [
+                'thumbs up',
+                'peace sign',
+                'waving',
+                'pointing',
+                'hands in pockets',
+                'arms crossed',
+                'hand on chin (thinking)',
+                'adjusting cap brim',
+                'holding jacket collar',
+                'hand raised as if greeting',
+                'shrug gesture',
+                'clapping once (mid-motion)',
+                'fist bump gesture',
+                'open palm “stop” gesture',
+                'finger-gun gesture (subtle)',
+                'hands behind back'
+            ];
+
+            const occupationPool = [
+                'barista (apron)',
+                'photographer (camera)',
+                'delivery courier (package)',
+                'office worker (laptop/badge)',
+                'construction worker (hi-vis vest)',
+                'chef (chef coat)',
+                'nurse/medical worker (scrubs)',
+                'teacher (book/notebook)',
+                'mechanic (work coveralls)',
+                'artist (paint supplies)',
+                'security guard (uniform)',
+                'police-like uniform (generic, no logos)',
+                'firefighter-like gear (generic)',
+                'retail worker (name tag, no branding)',
+                'musician (guitar)',
+                'gardener (watering can)'
+            ];
+
+            const colorPool = [
+                'warm palette (subtle warm tones)',
+                'cool palette (subtle cool tones)',
+                'muted earthy palette',
+                'high-contrast black and white',
+                'soft pastel accents',
+                'vibrant saturated colors',
+                'cinematic teal/orange grading',
+                'desaturated moody look',
+                'bright airy look',
+                'night neon accents (subtle)',
+                'vintage film fade',
+                'clean modern neutral palette',
+                'warm sunset grading',
+                'cool overcast grading',
+                'monochrome with one accent color',
+                'duotone-like color grading'
+            ];
+
+            const bubblePoolDefault = [
+                'Hello!',
+                'Thanks!',
+                'Yay!',
+                'Wow!',
+                'LOL',
+                'OK!',
+                'Bye!',
+                'No way!',
+                'Nice!',
+                'Let\'s go!',
+                'BRB',
+                'Cool!',
+                'Sure!',
+                'Oops!',
+                'Great!',
+                'All good!'
+            ];
+
+            const bubblePool = (variation === 'text-bubbles')
+                ? ((els.bubbleText && els.bubbleText.value.trim())
+                    ? els.bubbleText.value.split(',').map(s => s.trim()).filter(Boolean)
+                    : bubblePoolDefault)
+                : null;
+
+            const variationPoolMap = {
+                scenes: scenePool,
+                hobbies: hobbyPool,
+                actions: actionPool,
+                poses: posePool,
+                elements: elementPool,
+                emotions: emotionPool,
+                outfits: outfitPool,
+                seasons: seasonPool,
+                interactions: interactionPool,
+                weather: weatherPool,
+                gestures: gesturePool,
+                occupations: occupationPool,
+                colors: colorPool,
+                'text-bubbles': bubblePool
+            };
+
+            const stickerMustIncludeCharacter = (variation !== 'styles')
+                ? 'Sticker constraint: Every sticker MUST include the character (not standalone environments/objects). Background elements should be minimal context behind the character, not separate photos. No rectangular photo frames/tiles/polaroids; do not depict any sticker as a framed photograph.'
+                : '';
+
+            const propUniqueness = (variation !== 'colors' && variation !== 'styles')
+                ? 'Uniqueness constraint: Do NOT repeat primary props across stickers. If a plan line specifies a prop (coffee cup, phone, book, tote bag, umbrella, ball, racket, guitar, camera, etc.), that prop must appear ONLY in that sticker and must NOT appear in any other sticker.'
+                : '';
+
+            const pool = variationPoolMap[variation] || null;
+
+            const variationPlan = pool
+                ? `${variation === 'scenes' ? 'Scene' : 'Variation'} plan (exactly ${n} unique items; one per sticker; do not reuse):\n${pool.slice(0, Math.min(n, pool.length)).map((s, i) => {
+                    let onlyPropText = '';
+                    const lower = String(s).toLowerCase();
+                    if (lower.includes('coffee cup') || lower.includes('beverage') || lower.includes('cup')) onlyPropText = ' (ONLY sticker with any coffee cup/beverage/cup)';
+                    else if (lower.includes('phone')) onlyPropText = ' (ONLY sticker with a phone visible)';
+                    else if (lower.includes('book')) onlyPropText = ' (ONLY sticker with a book visible)';
+                    else if (lower.includes('tote bag')) onlyPropText = ' (ONLY sticker with a tote bag)';
+                    else if (lower.includes('umbrella')) onlyPropText = ' (ONLY sticker with an umbrella)';
+                    else if (lower.includes('basketball')) onlyPropText = ' (ONLY sticker with a basketball)';
+                    else if (lower.includes('soccer')) onlyPropText = ' (ONLY sticker with a soccer ball)';
+                    else if (lower.includes('tennis')) onlyPropText = ' (ONLY sticker with a tennis racket)';
+                    else if (lower.includes('skateboard')) onlyPropText = ' (ONLY sticker with a skateboard)';
+                    else if (lower.includes('guitar')) onlyPropText = ' (ONLY sticker with a guitar)';
+                    else if (lower.includes('camera')) onlyPropText = ' (ONLY sticker with a camera)';
+                    else if (lower.includes('laptop')) onlyPropText = ' (ONLY sticker with a laptop)';
+                    else if (lower.includes('spatula')) onlyPropText = ' (ONLY sticker with a spatula)';
+                    return `${i + 1}. Character: ${s}${onlyPropText}.`;
+                }).join('\n')}`
+                : '';
 
             // Override palette/neutralize lines for sticker mode
             return [
                 typeSentence,
                 mapping,
                 rendering,
+                fullRedrawInstruction,
+                identityLock,
                 `Layout: Arrange ${count} stickers in a grid with even spacing; each sticker maintains consistent scale relative to others.`,
-                `Style consistency: All ${count} stickers use the same art style, line weight, shading technique, and color saturation.`,
+                styleConsistencyLine,
                 `Variation: Each sticker shows a unique ${
                     variation === 'poses' ? 'pose/expression' :
                     variation === 'elements' ? 'prop/accessory' :
@@ -1199,7 +1578,10 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
                     variation === 'text-bubbles' ? 'text bubble/message' :
                     'variation'
                 } - no duplicates.`,
-                'Negatives: no overlapping stickers, no merged designs, no inconsistent art styles, no blurry details, no incomplete stickers, no cut-off elements, no background that isn\'t transparent.'
+                stickerMustIncludeCharacter,
+                propUniqueness,
+                variationPlan,
+                stickerNegatives
             ].filter(Boolean).join('\n\n');
 
         } else if (wrapType === 'logo') {
@@ -2060,6 +2442,11 @@ POST-PROCESSING:
                     <p>Optimizing for photorealistic imagery with technical details.</p>
                     <em>Best for: Detailed photography-style images with realistic lighting and textures.</em>
                     <em>Tip: Include camera model, lens details, and lighting setup.</em>`;
+                } else if (model === 'z-image-turbo') {
+                    infoContent = `<strong>Z-Image Turbo Model Selected</strong>
+                    <p>Fast photorealistic image model using standard prompt formatting.</p>
+                    <em>Best for: Quick photorealistic generations and iteration.</em>
+                    <em>Tip: Keep prompts concise and explicit about composition and lighting.</em>`;
                 } else if (model === 'pixart') {
                     infoContent = `<strong>PixArt Model Selected</strong>
                     <p>Optimizing for detailed compositions with artistic direction.</p>
@@ -3218,6 +3605,8 @@ STYLE: Commercial product photography with emphasis on the vehicle wrap design a
         switch(model) {
             case 'flux':
                 return formatFluxPrompt(prompt);
+            case 'z-image-turbo':
+                return prompt;
             case 'qwen':
                 return formatQwenPrompt(prompt);
             case 'nunchaku':
@@ -3310,8 +3699,9 @@ STYLE: Commercial product photography with emphasis on the vehicle wrap design a
     // Model-specific character limits
     const MODEL_CHAR_LIMITS = {
         'Image': {
-            'default': 3000,
+            'default': 4500,
             'flux': 1200,
+            'z-image-turbo': 3000,
             'qwen': 2500,  // Increased Qwen limit to 2500 characters
             'nunchaku': 1500
         },
