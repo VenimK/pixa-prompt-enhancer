@@ -16,6 +16,50 @@ document.addEventListener('DOMContentLoaded', () => {
     // Holds last analysis texts for A/B to enable auto object/subject extraction
     let latestAnalysis = { combined: '', a: '', b: '' };
 
+    let analysisInFlight = null;
+
+    function getImageContextForEnhance() {
+        const parts = [];
+        if (latestAnalysis && latestAnalysis.combined) parts.push(`Combined analysis:\n${latestAnalysis.combined}`);
+        if (latestAnalysis && latestAnalysis.a) parts.push(`Reference A:\n${latestAnalysis.a}`);
+        if (latestAnalysis && latestAnalysis.b) parts.push(`Reference B:\n${latestAnalysis.b}`);
+        const joined = parts.filter(Boolean).join('\n\n');
+        if (joined) return joined;
+        return (els.imageDescription && els.imageDescription.innerText) ? els.imageDescription.innerText : '';
+    }
+
+    async function ensureAnalysisForEnhance() {
+        if (analysisInFlight) return analysisInFlight;
+
+        const hasImages = (selectedFiles && selectedFiles.length > 0)
+            || (els.imageUpload && els.imageUpload.files && els.imageUpload.files.length > 0);
+        const hasAnyAnalysis = !!(latestAnalysis && (latestAnalysis.combined || latestAnalysis.a || latestAnalysis.b));
+
+        if (!hasImages || hasAnyAnalysis) return true;
+
+        analysisInFlight = (async () => {
+            try {
+                if (els.analyze && !els.analyze.disabled) {
+                    els.analyze.click();
+                }
+
+                const start = Date.now();
+                const timeoutMs = 60000;
+                while (Date.now() - start < timeoutMs) {
+                    const done = !(els.analyze && els.analyze.disabled);
+                    const nowHasAnyAnalysis = !!(latestAnalysis && (latestAnalysis.combined || latestAnalysis.a || latestAnalysis.b));
+                    if (done && nowHasAnyAnalysis) return true;
+                    await new Promise(r => setTimeout(r, 200));
+                }
+                return false;
+            } finally {
+                analysisInFlight = null;
+            }
+        })();
+
+        return analysisInFlight;
+    }
+
     function reanalyzeIfEnabled() {
         if (!autoReAnalyzeOnChange) return;
         if (!els || !els.analyze) return;
@@ -452,6 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
         stickerCamera: document.getElementById('sticker-camera'),
         stickerInnerKeyline: document.getElementById('sticker-inner-keyline'),
         stickerVariation: document.getElementById('sticker-variation'),
+        stickerPlanSource: document.getElementById('sticker-plan-source'),
         bubbleTextContainer: document.getElementById('bubble-text-container'),
         bubbleText: document.getElementById('bubble-text')
     };
@@ -1135,6 +1180,7 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
             const camera = els.stickerCamera ? els.stickerCamera.value : 'top-down';
             const innerKeyline = !!(els.stickerInnerKeyline && els.stickerInnerKeyline.checked);
             const variation = els.stickerVariation ? els.stickerVariation.value : 'poses';
+            const planSource = els.stickerPlanSource ? els.stickerPlanSource.value : 'built-in';
 
             const styleMap = {
                 'die-cut': 'die-cut stickers with white border outline around each character/element',
@@ -1530,7 +1576,7 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
 
             const pool = variationPoolMap[variation] || null;
 
-            const variationPlan = pool
+            const variationPlanBuiltIn = pool
                 ? `${variation === 'scenes' ? 'Scene' : 'Variation'} plan (exactly ${n} unique items; one per sticker; do not reuse):\n${pool.slice(0, Math.min(n, pool.length)).map((s, i) => {
                     let onlyPropText = '';
                     const lower = String(s).toLowerCase();
@@ -1550,6 +1596,12 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
                     return `${i + 1}. Character: ${s}${onlyPropText}.`;
                 }).join('\n')}`
                 : '';
+
+            const variationPlanAI = `Variation plan: Generate exactly ${n} unique items (one per sticker) for "${variation}". Output a numbered list 1..${n}. No duplicates. Each item must explicitly describe the character in a distinct ${variationText}.`;
+
+            const variationPlan = planSource === 'ai-enhance'
+                ? variationPlanAI
+                : variationPlanBuiltIn;
 
             // Override palette/neutralize lines for sticker mode
             return [
@@ -2226,7 +2278,16 @@ POST-PROCESSING:
             const style = els.style.value;
             const cinematography = els.cinematography.value;
             const lighting = els.lighting.value;
-            const imageDescription = els.imageDescription.innerText;
+            const hasImages = (selectedFiles && selectedFiles.length > 0)
+                || (els.imageUpload && els.imageUpload.files && els.imageUpload.files.length > 0);
+            if (hasImages) {
+                try {
+                    await ensureAnalysisForEnhance();
+                } catch (e) {
+                    console.warn('Auto-analysis before enhance failed:', e);
+                }
+            }
+            const imageDescription = getImageContextForEnhance();
             const motionEffect = els.motionEffect.value;
             const textToEmphasis = els.textEmphasis.value;
             const textPosition = els.textPosition.value;
