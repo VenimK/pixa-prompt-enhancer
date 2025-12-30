@@ -509,7 +509,11 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
         instruction_text = " " + " and ".join(instructions) if instructions else ""
 
         image_context = (
-            f" The user has provided a reference image described as: '{request.image_description}'."
+            f" CRITICAL REFERENCE IMAGE GUIDANCE: The user has provided a reference image described as: '{request.image_description}'. "
+            f"Analyze this description carefully and identify key visual elements (subjects, objects, environment, lighting, colors) that should appear in the animation. "
+            f"Use these elements as the foundation for your prompt - the animation should clearly relate to what's described in the reference image. "
+            f"If the user's prompt mentions specific characters or objects from the reference, ensure they are prominently featured. "
+            f"Maintain visual consistency with the reference while adding the requested motion."
             if request.image_description
             else ""
         )
@@ -641,14 +645,15 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
             if request.prompt:
                 wan2_text_rule = " IMPORTANT: Do NOT invent any written text, logos, banners, or signage unless the exact text is explicitly present in the reference image description or the user's idea. If text is present, preserve it exactly as written."
                 wan2_format_rule = " IMPORTANT FORMAT: Output a single concise WAN2 prompt under 500 characters. Prefer a compact tag-like prefix (shot type, lens, composition, lighting) then a single sentence describing SUBJECT + MOTION. For camera movements (pan, zoom, dolly, etc.), specify the camera action. For subject/object motions (walking, jumping, falling, etc.), describe the subject/object performing the motion. For cinematic effects (fade, dissolve, slow motion, etc.), incorporate the effect as a transition or style modifier. Always specify camera behavior: use 'static shot' / 'fixed shot' unless the user requests camera movement. Focus on motion; avoid unnecessary micro-details."
-                wan2_user_idea_rule = " IMPORTANT: The user's idea is the PRIMARY requirement. The output MUST clearly include the user's requested subject and action. Do not ignore the user's idea."
+                wan2_user_idea_rule = " IMPORTANT: The user's idea is the PRIMARY requirement. The output MUST clearly include the user's requested subject and action. Do not ignore the user's idea. Preserve the exact relationship and behavior described by the user without adding extra narrative elements."
                 wan2_subject_rule = " IMPORTANT SUBJECT CONTROL: Do NOT introduce any extra subjects beyond what the user asked for. No random new people/characters, duplicates, background pedestrians, crowds, or extra faces. If the user's idea introduces a new object/character not visible in the reference, describe it as transforming/morphing/emerging from existing elements in the reference (not appearing from nowhere)."
+                wan2_narrative_rule = " IMPORTANT NARRATIVE CONTROL: Do NOT add story elements, emotional context, or narrative progression that wasn't in the user's original prompt. Avoid words like 'cease', 'gently', 'fallen', 'suddenly', 'dramatically' unless explicitly in user input. Keep the action description literal and direct."
                 motion_effect = (
                     f" with {request.motion_effect} motion effect"
                     if request.motion_effect and request.motion_effect != "Static"
                     else ""
                 )
-                meta_prompt = f"You are a creative assistant for the WAN2 image-to-video animation model. Create a CONCISE prompt (maximum 500 characters){instruction_text}{motion_effect}. Focus on animating the reference image with clear subject motion and stable composition. WAN2 has strict character limits to prevent OOM errors.{wan2_format_rule}{wan2_user_idea_rule}{wan2_subject_rule}{wan2_text_rule}{image_context}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
+                meta_prompt = f"You are a creative assistant for the WAN2 image-to-video animation model. Create a CONCISE prompt (maximum 500 characters){instruction_text}{motion_effect}. Focus on animating the reference image with clear subject motion and stable composition. Your animation should primarily feature the subjects and objects described in the reference image, adding motion to the existing scene rather than creating new elements. WAN2 has strict character limits to prevent OOM errors.{wan2_format_rule}{wan2_user_idea_rule}{wan2_subject_rule}{wan2_narrative_rule}{wan2_text_rule}{image_context}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
             else:
                 # Logic for when the user wants the AI to imply the animation
                 meta_prompt = f"""You are a creative assistant for the WAN2 image-to-video model. Create a CONCISE prompt (maximum 500 characters) that describes how to animate the static image.
