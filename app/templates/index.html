@@ -241,6 +241,7 @@
                                     <option value="decal">Decal / sticker</option>
                                     <option value="product">Product wrap (can/bottle/glass)</option>
                                     <option value="logo">Logo / branding</option>
+                                    <option value="character">Character wrap (person/animal)</option>
                                     <option value="people-object">People/Object (A→B transfer)</option>
                                     <option value="sticker-pack">Sticker pack / sheet</option>
                                 </select>
@@ -349,6 +350,53 @@
                                     <label style="display:flex; align-items:center; gap:8px; margin-top:24px;">
                                         <input type="checkbox" id="logo-pattern">
                                         Repeating pattern
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Character-specific controls (shown when wrap-type=character) -->
+                        <div id="character-controls" style="display:none; gap:12px;">
+                            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label for="character-placement">Logo Placement on Character</label>
+                                    <select id="character-placement">
+                                        <option value="chest">Chest/Heart area</option>
+                                        <option value="back">Back/Shoulders</option>
+                                        <option value="hat">Hat/Headwear</option>
+                                        <option value="arm">Arm/Sleeve</option>
+                                        <option value="leg">Leg/Pants</option>
+                                        <option value="full-body">Full body outfit</option>
+                                        <option value="accessory">Accessory (bag, scarf, etc.)</option>
+                                        <option value="custom">Custom (use scope field)</option>
+                                    </select>
+                                </div>
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label for="character-logo-size">Logo Size</label>
+                                    <select id="character-logo-size">
+                                        <option value="tiny">Tiny (subtle detail)</option>
+                                        <option value="small">Small (patch size)</option>
+                                        <option value="medium" selected>Medium (prominent)</option>
+                                        <option value="large">Large (statement piece)</option>
+                                        <option value="full">Full coverage</option>
+                                    </select>
+                                </div>
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label for="character-integration">Integration Style</label>
+                                    <select id="character-integration">
+                                        <option value="natural">Natural (part of clothing)</option>
+                                        <option value="patch">Patch/appliqué</option>
+                                        <option value="printed">Printed fabric</option>
+                                        <option value="embroidered">Embroidered</option>
+                                        <option value="painted">Body paint/makeup</option>
+                                        <option value="projected">Projected light</option>
+                                        <option value="magical">Magical glow/aura</option>
+                                    </select>
+                                </div>
+                                <div class="selector" style="flex:1; min-width:180px;">
+                                    <label style="display:flex; align-items:center; gap:8px; margin-top:24px;">
+                                        <input type="checkbox" id="character-animated">
+                                        Animated/moving logo
                                     </label>
                                 </div>
                             </div>

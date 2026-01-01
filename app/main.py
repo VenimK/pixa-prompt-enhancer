@@ -442,12 +442,24 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
             "automotive", "vehicle", "car", "sedan", "coupe", "sports coupe",
             "hatchback", "suv", "truck"
         ]
+        # New: People/character terms for branding/wrapping
+        people_terms = [
+            "person", "people", "human", "character", "man", "woman", "child",
+            "model", "athlete", "celebrity", "portrait", "figure", "body"
+        ]
         wrap_terms = [
-            "vehicle wrap", "wrap design", "vinyl wrap", "car wrap", "livery", "wrap"
+            "vehicle wrap", "wrap design", "vinyl wrap", "car wrap", "livery", "wrap",
+            "body wrap", "skin wrap", "character wrap", "branding", "logo wrap",
+            "sponsored", "branded", "advertisement", "promo", "sponsored by"
         ]
         body_terms = [
             "body lines", "body panels", "quarter panel", "fender", "hood", "spoiler",
             "door", "bonnet", "trunk", "bumper", "side skirt", "roof"
+        ]
+        # New: Human body parts for character wraps
+        human_body_terms = [
+            "arms", "legs", "torso", "chest", "back", "shoulders", "skin",
+            "full body", "entire body", "body surface"
         ]
         def contains_term(text: str, terms: list[str]) -> bool:
             return any(term in text for term in terms)
@@ -464,8 +476,10 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
         people_object_hint = "people/object" in prompt_lower or "a→b transfer" in prompt_lower
 
         vehicle_present = contains_term(prompt_lower, vehicle_terms)
+        people_present = contains_term(prompt_lower, people_terms)
         wrap_present = contains_term(prompt_lower, wrap_terms)
         body_hits = sum(1 for t in body_terms if t in prompt_lower)
+        human_body_hits = sum(1 for t in human_body_terms if t in prompt_lower)
 
         # Start with heuristic, then override with explicit wrap_mode if provided
         # Stricter rule: need explicit wrap AND (vehicle OR >=2 body panel terms)
@@ -475,16 +489,31 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
             and not has_negation(prompt_lower)
             and not people_object_hint
         )
+        
+        # New: Character/branding wrap detection
+        is_character_wrap = (
+            wrap_present
+            and (people_present or human_body_hits >= 2)
+            and not has_negation(prompt_lower)
+            and not people_object_hint
+            and not is_vehicle_wrap  # Don't double-count
+        )
 
         # Explicit wrap_mode overrides heuristics to prevent mixing modes
         if request.wrap_mode:
             mode = request.wrap_mode.lower()
             if mode == "vehicle":
                 is_vehicle_wrap = True
+                is_character_wrap = False
                 people_object_hint = False
             elif mode == "people-object":
                 is_vehicle_wrap = False
+                is_character_wrap = False
                 people_object_hint = True
+            elif mode == "character":
+                is_vehicle_wrap = False
+                is_character_wrap = True
+                people_object_hint = False
         
         # --- Build instructions based on user selections ---
         def is_meaningful_selection(value: str | None) -> bool:
@@ -740,6 +769,37 @@ Original technical prompt to enhance (preserve structure, add descriptions):
 '{request.prompt}'
 
 Output the enhanced prompt now, keeping ALL technical requirements intact."""
+
+            # Character/branding wrap - for people, animals, characters
+            elif is_character_wrap:
+                meta_prompt = f"""You are enhancing a character branding wrap prompt. The user wants to place a logo or branding on a character (person, animal, creature) with natural integration.
+
+CRITICAL REQUIREMENTS:
+- Maintain the character's identity, appearance, and personality completely
+- The logo/branding should integrate naturally with the character's clothing, accessories, or body
+- Preserve the original pose, expression, and character features from Reference A
+- If Reference B contains the logo/branding, transfer ONLY those design elements
+
+CHARACTER WRAPPING RULES:
+- Place logos naturally on clothing, accessories, or appropriate body areas
+- Consider the character's style and personality when integrating branding
+- Maintain proper perspective and contour fitting on character's body/clothing
+- For animals, integrate branding on collars, accessories, or natural markings
+- Keep the character as the main focus, not the branding
+
+ENHANCEMENT TASK:
+- Add descriptive details about the character's appearance and style
+- Enhance the integration method (embroidered patch, printed fabric, natural pattern, etc.)
+- Add atmospheric details that complement the character's personality
+- If style preferences are provided{instruction_text}, enhance the overall aesthetic
+- Remove any markdown formatting like ** or __ from the original prompt
+
+{image_context}{text_emphasis}
+
+Original character wrap prompt to enhance:
+'{request.prompt}'
+
+Output the enhanced prompt now, keeping the character's identity intact while naturally integrating the branding."""
 
             # Material-specific handling
             elif "yarn" in prompt_lower and any(
