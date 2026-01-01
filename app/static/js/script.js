@@ -1172,7 +1172,8 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
         const analysisText = els.imageDescription ? els.imageDescription.innerText.trim() : '';
         
         // Use multi-stage prompting if enabled
-        if (multiStage) {
+        // NOTE: character wrap uses its own explicit placement/scale constraints (avoid routing to generic multi-stage)
+        if (multiStage && wrapType !== 'character') {
             return buildMultiStagePrompt(wrapType, finish, scope, palette, analysisText, scopePreset);
         }
         let paletteLine = '';
@@ -1700,6 +1701,71 @@ Add fine details, text, logos; apply ${finish} finish; photorealistic rendering 
                 : finish === 'matte' ? 'matte vinyl finish'
                 : 'glossy vinyl finish';
             rendering = `Photorealistic logo application with ${finishText}; maintain Reference B lighting, shadows, and reflections; logo colors are vibrant and accurate.`;
+
+        } else if (wrapType === 'character') {
+            // Character wrap (person/animal): place logo from A onto character in B with strict scale/placement constraints
+            const placement = els.characterPlacement ? els.characterPlacement.value : 'chest';
+            const size = els.characterLogoSize ? els.characterLogoSize.value : 'medium';
+            const integration = els.characterIntegration ? els.characterIntegration.value : 'natural';
+            const animated = !!(els.characterAnimated && els.characterAnimated.checked);
+
+            const placementMap = {
+                'chest': 'on the chest/heart area of the character',
+                'belly': 'on the belly/tummy area of the character',
+                'back': 'centered on the upper back/shoulders',
+                'hat': 'on the front panel of the hat/headwear',
+                'arm': 'on the upper arm/sleeve',
+                'leg': 'on the thigh/leg area',
+                'full-body': 'across the outfit as an all-over print (NOT a single oversized logo)',
+                'accessory': 'on the main visible accessory (bag/scarf/etc.)',
+                'custom': scope
+            };
+            const placementText = placementMap[placement] || 'on the character';
+
+            // Hard size constraints to avoid the model turning the logo into headwear/crown
+            const sizeMap = {
+                'tiny': { text: 'tiny', pct: 'about 3–5% of the torso width', area: 'about 1–2% of the visible character area' },
+                'small': { text: 'small patch-size', pct: 'about 6–10% of the torso width', area: 'about 2–4% of the visible character area' },
+                'medium': { text: 'medium but controlled', pct: 'about 12–18% of the torso width', area: 'about 4–7% of the visible character area' },
+                'large': { text: 'large but still realistic', pct: 'about 20–28% of the torso width', area: 'about 8–12% of the visible character area' },
+                'full': { text: 'full coverage', pct: 'covers the intended clothing area only', area: 'but does NOT become a crown/helmet/headpiece' }
+            };
+            const sizeInfo = sizeMap[size] || sizeMap.medium;
+
+            const integrationMap = {
+                'natural': 'integrated naturally as part of the clothing/fabric print',
+                'patch': 'as a stitched patch/appliqué',
+                'printed': 'as a printed fabric decal',
+                'embroidered': 'as clean embroidery',
+                'painted': 'as body paint/makeup (only where skin/fur is visible)',
+                'projected': 'as projected light (no physical sticker edges)',
+                'magical': 'as a subtle magical glow mark (still logo-shaped)'
+            };
+            const integrationText = integrationMap[integration] || integrationMap.natural;
+
+            const finishText = finish === 'metallic' ? 'metallic foil / reflective gold' 
+                : finish === 'paper' ? 'printed paper label look'
+                : finish === 'shrink' ? 'embedded in a thin flexible film'
+                : finish === 'matte' ? 'matte vinyl'
+                : 'glossy vinyl';
+
+            typeSentence = `CHARACTER WRAP: Apply the logo/branding from Reference A onto the character in Reference B.`;
+            mapping = `Placement: ${placementText}. Scale: ${sizeInfo.text}; target scale is ${sizeInfo.pct} (${sizeInfo.area}). Maintain exact logo aspect ratio; crisp edges; no warping or stretching; conform to curvature of fur/clothing with correct perspective. The logo must remain a flat decal/print/patch on the specified area only.`;
+            rendering = `Material & integration: ${integrationText}; finish: ${finishText}. Match Reference B lighting/shadows; add subtle contact shadows and highlights on the logo. ${animated ? 'If animated, only subtle shimmer/glint/soft glow—do NOT move the logo location or scale.' : ''}`.trim();
+
+            // Strong anti-failure negatives for crown-like logos
+            const characterNegatives = `Negatives: oversized logo, logo covering face, logo as crown, logo as helmet, logo as headpiece, logo replacing hat, logo becoming armor, logo turning into a 3D object, floating logo, distorted decal, stretched decal, wrong placement, wrong scale, perspective errors, blurry edges, warped logo.`;
+
+            return [
+                typeSentence,
+                mapping,
+                rendering,
+                priority,
+                paletteLine,
+                neutralizeLine,
+                characterNegatives
+            ].filter(Boolean).join('\n\n');
+
         } else if (wrapType === 'people-object') {
             // People/Object A→B transfer (e.g., subject from A wearing/holding object from B)
             const analysisText = els.imageDescription ? els.imageDescription.innerText.trim() : '';
@@ -1998,12 +2064,15 @@ POST-PROCESSING:
         ].filter(Boolean).join('\n\n');
     }
 
-    // Show/hide logo, sticker, and vehicle controls based on wrap type
+    // Show/hide logo, character, sticker, and vehicle controls based on wrap type
     if (els.wrapType) {
         els.wrapType.addEventListener('change', () => {
             const wrapType = els.wrapType.value;
             if (els.logoControls) {
                 els.logoControls.style.display = wrapType === 'logo' ? 'grid' : 'none';
+            }
+            if (els.characterControls) {
+                els.characterControls.style.display = wrapType === 'character' ? 'block' : 'none';
             }
             if (els.stickerControls) {
                 els.stickerControls.style.display = wrapType === 'sticker-pack' ? 'grid' : 'none';
@@ -2372,6 +2441,7 @@ POST-PROCESSING:
                 if (!(els.plainEnhance && els.plainEnhance.checked)) {
                     wrapMode = (els.wrapType && els.wrapType.value === 'vehicle') ? 'vehicle'
                         : (els.wrapType && els.wrapType.value === 'people-object') ? 'people-object'
+                        : (els.wrapType && els.wrapType.value === 'character') ? 'character'
                         : 'none';
                 }
 
