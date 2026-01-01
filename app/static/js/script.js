@@ -485,6 +485,12 @@ document.addEventListener('DOMContentLoaded', () => {
         logoPlacement: document.getElementById('logo-placement'),
         logoSize: document.getElementById('logo-size'),
         logoPattern: document.getElementById('logo-pattern'),
+        // Character-specific controls
+        characterControls: document.getElementById('character-controls'),
+        characterPlacement: document.getElementById('character-placement'),
+        characterLogoSize: document.getElementById('character-logo-size'),
+        characterIntegration: document.getElementById('character-integration'),
+        characterAnimated: document.getElementById('character-animated'),
         // Sticker pack controls
         stickerControls: document.getElementById('sticker-controls'),
         stickerCount: document.getElementById('sticker-count'),
@@ -527,6 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hideContainer(els.objectOverrideContainer);
         hideContainer(els.vehicleControls);
         hideContainer(els.logoControls);
+        hideContainer(els.characterControls);
         hideContainer(els.stickerControls);
         
         // Hide wrap-type selector and related controls (find their parent .selector)
@@ -612,6 +619,24 @@ document.addEventListener('DOMContentLoaded', () => {
     function toggleObjectOverrideVisibility() {
         if (!els.objectOverrideContainer || !els.wrapType) return;
         const isPeopleObject = els.wrapType.value === 'people-object';
+        const isCharacter = els.wrapType.value === 'character';
+        const isLogo = els.wrapType.value === 'logo';
+        const isVehicle = els.wrapType.value === 'vehicle';
+        const isStickerPack = els.wrapType.value === 'sticker-pack';
+        
+        // Hide all control panels first
+        if (els.vehicleControls) els.vehicleControls.style.display = 'none';
+        if (els.logoControls) els.logoControls.style.display = 'none';
+        if (els.characterControls) els.characterControls.style.display = 'none';
+        if (els.stickerControls) els.stickerControls.style.display = 'none';
+        
+        // Show relevant controls
+        if (els.vehicleControls) els.vehicleControls.style.display = isVehicle ? 'block' : 'none';
+        if (els.logoControls) els.logoControls.style.display = isLogo ? 'block' : 'none';
+        if (els.characterControls) els.characterControls.style.display = isCharacter ? 'block' : 'none';
+        if (els.stickerControls) els.stickerControls.style.display = isStickerPack ? 'block' : 'none';
+        
+        // Handle object override container
         els.objectOverrideContainer.style.display = isPeopleObject ? 'flex' : 'none';
         if (isPeopleObject) {
             const subj = detectSubjectFromA(latestAnalysis.a, latestAnalysis.combined) || 'subject';
