@@ -3865,7 +3865,7 @@ STYLE: Commercial product photography with emphasis on the vehicle wrap design a
             'default': 1000
         },
         'WAN2': {
-            'default': 750
+            'default': 800
         }
     };
     
