@@ -676,6 +676,12 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
             model_3d_format = " IMPORTANT FORMAT: Structure as detailed 3D model specifications with technical requirements (polygons, materials, rigging). Include mesh details, texture maps, and animation considerations."
             model_3d_character = " IMPORTANT CHARACTER: Since this is character creation from a reference photo, emphasize anatomical accuracy, poseable rigging, and realistic proportions. Include facial rigging for expressions."
             
+            motion_effect = (
+                f" with {request.motion_effect} motion effect"
+                if request.motion_effect and request.motion_effect != "Static"
+                else ""
+            )
+            
             if request.prompt:
                 meta_prompt = f"You are a creative assistant for 3D character model generation. Create detailed 3D model specifications (maximum 2000 characters){instruction_text}{motion_effect}. Focus on creating a high-quality 3D character model based on the reference image. Include mesh topology, rigging requirements, materials, textures, and animation-ready specifications.{model_3d_rules}{model_3d_format}{model_3d_character}{image_context}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
             else:
