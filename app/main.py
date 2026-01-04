@@ -671,10 +671,21 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
             meta_prompt = f"You are a creative assistant for the VEO text-to-video model. Expand the user's idea into a rich, cinematic prompt{instruction_text}. Describe the scene, subject, and action in a detailed paragraph.{image_context}{text_emphasis} IMPORTANT: Keep your enhanced prompt under 2000 characters total. Do not add conversational fluff. User's idea: '{request.prompt}'"
 
         elif request.prompt_type == "3D":
-            # 3D Model generation (character creation from reference)
-            model_3d_rules = " IMPORTANT: This is for 3D model generation. Focus on mesh topology, rigging, materials, and textures suitable for 3D modeling. Include polygon count, UV mapping, and animation-ready specifications."
-            model_3d_format = " IMPORTANT FORMAT: Structure as detailed 3D model specifications with technical requirements (polygons, materials, rigging). Include mesh details, texture maps, and animation considerations."
-            model_3d_character = " IMPORTANT CHARACTER: Since this is character creation from a reference photo, emphasize anatomical accuracy, poseable rigging, and realistic proportions. Include facial rigging for expressions."
+            # 3D Model generation (character creation from reference) - descriptive prompts for image-to-3D models
+            model_3d_rules = " IMPORTANT: This is for image-to-3D generation. Create a detailed visual description that an AI image-to-3D model can use to generate a 3D model from the reference image. Focus on visual appearance, pose, materials, and character details."
+            model_3d_format = " IMPORTANT FORMAT: Write a concise but detailed description of the character/object for 3D model generation. Include appearance, pose, materials, lighting, and any important visual details. Keep under 2000 characters."
+            model_3d_character = " IMPORTANT CHARACTER: Describe the character accurately based on the reference image. Include species/type, colors, features, clothing/accessories, pose, and expression. Make it suitable for 3D model generation workflows."
+            
+            # 3D-specific image context (different from animation context)
+            image_context_3d = (
+                f" CRITICAL REFERENCE IMAGE GUIDANCE: The user has provided a reference image described as: '{request.image_description}'. "
+                f"Use this description to create a detailed visual prompt that accurately represents the character/object in the reference image for 3D model generation. "
+                f"Extract and describe key visual elements (appearance, pose, colors, materials, textures, proportions) that an image-to-3D AI can use. "
+                f"The prompt should enable accurate 3D reconstruction of the reference subject. "
+                f"Focus on creating descriptive prompts for 3D generation, not technical modeling specifications."
+                if request.image_description
+                else ""
+            )
             
             motion_effect = (
                 f" with {request.motion_effect} motion effect"
@@ -683,18 +694,17 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
             )
             
             if request.prompt:
-                meta_prompt = f"You are a creative assistant for 3D character model generation. Create detailed 3D model specifications (maximum 2000 characters){instruction_text}{motion_effect}. Focus on creating a high-quality 3D character model based on the reference image. Include mesh topology, rigging requirements, materials, textures, and animation-ready specifications.{model_3d_rules}{model_3d_format}{model_3d_character}{image_context}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
+                meta_prompt = f"You are a creative assistant for image-to-3D model generation. Create a detailed visual description (maximum 2000 characters){instruction_text}{motion_effect}. Focus on creating a descriptive prompt that an AI image-to-3D model can use to generate a 3D model based on the reference image. Include detailed visual characteristics, pose, materials, and appearance details.{model_3d_rules}{model_3d_format}{model_3d_character}{image_context_3d}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
             else:
-                meta_prompt = f"""You are a creative assistant for 3D character model generation. Create detailed 3D model specifications (maximum 2000 characters) based on the reference image.
-- Include polygon count and mesh topology details
-- Specify rigging requirements for poseable character
-- Detail materials and texture maps needed
-- Include animation considerations and facial rigging
-- Focus on anatomical accuracy and realistic proportions
+                meta_prompt = f"""You are a creative assistant for image-to-3D model generation. Create a detailed visual description (maximum 2000 characters) based on the reference image that can be used by AI image-to-3D models.
+- Describe the character's appearance, pose, and visual details
+- Include colors, materials, textures, and proportions  
+- Focus on elements that help 3D reconstruction
+- Keep the description detailed but suitable for AI processing
 
-{image_context}{instruction_text}
+{image_context_3d}{instruction_text}
 
-Generate detailed 3D model specifications now."""
+Generate a detailed visual prompt for 3D model generation now."""
 
         elif request.prompt_type == "WAN2":
             if request.prompt:
