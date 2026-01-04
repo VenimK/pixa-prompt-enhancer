@@ -3861,6 +3861,9 @@ STYLE: Commercial product photography with emphasis on the vehicle wrap design a
             'qwen': 2500,  // Increased Qwen limit to 2500 characters
             'nunchaku': 1500
         },
+        '3D': {
+            'default': 2000
+        },
         'VEO': {
             'default': 1000
         },
