@@ -708,9 +708,17 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
             
             selected_type = model_type_guidance.get(model_type, model_type_guidance["character"])
             
-            model_3d_rules = f" IMPORTANT: This is for {selected_type['focus']}. Create a detailed visual description that an AI image-to-3D model can use to generate a 3D model from the reference image. Focus on {selected_type['details']}."
-            model_3d_format = f" IMPORTANT FORMAT: Write a concise but detailed description of the {model_type} for 3D model generation. Include {selected_type['examples']}. Keep under 2000 characters."
-            model_3d_character = f" IMPORTANT {model_type.upper()}: Describe the {model_type} accurately based on the reference image. Make it suitable for 3D model generation workflows."
+            # Conditional guidance based on whether image description exists
+            if request.image_description:
+                # Use reference image guidance
+                model_3d_rules = f" IMPORTANT: This is for {selected_type['focus']}. Create a detailed visual description that an AI image-to-3D model can use to generate a 3D model from the reference image. Focus on {selected_type['details']}."
+                model_3d_format = f" IMPORTANT FORMAT: Write a concise but detailed description of the {model_type} for 3D model generation. Include {selected_type['examples']}. Keep under 2000 characters."
+                model_3d_character = f" IMPORTANT {model_type.upper()}: Describe the {model_type} accurately based on the reference image. Make it suitable for 3D model generation workflows."
+            else:
+                # Use user's prompt as source
+                model_3d_rules = f" IMPORTANT: This is for {selected_type['focus']}. Enhance the user's description by adding detailed 3D modeling information while preserving all key elements. Focus on {selected_type['details']}."
+                model_3d_format = f" IMPORTANT FORMAT: Expand the user's prompt with 3D modeling details. Include {selected_type['examples']}. Keep the user's main subject and action exactly as described. Keep under 2000 characters."
+                model_3d_character = f" IMPORTANT {model_type.upper()}: Take the user's description and enhance it for 3D model generation. Make it suitable for 3D modeling workflows while preserving the user's exact subject matter."
             
             # 3D-specific image context (different from animation context)
             image_context_3d = (
