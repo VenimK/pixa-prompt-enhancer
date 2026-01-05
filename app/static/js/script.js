@@ -2456,18 +2456,53 @@ POST-PROCESSING:
                     image_description: imageDescription,
                     text_emphasis: textEmphasisDetails,
                     model: selectedModel,
-                    wrap_mode: wrapMode
+                    wrap_mode: wrapMode,
+                    model_type: (els.modelTypeSelect ? els.modelTypeSelect.value : null)
                 });
 
-            console.log('Model type selector element:', els.modelTypeSelect);
-            if (els.modelTypeSelect) {
-                console.log('Model type selector value:', els.modelTypeSelect.value);
+                console.log('Model type selector element:', els.modelTypeSelect);
+                if (els.modelTypeSelect) {
+                    console.log('Model type selector value:', els.modelTypeSelect.value);
                 }
 
-                console.log('API call successful, parsing response...');
-                const data = await response.json();
+                const modelType = (els.modelTypeSelect ? els.modelTypeSelect.value : null);
+
+                const response = await fetch('/enhance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: formattedPrompt,
+                        prompt_type: promptType,
+                        style: style,
+                        cinematography: cinematography,
+                        lighting: lighting,
+                        motion_effect: motionEffect,
+                        image_description: imageDescription,
+                        text_emphasis: textEmphasisDetails,
+                        model: selectedModel,
+                        wrap_mode: wrapMode,
+                        model_type: modelType
+                    }),
+                });
+
+                console.log('API call completed. Status:', response.status, 'ok:', response.ok);
+
+                const responseText = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (jsonError) {
+                    console.error('Failed to parse JSON response:', jsonError);
+                    console.log('Response text:', responseText);
+                    showToast('Failed to parse server response. Check console for details.', 'error');
+                    return;
+                }
+
                 console.log('Response data:', data);
-                console.log('Enhanced prompt:', data.enhanced_prompt);
+                console.log('Response data keys:', Object.keys(data));
+                console.log('Enhanced prompt in response:', data.enhanced_prompt);
                 console.log('Result element:', els.result);
                 console.log('Result text element:', els.resultText);
 
