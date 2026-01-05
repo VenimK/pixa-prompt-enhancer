@@ -2458,29 +2458,10 @@ POST-PROCESSING:
                     model: selectedModel,
                     wrap_mode: wrapMode
                 });
-                const response = await fetch('/enhance', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        prompt: formattedPrompt,
-                        prompt_type: promptType,
-                        style: style,
-                        cinematography: cinematography,
-                        lighting: lighting,
-                        motion_effect: motionEffect,
-                        image_description: imageDescription,
-                        text_emphasis: textEmphasisDetails,
-                        model: selectedModel,
-                        model_type: (els.modelTypeSelect ? els.modelTypeSelect.value : null),
-                        wrap_mode: wrapMode
-                    }),
-                });
 
-                if (!response.ok) {
-                    console.log('API call failed with status:', response.status);
-                    throw new Error('Failed to enhance prompt.');
+            console.log('Model type selector element:', els.modelTypeSelect);
+            if (els.modelTypeSelect) {
+                console.log('Model type selector value:', els.modelTypeSelect.value);
                 }
 
                 console.log('API call successful, parsing response...');
