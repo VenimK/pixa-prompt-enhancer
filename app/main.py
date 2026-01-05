@@ -80,7 +80,7 @@ UPLOADS_DIR = "uploads"
 # --- Pydantic Models ---
 class EnhanceRequest(BaseModel):
     prompt: str
-    prompt_type: str  # VEO or WAN2 or Image
+    prompt_type: str  # VEO or WAN2 or Image or 3D
     style: str
     cinematography: str
     lighting: str
@@ -88,6 +88,7 @@ class EnhanceRequest(BaseModel):
     motion_effect: str | None = None
     text_emphasis: str | None = None
     model: str | None = None  # AI model selection (flux, qwen, nunchaku, etc.)
+    model_type: str | None = None  # 3D model type (character, object, vehicle, environment, props)
     wrap_mode: str | None = None  # 'vehicle' | 'people-object' | 'none'
 
 
@@ -672,14 +673,49 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
 
         elif request.prompt_type == "3D":
             # 3D Model generation (character creation from reference) - descriptive prompts for image-to-3D models
-            model_3d_rules = " IMPORTANT: This is for image-to-3D generation. Create a detailed visual description that an AI image-to-3D model can use to generate a 3D model from the reference image. Focus on visual appearance, pose, materials, and character details."
-            model_3d_format = " IMPORTANT FORMAT: Write a concise but detailed description of the character/object for 3D model generation. Include appearance, pose, materials, lighting, and any important visual details. Keep under 2000 characters."
-            model_3d_character = " IMPORTANT CHARACTER: Describe the character accurately based on the reference image. Include species/type, colors, features, clothing/accessories, pose, and expression. Make it suitable for 3D model generation workflows."
+            
+            # Get the selected 3D model type to tailor the prompt
+            model_type = request.model_type or "character"
+            
+            # Define model type specific guidance
+            model_type_guidance = {
+                "character": {
+                    "focus": "character modeling",
+                    "details": "Include detailed anatomy, pose, expression, rigging considerations, facial features, body proportions, and character personality traits",
+                    "examples": "pose, expression, anatomy, rigging, facial features, body proportions"
+                },
+                "object": {
+                    "focus": "object modeling", 
+                    "details": "Include material properties, surface textures, functional details, scale, and physical characteristics",
+                    "examples": "materials, textures, surface details, functionality, scale"
+                },
+                "vehicle": {
+                    "focus": "vehicle modeling",
+                    "details": "Include mechanical components, vehicle proportions, scale, technical details, and functional elements",
+                    "examples": "mechanical parts, scale, proportions, technical specifications"
+                },
+                "environment": {
+                    "focus": "environment modeling",
+                    "details": "Include architectural elements, spatial layout, scale, environmental context, and structural details",
+                    "examples": "architecture, scale, spatial relationships, environmental context"
+                },
+                "props": {
+                    "focus": "props modeling",
+                    "details": "Include small-scale details, material authenticity, scale, accessory characteristics, and functional properties",
+                    "examples": "detail level, materials, scale, accessory properties"
+                }
+            }
+            
+            selected_type = model_type_guidance.get(model_type, model_type_guidance["character"])
+            
+            model_3d_rules = f" IMPORTANT: This is for {selected_type['focus']}. Create a detailed visual description that an AI image-to-3D model can use to generate a 3D model from the reference image. Focus on {selected_type['details']}."
+            model_3d_format = f" IMPORTANT FORMAT: Write a concise but detailed description of the {model_type} for 3D model generation. Include {selected_type['examples']}. Keep under 2000 characters."
+            model_3d_character = f" IMPORTANT {model_type.upper()}: Describe the {model_type} accurately based on the reference image. Make it suitable for 3D model generation workflows."
             
             # 3D-specific image context (different from animation context)
             image_context_3d = (
                 f" CRITICAL REFERENCE IMAGE GUIDANCE: The user has provided a reference image described as: '{request.image_description}'. "
-                f"Use this description to create a detailed visual prompt that accurately represents the character/object in the reference image for 3D model generation. "
+                f"Use this description to create a detailed visual prompt that accurately represents the {model_type} in the reference image for 3D model generation. "
                 f"Extract and describe key visual elements (appearance, pose, colors, materials, textures, proportions) that an image-to-3D AI can use. "
                 f"The prompt should enable accurate 3D reconstruction of the reference subject. "
                 f"Focus on creating descriptive prompts for 3D generation, not technical modeling specifications."
@@ -697,7 +733,7 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
                 meta_prompt = f"You are a creative assistant for image-to-3D model generation. Create a detailed visual description (maximum 2000 characters){instruction_text}{motion_effect}. Focus on creating a descriptive prompt that an AI image-to-3D model can use to generate a 3D model based on the reference image. Include detailed visual characteristics, pose, materials, and appearance details.{model_3d_rules}{model_3d_format}{model_3d_character}{image_context_3d}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
             else:
                 meta_prompt = f"""You are a creative assistant for image-to-3D model generation. Create a detailed visual description (maximum 2000 characters) based on the reference image that can be used by AI image-to-3D models.
-- Describe the character's appearance, pose, and visual details
+- Describe the {model_type}'s appearance, pose, and visual details
 - Include colors, materials, textures, and proportions  
 - Focus on elements that help 3D reconstruction
 - Keep the description detailed but suitable for AI processing

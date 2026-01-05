@@ -407,6 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
         compareViewBtn: document.getElementById('compare-view-btn'),
         textControlsToggle: document.getElementById('text-controls-toggle'),
         modelSelect: document.getElementById('model-select'),
+        modelTypeSelect: document.getElementById('model-type-select'),
         style: document.getElementById('style-select'),
         cinematography: document.getElementById('cinematography-select'),
         lighting: document.getElementById('lighting-select'),
@@ -2472,6 +2473,7 @@ POST-PROCESSING:
                         image_description: imageDescription,
                         text_emphasis: textEmphasisDetails,
                         model: selectedModel,
+                        model_type: (els.modelTypeSelect ? els.modelTypeSelect.value : null),
                         wrap_mode: wrapMode
                     }),
                 });
@@ -2559,6 +2561,15 @@ POST-PROCESSING:
                 els.motionEffectContainer.style.display = 'flex';
             } else {
                 els.motionEffectContainer.style.display = 'none';
+            }
+            
+            // Show/hide 3D model type selector
+            if (els.promptType.value === '3D') {
+                const modelTypeSelector = document.getElementById('model-type-selector-container');
+                if (modelTypeSelector) modelTypeSelector.style.display = 'block';
+            } else {
+                const modelTypeSelector = document.getElementById('model-type-selector-container');
+                if (modelTypeSelector) modelTypeSelector.style.display = 'none';
             }
             
             // Show/hide model selector based on prompt type
