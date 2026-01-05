@@ -730,7 +730,12 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
             )
             
             if request.prompt:
-                meta_prompt = f"You are a creative assistant for image-to-3D model generation. Create a detailed visual description (maximum 2000 characters){instruction_text}{motion_effect}. Focus on creating a descriptive prompt that an AI image-to-3D model can use to generate a 3D model based on the reference image. Include detailed visual characteristics, pose, materials, and appearance details.{model_3d_rules}{model_3d_format}{model_3d_character}{image_context_3d}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
+                if request.image_description:
+                    # Use image description as primary reference
+                    meta_prompt = f"You are a creative assistant for image-to-3D model generation. Create a detailed visual description (maximum 2000 characters){instruction_text}{motion_effect}. Focus on creating a descriptive prompt that an AI image-to-3D model can use to generate a 3D model based on the reference image. Include detailed visual characteristics, pose, materials, and appearance details.{model_3d_rules}{model_3d_format}{model_3d_character}{image_context_3d}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
+                else:
+                    # Use user's prompt as primary description source
+                    meta_prompt = f"You are a creative assistant for image-to-3D model generation. Create a detailed visual description (maximum 2000 characters){instruction_text}{motion_effect}. Focus on creating a descriptive prompt that an AI image-to-3D model can use to generate a 3D model based on the user's description. Include detailed visual characteristics, pose, materials, and appearance details.{model_3d_rules}{model_3d_format}{model_3d_character}{text_emphasis} Do not add conversational fluff. User's description: '{request.prompt}'"
             else:
                 meta_prompt = f"""You are a creative assistant for image-to-3D model generation. Create a detailed visual description (maximum 2000 characters) based on the reference image that can be used by AI image-to-3D models.
 - Describe the {model_type}'s appearance, pose, and visual details
