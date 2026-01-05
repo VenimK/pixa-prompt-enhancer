@@ -734,8 +734,8 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
                     # Use image description as primary reference
                     meta_prompt = f"You are a creative assistant for image-to-3D model generation. Create a detailed visual description (maximum 2000 characters){instruction_text}{motion_effect}. Focus on creating a descriptive prompt that an AI image-to-3D model can use to generate a 3D model based on the reference image. Include detailed visual characteristics, pose, materials, and appearance details.{model_3d_rules}{model_3d_format}{model_3d_character}{image_context_3d}{text_emphasis} Do not add conversational fluff. User's idea: '{request.prompt}'"
                 else:
-                    # Use user's prompt as primary description source
-                    meta_prompt = f"You are a creative assistant for image-to-3D model generation. Create a detailed visual description (maximum 2000 characters){instruction_text}{motion_effect}. Focus on creating a descriptive prompt that an AI image-to-3D model can use to generate a 3D model based on the user's description. Include detailed visual characteristics, pose, materials, and appearance details.{model_3d_rules}{model_3d_format}{model_3d_character}{text_emphasis} Do not add conversational fluff. User's description: '{request.prompt}'"
+                    # Use user's prompt as primary description source - be explicit about enhancement
+                    meta_prompt = f"You are a creative assistant for image-to-3D model generation. Your task is to ENHANCE the user's prompt by adding detailed 3D modeling information while PRESERVING ALL the key elements from their description. Do NOT create a new description - take their exact prompt and expand it with 3D-specific details.{instruction_text}{motion_effect}{model_3d_rules}{model_3d_format}{model_3d_character}{text_emphasis} CRITICAL: Keep the user's main subject and action exactly as described. User's prompt to enhance: '{request.prompt}'"
             else:
                 meta_prompt = f"""You are a creative assistant for image-to-3D model generation. Create a detailed visual description (maximum 2000 characters) based on the reference image that can be used by AI image-to-3D models.
 - Describe the {model_type}'s appearance, pose, and visual details
@@ -911,12 +911,7 @@ Output the enhanced prompt now, keeping the character's identity intact while na
         log_debug(f"\n{'='*60}")
         log_debug(f"ENHANCE REQUEST")
         log_debug(f"{'='*60}")
-        log_debug(f"User Settings:")
-        log_debug(f"  - Prompt Type: {request.prompt_type}")
-        log_debug(f"  - Model: {request.model}")
-        log_debug(f"  - Style: {request.style}")
-        log_debug(f"  - Cinematography: {request.cinematography}")
-        log_debug(f"  - Lighting: {request.lighting}")
+        log_debug(f"  - Model Type (3D): {request.model_type}")
         if hasattr(request, "motion_effect") and request.motion_effect:
             log_debug(f"  - Motion Effect: {request.motion_effect}")
         if request.text_emphasis:
