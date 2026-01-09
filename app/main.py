@@ -668,7 +668,7 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
                     model_guidance += " For complex scenes, describe multiple elements with logical arrangement and consistent style for best results."
 
         # --- Logic to choose meta-prompt based on prompt_type ---
-        elif request.prompt_type == "VEO":
+        if request.prompt_type == "VEO":
             meta_prompt = f"You are a creative assistant for the VEO text-to-video model. Expand the user's idea into a rich, cinematic prompt{instruction_text}. Describe the scene, subject, and action in a detailed paragraph.{image_context}{text_emphasis} IMPORTANT: Keep your enhanced prompt under 2000 characters total. Do not add conversational fluff. User's idea: '{request.prompt}'"
 
         elif request.prompt_type == "3D":
