@@ -18,6 +18,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let analysisInFlight = null;
 
+    // --- Audio file state ---
+    let selectedAudioFile = null;
+    let audioAnalysisResult = null;
+
     function getImageContextForEnhance() {
         const parts = [];
         if (latestAnalysis && latestAnalysis.combined) parts.push(`Combined analysis:\n${latestAnalysis.combined}`);
@@ -78,6 +82,69 @@ document.addEventListener('DOMContentLoaded', () => {
         if (f.size > MAX_FILE_SIZE) return `Image too large (${(f.size/(1024*1024)).toFixed(2)}MB). Max 10MB.`;
         if (!validTypes.includes(f.type)) return `Invalid file type: ${f.type}.`;
         return null;
+    }
+
+    function validateAudioFile(f) {
+        const MAX_AUDIO_SIZE = 50 * 1024 * 1024; // 50MB
+        const validAudioTypes = ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/m4a', 'audio/mp4', 'audio/ogg', 'audio/flac'];
+        if (f.size > MAX_AUDIO_SIZE) return `Audio too large (${(f.size/(1024*1024)).toFixed(2)}MB). Max 50MB.`;
+        if (!validAudioTypes.includes(f.type)) return `Invalid audio type: ${f.type}. Supported: MP3, WAV, M4A, OGG, FLAC`;
+        return null;
+    }
+
+    function renderAudioPreview() {
+        if (selectedAudioFile) {
+            const audioUrl = URL.createObjectURL(selectedAudioFile);
+            if (els.audioPreview) {
+                els.audioPreview.src = audioUrl;
+                els.audioFileName.textContent = selectedAudioFile.name;
+                els.audioPreviewContainer.style.display = 'block';
+            }
+        } else {
+            if (els.audioPreview) {
+                els.audioPreview.src = '';
+                els.audioPreviewContainer.style.display = 'none';
+            }
+        }
+    }
+
+    function clearAudioSelection() {
+        selectedAudioFile = null;
+        audioAnalysisResult = null;
+        if (els.audioUpload) {
+            els.audioUpload.value = '';
+        }
+        renderAudioPreview();
+    }
+
+    async function analyzeAudioFile(audioFile) {
+        const formData = new FormData();
+        formData.append('audio_file', audioFile);
+        
+        try {
+            const response = await fetch('/analyze-audio', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error('Audio analysis failed');
+            }
+            
+            const result = await response.json();
+            if (result.error) {
+                throw new Error(result.error);
+            }
+            
+            audioAnalysisResult = result;
+            console.log('Audio analysis result:', result);
+            return result;
+            
+        } catch (error) {
+            console.error('Error analyzing audio:', error);
+            showToast('Error analyzing audio file', 'error');
+            return null;
+        }
     }
 
     function renderSelectedPreviews() {
@@ -448,6 +515,15 @@ document.addEventListener('DOMContentLoaded', () => {
         imageDescription: document.getElementById('image-description-text'),
         imageDescriptionWrapper: document.getElementById('image-description'),
         motionEffectContainer: document.getElementById('motion-effect-selector-container'),
+        ltx2ControlsContainer: document.getElementById('ltx2-controls-container'),
+        ltx2ResolutionContainer: document.getElementById('ltx2-resolution-container'),
+        audioUploadCard: document.getElementById('audio-upload-card'),
+        audioDropZone: document.getElementById('audio-drop-zone'),
+        audioUpload: document.getElementById('audio-upload'),
+        audioPreview: document.getElementById('audio-preview'),
+        audioPreviewContainer: document.getElementById('audio-preview-container'),
+        audioFileName: document.getElementById('audio-file-name'),
+        removeAudio: document.getElementById('remove-audio-btn'),
         historyPanel: document.querySelector('.history-panel'),
         compareResult: document.getElementById('compare-result'),
         compareResultText: document.getElementById('compare-result-text'),
@@ -677,6 +753,87 @@ document.addEventListener('DOMContentLoaded', () => {
             addFilesToSlots(files);
             // Clear native input to allow re-selecting same file later
             els.imageUpload.value = '';
+        });
+    }
+
+    // Audio upload handling
+    if (els.audioUpload) {
+        els.audioUpload.addEventListener('change', async () => {
+            const files = els.audioUpload.files;
+            if (!files || files.length === 0) return;
+            
+            const file = files[0];
+            const error = validateAudioFile(file);
+            if (error) {
+                showToast(error, 'error');
+                els.audioUpload.value = '';
+                return;
+            }
+            
+            selectedAudioFile = file;
+            renderAudioPreview();
+            showToast('Audio file loaded, analyzing...', 'info');
+            
+            // Analyze the audio file
+            await analyzeAudioFile(file);
+            if (audioAnalysisResult) {
+                showToast('Audio file analyzed successfully', 'success');
+            }
+        });
+    }
+
+    // Audio remove button
+    if (els.removeAudio) {
+        els.removeAudio.addEventListener('click', () => {
+            clearAudioSelection();
+            showToast('Audio file removed', 'info');
+        });
+    }
+
+    // Audio drop zone handling
+    if (els.audioDropZone) {
+        ['dragenter', 'dragover'].forEach(evt => {
+            els.audioDropZone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                els.audioDropZone.classList.add('is-dragover');
+            });
+        });
+        
+        ['dragleave', 'drop'].forEach(evt => {
+            els.audioDropZone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                els.audioDropZone.classList.remove('is-dragover');
+            });
+        });
+        
+        els.audioDropZone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            const dt = e.dataTransfer;
+            const files = dt && dt.files ? dt.files : null;
+            if (!files || files.length === 0) return;
+            
+            const file = files[0];
+            const error = validateAudioFile(file);
+            if (error) {
+                showToast(error, 'error');
+                return;
+            }
+            
+            selectedAudioFile = file;
+            renderAudioPreview();
+            showToast('Audio file loaded, analyzing...', 'info');
+            
+            // Analyze the audio file
+            await analyzeAudioFile(file);
+            if (audioAnalysisResult) {
+                showToast('Audio file analyzed successfully', 'success');
+            }
+        });
+        
+        els.audioDropZone.addEventListener('click', () => {
+            if (els.audioUpload) {
+                els.audioUpload.click();
+            }
         });
     }
 
@@ -2483,7 +2640,10 @@ POST-PROCESSING:
                         text_emphasis: textEmphasisDetails,
                         model: selectedModel,
                         wrap_mode: wrapMode,
-                        model_type: modelType
+                        model_type: modelType,
+                        audio_generation: promptType === 'LTX2' ? (document.getElementById('audio-generation-select')?.value || 'enabled') : null,
+                        resolution: promptType === 'LTX2' ? (document.getElementById('resolution-select')?.value || '4K') : null,
+                        audio_description: promptType === 'LTX2' && audioAnalysisResult ? audioAnalysisResult.audio_description : null
                     }),
                 });
 
@@ -2577,6 +2737,17 @@ POST-PROCESSING:
                 els.motionEffectContainer.style.display = 'flex';
             } else {
                 els.motionEffectContainer.style.display = 'none';
+            }
+            
+            // Show/hide LTX-2 specific controls
+            if (els.promptType.value === 'LTX2') {
+                if (els.ltx2ControlsContainer) els.ltx2ControlsContainer.style.display = 'flex';
+                if (els.ltx2ResolutionContainer) els.ltx2ResolutionContainer.style.display = 'flex';
+                if (els.audioUploadCard) els.audioUploadCard.style.display = 'block';
+            } else {
+                if (els.ltx2ControlsContainer) els.ltx2ControlsContainer.style.display = 'none';
+                if (els.ltx2ResolutionContainer) els.ltx2ResolutionContainer.style.display = 'none';
+                if (els.audioUploadCard) els.audioUploadCard.style.display = 'none';
             }
             
             // Show/hide 3D model type selector

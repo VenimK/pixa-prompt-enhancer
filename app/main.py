@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Request
+from fastapi import FastAPI, File, UploadFile, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -13,6 +13,11 @@ import time
 from datetime import datetime
 from dotenv import load_dotenv
 import atexit
+import json
+import mimetypes
+import librosa
+import numpy as np
+import scipy
 
 # Load environment variables from .env file
 load_dotenv()
@@ -80,7 +85,7 @@ UPLOADS_DIR = "uploads"
 # --- Pydantic Models ---
 class EnhanceRequest(BaseModel):
     prompt: str
-    prompt_type: str  # VEO or WAN2 or Image or 3D
+    prompt_type: str  # VEO or WAN2 or Image or 3D or LTX2
     style: str
     cinematography: str
     lighting: str
@@ -90,6 +95,9 @@ class EnhanceRequest(BaseModel):
     model: str | None = None  # AI model selection (flux, qwen, nunchaku, etc.)
     model_type: str | None = None  # 3D model type (character, object, vehicle, environment, props)
     wrap_mode: str | None = None  # 'vehicle' | 'people-object' | 'none'
+    audio_generation: str | None = None  # LTX-2 audio generation: 'enabled' or 'disabled'
+    resolution: str | None = None  # LTX-2 resolution: '4K', '1080p', '720p'
+    audio_description: str | None = None  # Description of uploaded audio file
 
 
 class EnhanceResponse(BaseModel):
@@ -118,7 +126,27 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
         return "Error: Google API key is not set. Please set the GOOGLE_API_KEY environment variable."
 
     try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        # Configure safety settings to be less restrictive
+        safety_settings = [
+            {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_NONE"
+            },
+            {
+                "category": "HARM_CATEGORY_HATE_SPEECH", 
+                "threshold": "BLOCK_NONE"
+            },
+            {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "BLOCK_NONE"
+            },
+            {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_NONE"
+            }
+        ]
+        
+        model = genai.GenerativeModel("gemini-2.5-flash", safety_settings=safety_settings)
 
         # Multi-image support
         if image_paths and len(image_paths) > 0:
@@ -131,6 +159,19 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
 
             try:
                 response = model.generate_content([prompt, *images])
+                
+                # Check for blocked content
+                if response.candidates:
+                    return response.text
+                else:
+                    if hasattr(response, 'prompt_feedback') and response.prompt_feedback:
+                        block_reason = response.prompt_feedback.block_reason.name if hasattr(response.prompt_feedback.block_reason, 'name') else str(response.prompt_feedback.block_reason)
+                        error_msg = f"Prompt blocked by Gemini API: {block_reason}"
+                        log_debug(f"Gemini API blocked content (multi-image): {block_reason}")
+                        return f"Error: {error_msg}. Please try rephrasing your prompt."
+                    else:
+                        return "Error: Gemini API returned empty response. Please try again."
+                        
             except Exception as api_error:
                 return f"Error processing image(s) with Gemini API: {api_error}. One of the images may be too large or in an unsupported format."
         elif image_path:
@@ -141,15 +182,41 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
 
             try:
                 response = model.generate_content([prompt, image])
+                
+                # Check for blocked content
+                if response.candidates:
+                    return response.text
+                else:
+                    if hasattr(response, 'prompt_feedback') and response.prompt_feedback:
+                        block_reason = response.prompt_feedback.block_reason.name if hasattr(response.prompt_feedback.block_reason, 'name') else str(response.prompt_feedback.block_reason)
+                        error_msg = f"Prompt blocked by Gemini API: {block_reason}"
+                        log_debug(f"Gemini API blocked content (single image): {block_reason}")
+                        return f"Error: {error_msg}. Please try rephrasing your prompt."
+                    else:
+                        return "Error: Gemini API returned empty response. Please try again."
+                        
             except Exception as api_error:
                 return f"Error processing image with Gemini API: {api_error}. The image may be too large or in an unsupported format."
         else:
             try:
                 response = model.generate_content(prompt)
+                
+                # Check for blocked content
+                if response.candidates:
+                    return response.text
+                else:
+                    if hasattr(response, 'prompt_feedback') and response.prompt_feedback:
+                        block_reason = response.prompt_feedback.block_reason.name if hasattr(response.prompt_feedback.block_reason, 'name') else str(response.prompt_feedback.block_reason)
+                        error_msg = f"Prompt blocked by Gemini API: {block_reason}"
+                        log_debug(f"Gemini API blocked content (text only): {block_reason}")
+                        log_debug(f"Prompt was: {prompt[:200]}...")
+                        return f"Error: {error_msg}. Please try rephrasing your prompt."
+                    else:
+                        log_debug("Gemini API returned empty candidates without feedback")
+                        return "Error: Gemini API returned empty response. Please try again."
+                        
             except Exception as api_error:
                 return f"Error with Gemini API: {api_error}. Your prompt may contain content that violates usage policies."
-
-        return response.text
     except Exception as e:
         import traceback
 
@@ -176,6 +243,7 @@ def limit_prompt_length(enhanced_prompt: str, model_type: str) -> str:
         "wan2": 800,  # WAN2 prompt limit
         "image": 3000,  # Image prompt type default
         "veo": 2000,  # Video prompt type default
+        "ltx2": 2500,  # LTX-2 prompt limit (supports longer prompts for audio-video sync)
         # AI Models - all set to 3000 except WAN2
         "default": 3000,
         "qwen": 3000,
@@ -413,6 +481,324 @@ async def analyze_image_endpoint(images: list[UploadFile] = File(...)):
         return AnalyzeResponse(
             description=f"An unexpected error occurred: {e}. Please try again later."
         )
+
+
+def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
+    """Analyze audio file characteristics using real audio processing."""
+    
+    try:
+        # Load audio file
+        y, sr = librosa.load(file_path, duration=30)  # Analyze first 30 seconds
+        
+        characteristics = {
+            "audio_type": "unknown",
+            "tempo": "medium",
+            "tempo_bpm": None,
+            "mood": "neutral", 
+            "energy_level": "medium",
+            "has_vocals": False,
+            "vocal_confidence": 0.0,
+            "danceability": 0.5,
+            "description": ""
+        }
+        
+        # 1. Tempo Detection
+        tempo, beats = librosa.beat.beat_track(y=y, sr=sr)
+        characteristics["tempo_bpm"] = float(tempo)
+        
+        # Convert numpy arrays to lists for JSON serialization
+        beats = beats.tolist() if hasattr(beats, 'tolist') else beats
+        
+        if tempo < 60:
+            characteristics["tempo"] = "very_slow"
+        elif tempo < 90:
+            characteristics["tempo"] = "slow"
+        elif tempo < 120:
+            characteristics["tempo"] = "medium"
+        elif tempo < 140:
+            characteristics["tempo"] = "fast"
+        else:
+            characteristics["tempo"] = "very_fast"
+        
+        # 2. Energy Level Detection
+        # Compute RMS energy
+        rms = librosa.feature.rms(y=y)[0]
+        energy = float(np.mean(rms))  # Convert to Python float
+        
+        if energy < 0.05:
+            characteristics["energy_level"] = "very_low"
+        elif energy < 0.1:
+            characteristics["energy_level"] = "low"
+        elif energy < 0.2:
+            characteristics["energy_level"] = "medium"
+        elif energy < 0.3:
+            characteristics["energy_level"] = "high"
+        else:
+            characteristics["energy_level"] = "very_high"
+        
+        # 3. Vocal Detection using Spectral Analysis
+        # Compute spectral features
+        spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
+        spectral_rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr)[0]
+        mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
+        
+        # Detect vocals based on spectral characteristics
+        # Human voices typically have higher spectral centroids and specific MFCC patterns
+        avg_spectral_centroid = float(np.mean(spectral_centroids))
+        spectral_variance = float(np.var(spectral_centroids))
+        
+        # Simple vocal detection heuristic
+        vocal_score = 0.0
+        
+        # High spectral centroid suggests vocals or high-frequency content
+        if avg_spectral_centroid > 2000:
+            vocal_score += 0.3
+        
+        # Variance in spectral content suggests complex audio (like vocals)
+        if spectral_variance > 500000:
+            vocal_score += 0.2
+        
+        # MFCC analysis for vocal patterns
+        mfcc_std = np.std(mfccs, axis=1)
+        if float(np.mean(mfcc_std[1:4])) > 15:  # MFCC coefficients 1-3 are important for vocals
+            vocal_score += 0.3
+        
+        # Zero crossing rate (vocals typically have higher ZCR)
+        zcr = librosa.feature.zero_crossing_rate(y)[0]
+        if float(np.mean(zcr)) > 0.05:
+            vocal_score += 0.2
+        
+        characteristics["vocal_confidence"] = min(float(vocal_score), 1.0)
+        characteristics["has_vocals"] = vocal_score > 0.5
+        
+        # 4. Danceability (based on beat consistency and tempo)
+        if len(beats) > 10:
+            beat_diffs = np.diff(beats)
+            beat_consistency = float(1.0 - np.std(beat_diffs) / np.mean(beat_diffs))
+            tempo_factor = min(tempo / 120, 2.0)  # Normalize around 120 BPM
+            characteristics["danceability"] = float(beat_consistency * 0.6 + tempo_factor * 0.4)
+        else:
+            characteristics["danceability"] = 0.3
+        
+        # 5. Mood Detection based on audio features
+        # Combine tempo, energy, and spectral features for mood
+        if characteristics["energy_level"] in ["high", "very_high"] and characteristics["tempo"] in ["fast", "very_fast"]:
+            if characteristics["has_vocals"]:
+                characteristics["mood"] = "energetic"
+            else:
+                characteristics["mood"] = "energetic_instrumental"
+        elif characteristics["energy_level"] in ["low", "very_low"] and characteristics["tempo"] in ["slow", "very_slow"]:
+            characteristics["mood"] = "calm"
+        elif characteristics["has_vocals"] and characteristics["energy_level"] == "medium":
+            characteristics["mood"] = "emotional"
+        else:
+            characteristics["mood"] = "neutral"
+        
+        # 6. Audio Type Classification
+        if characteristics["has_vocals"]:
+            if characteristics["tempo"] in ["medium", "fast", "very_fast"]:
+                characteristics["audio_type"] = "singing"
+            else:
+                characteristics["audio_type"] = "speech"
+        else:
+            if characteristics["danceability"] > 0.6:
+                characteristics["audio_type"] = "instrumental_dance"
+            else:
+                characteristics["audio_type"] = "instrumental"
+        
+        # 7. Generate Description
+        description_parts = []
+        
+        # Audio type
+        if characteristics["audio_type"] == "singing":
+            description_parts.append(f"singing performance with vocals ({characteristics['vocal_confidence']:.1f} confidence)")
+        elif characteristics["audio_type"] == "speech":
+            description_parts.append("spoken dialogue/voice")
+        elif characteristics["audio_type"] == "instrumental_dance":
+            description_parts.append("instrumental dance music")
+        elif characteristics["audio_type"] == "instrumental":
+            description_parts.append("instrumental music")
+        else:
+            description_parts.append("audio track")
+        
+        # Tempo with BPM
+        description_parts.append(f"with {characteristics['tempo']} tempo ({characteristics['tempo_bpm']:.1f} BPM)")
+        
+        # Energy and danceability
+        if characteristics["danceability"] > 0.7:
+            description_parts.append("highly danceable rhythm")
+        elif characteristics["danceability"] > 0.4:
+            description_parts.append("moderate danceability")
+        else:
+            description_parts.append("low danceability")
+        
+        # Mood
+        mood_descriptions = {
+            "energetic": "creating high energy and excitement",
+            "energetic_instrumental": "building instrumental energy",
+            "calm": "establishing a peaceful, serene mood",
+            "emotional": "with emotional, expressive atmosphere",
+            "neutral": "with balanced mood"
+        }
+        description_parts.append(mood_descriptions.get(characteristics["mood"], "with neutral mood"))
+        
+        # Performance instructions
+        if characteristics["has_vocals"]:
+            description_parts.append("featuring vocal performance that should be precisely lip-synced")
+        
+        characteristics["description"] = " ".join(description_parts) + "."
+        
+        log_debug(f"Real audio analysis completed: {filename}")
+        log_debug(f"Tempo: {characteristics['tempo_bpm']:.1f} BPM, Vocals: {characteristics['has_vocals']}, Energy: {characteristics['energy_level']}")
+        
+        return characteristics
+        
+    except Exception as e:
+        log_debug(f"Error in real audio analysis: {str(e)}")
+        # Fallback to filename-based analysis
+        return analyze_audio_characteristics(filename, 0)
+
+
+def analyze_audio_characteristics(filename: str, file_size: int) -> dict:
+    """Fallback filename-based analysis when real audio analysis fails."""
+    
+    characteristics = {
+        "audio_type": "unknown",
+        "tempo": "medium",
+        "mood": "neutral", 
+        "instruments": [],
+        "vocals": False,
+        "description": "",
+        "tempo_bpm": None,
+        "energy_level": "medium",
+        "vocal_confidence": 0.0,
+        "danceability": 0.5
+    }
+    
+    # Analyze filename for clues
+    filename_lower = filename.lower()
+    
+    # Detect audio type from filename
+    if any(word in filename_lower for word in ["song", "music", "track", "audio", "beat"]):
+        characteristics["audio_type"] = "music"
+    elif any(word in filename_lower for word in ["speech", "talk", "voice", "dialogue", "speaking"]):
+        characteristics["audio_type"] = "speech"
+    elif any(word in filename_lower for word in ["sing", "vocal", "lyrics", "song"]):
+        characteristics["audio_type"] = "singing"
+    elif any(word in filename_lower for word in ["instrumental", "ambient", "background"]):
+        characteristics["audio_type"] = "instrumental"
+    
+    # Detect tempo from filename
+    if any(word in filename_lower for word in ["fast", "quick", "upbeat", "energetic", "dance"]):
+        characteristics["tempo"] = "fast"
+    elif any(word in filename_lower for word in ["slow", "calm", "relaxing", "ambient", "chill"]):
+        characteristics["tempo"] = "slow"
+    
+    # Detect mood from filename
+    if any(word in filename_lower for word in ["happy", "joy", "celebration", "upbeat", "party"]):
+        characteristics["mood"] = "happy"
+    elif any(word in filename_lower for word in ["sad", "emotional", "dramatic", "melancholy"]):
+        characteristics["mood"] = "emotional"
+    elif any(word in filename_lower for word in ["energetic", "powerful", "intense", "epic"]):
+        characteristics["mood"] = "energetic"
+    elif any(word in filename_lower for word in ["calm", "peaceful", "relaxing", "meditation"]):
+        characteristics["mood"] = "calm"
+    
+    # Detect vocal presence
+    if any(word in filename_lower for word in ["vocals", "singing", "voice", "lyrics", "song"]):
+        characteristics["vocals"] = True
+        characteristics["vocal_confidence"] = 0.7
+    
+    # Generate descriptive text
+    description_parts = []
+    
+    # Audio type description
+    if characteristics["audio_type"] == "singing":
+        description_parts.append("singing performance with vocals")
+    elif characteristics["audio_type"] == "music":
+        description_parts.append("musical track")
+    elif characteristics["audio_type"] == "speech":
+        description_parts.append("spoken dialogue/voice")
+    elif characteristics["audio_type"] == "instrumental":
+        description_parts.append("instrumental music")
+    else:
+        description_parts.append("audio track")
+    
+    # Tempo description
+    if characteristics["tempo"] == "fast":
+        description_parts.append("with fast, energetic rhythm suitable for dancing")
+    elif characteristics["tempo"] == "slow":
+        description_parts.append("with slow, gentle rhythm")
+    else:
+        description_parts.append("with moderate tempo")
+    
+    # Mood description
+    if characteristics["mood"] == "happy":
+        description_parts.append("creating a joyful, upbeat mood")
+    elif characteristics["mood"] == "emotional":
+        description_parts.append("with emotional, dramatic atmosphere")
+    elif characteristics["mood"] == "energetic":
+        description_parts.append("building high energy and excitement")
+    elif characteristics["mood"] == "calm":
+        description_parts.append("establishing a peaceful, serene mood")
+    
+    # Vocal description
+    if characteristics["vocals"]:
+        description_parts.append("featuring vocal performance that should be lip-synced")
+    
+    characteristics["description"] = " ".join(description_parts) + "."
+    
+    return characteristics
+
+
+@app.post("/analyze-audio", response_model=dict)
+async def analyze_audio_endpoint(audio_file: UploadFile = File(...)):
+    """Analyze uploaded audio file for rhythm, tempo, and characteristics."""
+    try:
+        # Validate audio file
+        if not audio_file.content_type.startswith('audio/'):
+            return {"error": "Invalid file type. Please upload an audio file."}
+        
+        # Save audio file temporarily
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"audio_{timestamp}_{audio_file.filename}"
+        file_path = os.path.join(UPLOADS_DIR, filename)
+        
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(audio_file.file, buffer)
+        
+        # Basic audio analysis (for now, return file info)
+        # In a full implementation, you'd use librosa or similar for tempo/rhythm analysis
+        file_size = os.path.getsize(file_path)
+        
+        # Generate audio description for LTX-2 prompt enhancement using real audio analysis
+        audio_characteristics = analyze_real_audio_characteristics(file_path, audio_file.filename)
+        
+        # Add file format information
+        format_info = ""
+        if audio_file.filename.lower().endswith('.mp3'):
+            format_info = "MP3 format with compressed audio. "
+        elif audio_file.filename.lower().endswith('.wav'):
+            format_info = "WAV format with high-quality uncompressed audio. "
+        elif audio_file.filename.lower().endswith('.m4a'):
+            format_info = "M4A format with efficient compression. "
+        
+        # Combine format info with characteristics
+        audio_description = f"Uploaded audio file: {audio_file.filename} ({file_size/1024/1024:.1f}MB). {format_info}{audio_characteristics['description']} Use this audio as the soundtrack for synchronized performance."
+        
+        log_debug(f"Audio file analyzed: {audio_file.filename}, Size: {file_size} bytes")
+        
+        return {
+            "audio_description": audio_description,
+            "file_path": file_path,
+            "file_size": file_size,
+            "filename": audio_file.filename,
+            "characteristics": audio_characteristics
+        }
+        
+    except Exception as e:
+        log_debug(f"Error analyzing audio: {str(e)}")
+        return {"error": f"Error analyzing audio file: {str(e)}"}
 
 
 @app.post("/enhance", response_model=EnhanceResponse)
@@ -784,6 +1170,74 @@ User's Specifications:
 - Desired Style: '{instruction_text}'
 
 Generate a brief animation prompt now."""
+
+        elif request.prompt_type == "LTX2":
+            # LTX-2 video generation with synchronized audio
+            audio_generation = getattr(request, 'audio_generation', 'enabled') if hasattr(request, 'audio_generation') else 'enabled'
+            resolution = getattr(request, 'resolution', '4K') if hasattr(request, 'resolution') else '4K'
+            audio_description = getattr(request, 'audio_description', '') if hasattr(request, 'audio_description') else ''
+            
+            audio_instruction = ""
+            if audio_generation == 'enabled':
+                if audio_description:
+                    audio_instruction = f" Use the uploaded audio as the soundtrack: {audio_description} Generate synchronized lip-sync and dance movements that match the audio rhythm and tempo. The character should sing/dance in perfect sync with the uploaded audio track."
+                else:
+                    audio_instruction = " Include synchronized audio generation that matches the visual content - describe ambient sounds, dialogue, music, or effects that naturally complement the scene."
+            else:
+                audio_instruction = " Video only generation - no audio."
+            
+            resolution_instruction = f" Generate at {resolution} resolution with cinematic quality."
+            
+            # Add specific instructions for singing/dancing with uploaded audio
+            performance_instruction = ""
+            if audio_description:
+                # Parse characteristics from audio_description
+                if "singing" in audio_description.lower() or "vocals" in audio_description.lower():
+                    performance_instruction = " Focus on authentic singing performance with visible lip-sync, facial expressions showing emotion, and breathing patterns that match the vocal performance. "
+                elif "dance" in request.prompt.lower() or "dancing" in request.prompt.lower():
+                    # Use tempo information for more precise dance instructions
+                    if "very_fast" in audio_description.lower() or "fast tempo" in audio_description.lower():
+                        performance_instruction = " Focus on energetic, rapid dance movements synchronized to the fast audio rhythm with dynamic body motions, expressive gestures, and high-energy performance. "
+                    elif "very_slow" in audio_description.lower() or "slow tempo" in audio_description.lower():
+                        performance_instruction = " Focus on graceful, slow dance movements synchronized to the gentle audio rhythm with smooth body motions, elegant gestures, and flowing performance. "
+                    else:
+                        performance_instruction = " Focus on dance movements synchronized to the audio rhythm with body motions, gestures, and expressions that match the musical beat and tempo. "
+                
+                # Add energy-based instructions
+                if "high energy" in audio_description.lower() or "very_high" in audio_description.lower():
+                    performance_instruction += "Emphasize high-energy performance with dynamic movements and intense expressions. "
+                elif "low energy" in audio_description.lower() or "calm" in audio_description.lower():
+                    performance_instruction += "Emphasize gentle, controlled movements with calm expressions. "
+                
+                # Add mood-based instructions
+                if "happy" in audio_description.lower() or "joyful" in audio_description.lower():
+                    performance_instruction += "Emphasize joyful, positive expressions and upbeat movements. "
+                elif "emotional" in audio_description.lower() or "dramatic" in audio_description.lower():
+                    performance_instruction += "Emphasize emotional facial expressions and dramatic body language. "
+                
+                # Add danceability-based instructions
+                if "highly danceable" in audio_description.lower():
+                    performance_instruction += "Create performance with strong dance elements and rhythmic movements. "
+                elif "low danceability" in audio_description.lower():
+                    performance_instruction += "Focus more on emotional expression than complex dance movements. "
+            
+            meta_prompt = f"""You are a creative assistant for the LTX-2 text-to-video model, the first production-ready AI model with synchronized audio-video generation. Create a detailed, cinematic prompt{instruction_text}.
+
+LTX-2 SPECIAL FEATURES:
+- Native 4K resolution at 50 FPS
+- Synchronized audio-video generation in single pass
+- Up to 20 seconds video duration
+- Precise control over motion, structure, and camera
+- Multi-keyframe support for complex sequences
+- Perfect audio-video synchronization for singing and dancing
+
+{resolution_instruction}{audio_instruction}{performance_instruction}
+
+Describe the scene with rich visual detail, camera movements, lighting, and atmospheric elements. For character scenes, include expressions, gestures, and interactions. For environments, describe spatial depth, textures, and environmental details.
+
+{image_context}{text_emphasis}
+
+IMPORTANT: Keep your enhanced prompt under 2500 characters total. Focus on cinematic quality and precise visual storytelling. Do not add conversational fluff. User's idea: '{request.prompt}'"""
 
         elif request.prompt_type == "Image":
             # Determine character limit for this model

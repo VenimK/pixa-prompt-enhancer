@@ -155,6 +155,43 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Audio Upload Section -->
+            <div class="card audio-upload-card" id="audio-upload-card" style="display: none;">
+                <div class="card-header">
+                    <h3 class="card-title">Step 1.5: Upload Audio (Optional - LTX-2 Only)</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <div class="drop-zone" id="audio-drop-zone">
+                            <input type="file" id="audio-upload" accept="audio/*" class="drop-zone-input">
+                            <div class="drop-zone-content">
+                                <div class="drop-zone-icon">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M9 18V5l12-2v13"></path>
+                                        <circle cx="6" cy="18" r="3"></circle>
+                                        <circle cx="18" cy="16" r="3"></circle>
+                                    </svg>
+                                </div>
+                                <div class="drop-zone-text">
+                                    <p class="drop-zone-prompt">Drag & drop an audio file here, or click to select</p>
+                                    <p class="drop-zone-hint">Supports MP3, WAV, M4A, OGG • Max 50MB • For singing/dancing synchronization</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="audio-preview-container" style="display: none;">
+                        <div class="audio-preview">
+                            <audio id="audio-preview" controls style="width: 100%; margin: 10px 0;"></audio>
+                            <div class="audio-info">
+                                <span id="audio-file-name"></span>
+                                <button id="remove-audio-btn" class="btn btn-secondary btn-small">Remove Audio</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="card prompt-card">
                 <h2>Step 2: Enhance Your Prompt</h2>
                 <div class="selector">
@@ -164,6 +201,7 @@
                         <option value="3D">3D Model</option>
                         <option value="VEO">Video (VEO)</option>
                         <option value="WAN2">Animation (WAN2)</option>
+                        <option value="LTX2">Video (LTX-2)</option>
                     </select>
                 </div>
                 <div class="selector" id="model-selector-container">
@@ -747,6 +785,24 @@
                         <option value="Dissolving">Dissolving</option>
                         <option value="Morphing">Morphing</option>
                     </optgroup>
+                </select>
+            </div>
+
+            <!-- LTX-2 Specific Controls -->
+            <div class="selector" id="ltx2-controls-container" style="display: none;">
+                <label for="audio-generation-select">Audio Generation:</label>
+                <select id="audio-generation-select">
+                    <option value="enabled">Enabled (Synchronized Audio)</option>
+                    <option value="disabled">Disabled (Video Only)</option>
+                </select>
+            </div>
+
+            <div class="selector" id="ltx2-resolution-container" style="display: none;">
+                <label for="resolution-select">Resolution:</label>
+                <select id="resolution-select">
+                    <option value="4K">4K (Native 50 FPS)</option>
+                    <option value="1080p">1080p</option>
+                    <option value="720p">720p</option>
                 </select>
             </div>
 
