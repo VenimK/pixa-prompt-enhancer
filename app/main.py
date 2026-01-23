@@ -243,7 +243,7 @@ def limit_prompt_length(enhanced_prompt: str, model_type: str) -> str:
         "wan2": 800,  # WAN2 prompt limit
         "image": 3000,  # Image prompt type default
         "veo": 2000,  # Video prompt type default
-        "ltx2": 2500,  # LTX-2 prompt limit (supports longer prompts for audio-video sync)
+        "ltx2": 1500,  # LTX-2 prompt limit (aligned with official examples: 890-1404 chars)
         # AI Models - all set to 3000 except WAN2
         "default": 3000,
         "qwen": 3000,
@@ -1186,58 +1186,62 @@ Generate a brief animation prompt now."""
             else:
                 audio_instruction = " Video only generation - no audio."
             
-            resolution_instruction = f" Generate at {resolution} resolution with cinematic quality."
+            resolution_instruction = f""
             
             # Add specific instructions for singing/dancing with uploaded audio
             performance_instruction = ""
             if audio_description:
                 # Parse characteristics from audio_description
                 if "singing" in audio_description.lower() or "vocals" in audio_description.lower():
-                    performance_instruction = " Focus on authentic singing performance with visible lip-sync, facial expressions showing emotion, and breathing patterns that match the vocal performance. "
+                    performance_instruction = " Focus on audio-driven mouth motion and subtle facial movement influenced by the audio, suggesting singing in a restrained and natural way without exaggerated expressions. "
                 elif "dance" in request.prompt.lower() or "dancing" in request.prompt.lower():
                     # Use tempo information for more precise dance instructions
                     if "very_fast" in audio_description.lower() or "fast tempo" in audio_description.lower():
-                        performance_instruction = " Focus on energetic, rapid dance movements synchronized to the fast audio rhythm with dynamic body motions, expressive gestures, and high-energy performance. "
+                        performance_instruction = " Focus on rhythmic body motion with coordinated dance movements, expressive but controlled gestures that respond to the audio tempo. "
                     elif "very_slow" in audio_description.lower() or "slow tempo" in audio_description.lower():
-                        performance_instruction = " Focus on graceful, slow dance movements synchronized to the gentle audio rhythm with smooth body motions, elegant gestures, and flowing performance. "
+                        performance_instruction = " Focus on gentle, flowing body motion with smooth dance movements synchronized to the gentle audio rhythm. "
                     else:
-                        performance_instruction = " Focus on dance movements synchronized to the audio rhythm with body motions, gestures, and expressions that match the musical beat and tempo. "
+                        performance_instruction = " Focus on rhythmic body motion with coordinated dance movements and gestures that match the musical beat. "
                 
-                # Add energy-based instructions
+                # Add energy-based instructions (reduced intensity)
                 if "high energy" in audio_description.lower() or "very_high" in audio_description.lower():
-                    performance_instruction += "Emphasize high-energy performance with dynamic movements and intense expressions. "
+                    performance_instruction += "Emphasize rhythmic movement with controlled energy and natural expressions. "
                 elif "low energy" in audio_description.lower() or "calm" in audio_description.lower():
-                    performance_instruction += "Emphasize gentle, controlled movements with calm expressions. "
+                    performance_instruction += "Emphasize gentle, subtle movement with calm facial behavior. "
                 
-                # Add mood-based instructions
+                # Add mood-based instructions (more subtle)
                 if "happy" in audio_description.lower() or "joyful" in audio_description.lower():
-                    performance_instruction += "Emphasize joyful, positive expressions and upbeat movements. "
+                    performance_instruction += "Create positive, expressive presence through body language and subtle facial motion. "
                 elif "emotional" in audio_description.lower() or "dramatic" in audio_description.lower():
-                    performance_instruction += "Emphasize emotional facial expressions and dramatic body language. "
+                    performance_instruction += "Create emotional presence through controlled body movement and natural facial expressions. "
                 
                 # Add danceability-based instructions
                 if "highly danceable" in audio_description.lower():
-                    performance_instruction += "Create performance with strong dance elements and rhythmic movements. "
+                    performance_instruction += "Include rhythmic dance elements with natural, continuous motion. "
                 elif "low danceability" in audio_description.lower():
-                    performance_instruction += "Focus more on emotional expression than complex dance movements. "
+                    performance_instruction += "Focus on subtle body movement and emotional expression rather than complex dance. "
+                
+                # Add stability limiter (MANDATORY)
+                performance_instruction += "Natural motion, realistic timing, minimal facial distortion, no overacting or sudden movement. "
             
-            meta_prompt = f"""You are a creative assistant for the LTX-2 text-to-video model, the first production-ready AI model with synchronized audio-video generation. Create a detailed, cinematic prompt{instruction_text}.
+            meta_prompt = f"""You are a creative assistant for the LTX-2 text-to-video model. Create a concise, motion-focused prompt following this exact 7-point structure{instruction_text}.
 
-LTX-2 SPECIAL FEATURES:
-- Native 4K resolution at 50 FPS
-- Synchronized audio-video generation in single pass
-- Up to 20 seconds video duration
-- Precise control over motion, structure, and camera
-- Multi-keyframe support for complex sequences
-- Perfect audio-video synchronization for singing and dancing
+LTX-2 PROMPT STRUCTURE (follow this order):
+1. Main action in ONE sentence - What is happening right now?
+2. Movements and gestures - Head turns, walking pace, hair movement, hands, posture
+3. Character appearances - Clothing, age, accessories, expressions
+4. Environment - Location, background elements, depth
+5. Camera angle and movement - Tracking, static, close-up, wide, height
+6. Lighting and colors - Time of day, shadows, dominant tones
+7. Changes or events - Or clearly state that nothing changes
 
 {resolution_instruction}{audio_instruction}{performance_instruction}
 
-Describe the scene with rich visual detail, camera movements, lighting, and atmospheric elements. For character scenes, include expressions, gestures, and interactions. For environments, describe spatial depth, textures, and environmental details.
+CRITICAL: Keep your enhanced prompt under 1500 characters total. Use exactly 7 sentences maximum - one for each point above. Be concise and specific. Focus on natural motion and realistic timing. Do not add conversational fluff.
 
-{image_context}{text_emphasis}
+{image_context}
 
-IMPORTANT: Keep your enhanced prompt under 2500 characters total. Focus on cinematic quality and precise visual storytelling. Do not add conversational fluff. User's idea: '{request.prompt}'"""
+User's idea: '{request.prompt}'"""
 
         elif request.prompt_type == "Image":
             # Determine character limit for this model

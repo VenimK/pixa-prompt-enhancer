@@ -8,6 +8,7 @@ Pixa Prompt Enhancer is a web-based application that helps you create rich and d
   - Image (Text-to-Image)
   - VEO (Text-to-Video)
   - WAN2 (Image-to-Video)
+  - LTX-2 (Text-to-Video with Synchronized Audio)
 
 - **Creative Controls**
   - 100+ Artistic Styles
@@ -18,6 +19,8 @@ Pixa Prompt Enhancer is a web-based application that helps you create rich and d
 - **Smart Features**
   - Image-to-Prompt Analysis
   - Two-Image Analysis (A/B) with Combined + Per-Image references
+  - Real Audio Analysis (Tempo, Vocals, Energy, Danceability)
+  - Audio-Video Synchronization for LTX-2
   - Style Combination
   - Prompt Optimization
   - Character Limit Management
@@ -27,6 +30,41 @@ Pixa Prompt Enhancer is a web-based application that helps you create rich and d
   - Responsive Design
   - Easy Copy/Paste
   - Dark/Light Mode
+
+## 🎵 LTX-2 Audio Features
+
+The LTX-2 mode includes advanced audio upload and analysis capabilities for perfect audio-video synchronization:
+
+### Audio Upload & Analysis
+- **Supported Formats**: MP3, WAV, M4A, OGG, FLAC (up to 50MB)
+- **Real Audio Processing**: Uses librosa for professional audio analysis
+- **Drag & Drop Interface**: Easy file upload with preview
+- **Audio Preview**: Built-in audio player with controls
+
+### Smart Audio Detection
+- **Tempo Detection**: Real BPM analysis (e.g., 128.5 BPM)
+- **Vocal Detection**: Spectral analysis with confidence scores
+- **Energy Level Analysis**: Low/Medium/High/Very High classification
+- **Danceability Calculation**: Beat consistency and rhythm analysis
+- **Mood Detection**: Energetic/Calm/Emotional classification
+
+### Synchronized Performance Generation
+- **Lip-Sync Instructions**: Precise mouth movement matching vocals
+- **Dance Synchronization**: Movements matched to audio rhythm and tempo
+- **Performance Styles**: Singing, dancing, or speaking based on audio content
+- **Mood-Based Instructions**: Energy and emotion matched to audio characteristics
+
+### LTX-2 Controls
+- **Audio Generation**: Enable/disable synchronized audio
+- **Resolution Options**: 4K, 1080p, 720p output quality
+- **Character Limit**: 2500 characters for optimal LTX-2 performance
+
+#### Example Workflow
+1. Upload reference image of character
+2. Upload audio file (song/music)
+3. Select "Video (LTX-2)" mode
+4. Write prompt: "Character from reference image sings and dances to uploaded music"
+5. Enhanced prompt includes: "singing performance with vocals (0.8 confidence) with fast tempo (128.5 BPM) highly danceable rhythm creating high energy and excitement featuring vocal performance that should be precisely lip-synced"
 
 ## 🎨 Available Styles
 
@@ -107,6 +145,12 @@ Pixa Prompt Enhancer offers a wide variety of artistic styles to enhance your pr
     pip install -r requirements.txt
     ```
 
+    **For LTX-2 Audio Features** (optional but recommended):
+    ```bash
+    pip install librosa numpy scipy
+    ```
+    *Note: librosa enables real audio analysis (tempo detection, vocal detection, etc.). Without it, the system will fall back to filename-based analysis.*
+
 4.  **Set up the API Key:**
     This application uses the Google Generative AI SDK and requires a `GOOGLE_API_KEY` to function.
 
@@ -157,13 +201,20 @@ If you receive an error like `400 API key not valid`, it usually means the envir
         -   Use per-slot controls to Replace/Remove A or B. You can also add a second image later.
         -   Click "Analyze Image". The app returns a structured Combined analysis and labeled "Reference A" / "Reference B" summaries.
         -   When you replace or remove an image, analysis auto-refreshes to keep references in sync.
+    -   **Optional: Upload Audio (LTX-2 only):**
+        -   Select "Video (LTX-2)" as the prompt type.
+        -   Audio upload section will appear automatically.
+        -   Drag & drop or select an audio file (MP3, WAV, M4A, OGG, FLAC).
+        -   System analyzes audio for tempo, vocals, energy, and danceability.
+        -   Preview audio with built-in player controls.
     -   **Enhance Your Prompt:**
-        -   Select the prompt type (Image, VEO, or WAN2).
+        -   Select the prompt type (Image, VEO, WAN2, or LTX-2).
         -   Choose an AI model (for Image prompts).
         -   Enter your base prompt in the text area.
         -   Choose your desired style, cinematography, and lighting from the dropdown menus.
         -   Optionally add text emphasis with advanced formatting options.
         -   For WAN2, select motion effects if desired.
+        -   For LTX-2, configure audio generation and resolution settings.
         -   Click the "Enhance Prompt" button.
         -   The enhanced prompt will be displayed in the "Enhanced Prompt" section.
 
@@ -244,6 +295,31 @@ Transfer the design from Reference A onto the cylindrical surface of Reference B
 Wrap seamlessly around the circumference; correct radial perspective and distortion for curved surface; align logo/artwork to front-center; respect top and bottom rims; no visible seam on front view; no stretching or warping at edges.
 
 Photorealistic product packaging with metallic foil label; maintain Reference B lighting, reflections, and camera angle; label conforms perfectly to object shape.
+```
+
+### LTX-2 Audio-Video Examples
+
+#### Character Singing with Audio
+
+- **Singing Performance**
+```text
+Character from reference image performs authentic singing with visible lip-sync, facial expressions showing emotion, and breathing patterns that match the vocal performance. Use the uploaded audio as the soundtrack: singing performance with vocals (0.8 confidence) with fast tempo (128.5 BPM) highly danceable rhythm creating high energy and excitement featuring vocal performance that should be precisely lip-synced. Generate at 4K resolution with cinematic quality.
+
+Focus on authentic singing performance with visible lip-sync, facial expressions showing emotion, and breathing patterns that match the vocal performance. Emphasize joyful, positive expressions and upbeat movements. Create performance with strong dance elements and rhythmic movements.
+```
+
+- **Dancing to Music**
+```text
+Character from reference image dances energetically to the uploaded music with synchronized movements. Use the uploaded audio as the soundtrack: instrumental dance music with fast tempo (140.2 BPM) highly danceable rhythm building high energy and excitement. Generate at 4K resolution with cinematic quality.
+
+Focus on energetic, rapid dance movements synchronized to the fast audio rhythm with dynamic body motions, expressive gestures, and high-energy performance. Emphasize high-energy performance with dynamic movements and intense expressions. Create performance with strong dance elements and rhythmic movements.
+```
+
+- **Emotional Performance**
+```text
+Character from reference image delivers emotional performance with slow, expressive movements. Use the uploaded audio as the soundtrack: singing performance with vocals (0.9 confidence) with slow tempo (75.3 BPM) low danceability with emotional, expressive atmosphere featuring vocal performance that should be precisely lip-synced. Generate at 1080p resolution with cinematic quality.
+
+Focus on authentic singing performance with visible lip-sync, facial expressions showing emotion, and breathing patterns that match the vocal performance. Emphasize gentle, controlled movements with calm expressions. Emphasize emotional facial expressions and dramatic body language. Focus more on emotional expression than complex dance movements.
 ```
 
 ## Contributing
