@@ -1252,7 +1252,8 @@ CRITICAL FRAME AWARENESS:
 - If shot is chest up: NO hip movements, waist movements, or arm gestures below chest
 - If shot is close-up on face: ONLY head, eye, and mouth movements
 - Only describe movements that are VISIBLE in the specified frame
-- If user wants "no movement", "static", or "singing only": ONLY describe lip-sync and subtle facial expressions
+- If user wants "no movement", "static", "singing only", "still", or "stationary": ONLY describe lip-sync and subtle facial expressions, NO arm movements, head tilts, or body swaying
+- If user says "static upper body" or "maintains static posture": NO arm movements, torso movements, or shoulder movements
 
 {resolution_instruction}{audio_instruction}{performance_instruction}
 
