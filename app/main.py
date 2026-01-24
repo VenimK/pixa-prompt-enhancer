@@ -1247,6 +1247,12 @@ LTX-2 PROMPT STRUCTURE (follow this order, no numbers):
 - Lighting and colors - Time of day, shadows, dominant tones
 - Changes or events - Or clearly state that nothing changes
 
+CRITICAL FRAME AWARENESS:
+- If shot is from waist up: NO foot taps, leg movements, or walking descriptions
+- If shot is chest up: NO hip movements, waist movements, or arm gestures below chest
+- If shot is close-up on face: ONLY head, eye, and mouth movements
+- Only describe movements that are VISIBLE in the specified frame
+
 {resolution_instruction}{audio_instruction}{performance_instruction}
 
 CRITICAL: Keep your enhanced prompt under 1500 characters total. Use exactly 7 sentences maximum - one for each point above. Be concise and specific. Focus on natural motion and realistic timing. Do not add conversational fluff.
