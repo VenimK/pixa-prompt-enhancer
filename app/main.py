@@ -1193,47 +1193,59 @@ Generate a brief animation prompt now."""
             if audio_description:
                 # Parse characteristics from audio_description
                 if "singing" in audio_description.lower() or "vocals" in audio_description.lower():
-                    performance_instruction = " Focus on audio-driven mouth motion and subtle facial movement influenced by the audio, suggesting singing in a restrained and natural way without exaggerated expressions. "
+                    performance_instruction = " Focus on subtle mouth motion and natural facial movement influenced by vocal rhythm - gentle lip movement, slight jaw motion, and expressive eyes that suggest singing without exaggerated mouth openings. "
                 elif "dance" in request.prompt.lower() or "dancing" in request.prompt.lower():
                     # Use tempo information for more precise dance instructions
                     if "very_fast" in audio_description.lower() or "fast tempo" in audio_description.lower():
-                        performance_instruction = " Focus on rhythmic body motion with coordinated dance movements, expressive but controlled gestures that respond to the audio tempo. "
+                        performance_instruction = " Focus on energetic but controlled rhythmic body motion with quick, precise movements that match the fast tempo - head nods, shoulder movements, and hand gestures in sync with rapid beats. "
                     elif "very_slow" in audio_description.lower() or "slow tempo" in audio_description.lower():
-                        performance_instruction = " Focus on gentle, flowing body motion with smooth dance movements synchronized to the gentle audio rhythm. "
+                        performance_instruction = " Focus on gentle, flowing body motion with slow, deliberate movements - subtle swaying, soft hand gestures, and gradual weight shifts synchronized to the slow rhythm. "
                     else:
-                        performance_instruction = " Focus on rhythmic body motion with coordinated dance movements and gestures that match the musical beat. "
+                        performance_instruction = " Focus on rhythmic body motion with coordinated dance movements - head bobs, shoulder movements, and hand gestures that naturally respond to the musical beat and rhythm. "
                 
-                # Add energy-based instructions (reduced intensity)
+                # Add energy-based instructions
                 if "high energy" in audio_description.lower() or "very_high" in audio_description.lower():
-                    performance_instruction += "Emphasize rhythmic movement with controlled energy and natural expressions. "
+                    performance_instruction += "Emphasize dynamic movement with increased motion range while maintaining natural body mechanics - more expressive gestures, broader movements, and stronger rhythmic responses. "
                 elif "low energy" in audio_description.lower() or "calm" in audio_description.lower():
-                    performance_instruction += "Emphasize gentle, subtle movement with calm facial behavior. "
+                    performance_instruction += "Emphasize minimal, subtle movement with gentle body language - soft gestures, slight swaying, and calm facial expressions that match the tranquil mood. "
                 
-                # Add mood-based instructions (more subtle)
+                # Add mood-based instructions
                 if "happy" in audio_description.lower() or "joyful" in audio_description.lower():
-                    performance_instruction += "Create positive, expressive presence through body language and subtle facial motion. "
+                    performance_instruction += "Create positive presence through natural smiles, bright eyes, and open body posture - subtle expressions that convey joy without overacting. "
                 elif "emotional" in audio_description.lower() or "dramatic" in audio_description.lower():
-                    performance_instruction += "Create emotional presence through controlled body movement and natural facial expressions. "
+                    performance_instruction += "Create emotional presence through controlled body movement and expressive facial expressions - meaningful gestures and nuanced expressions that convey depth. "
+                elif "sad" in audio_description.lower() or "melancholy" in audio_description.lower():
+                    performance_instruction += "Create somber presence through gentle, slow movements and soft facial expressions - downward gaze, slight shoulder movements, and restrained gestures. "
                 
                 # Add danceability-based instructions
                 if "highly danceable" in audio_description.lower():
-                    performance_instruction += "Include rhythmic dance elements with natural, continuous motion. "
+                    performance_instruction += "Include rhythmic dance elements with natural, continuous motion - foot taps, hip movements, and coordinated upper body gestures that flow with the music. "
                 elif "low danceability" in audio_description.lower():
-                    performance_instruction += "Focus on subtle body movement and emotional expression rather than complex dance. "
+                    performance_instruction += "Focus on subtle body movement and emotional expression rather than complex dance - gentle swaying, head movement, and expressive hand gestures. "
+                
+                # Add genre-specific instructions
+                if "electronic" in audio_description.lower() or "edm" in audio_description.lower():
+                    performance_instruction += "Emphasize sharp, precise movements with electronic music responsiveness - quick head nods, robotic gestures, and staccato motions that match electronic beats. "
+                elif "acoustic" in audio_description.lower() or "folk" in audio_description.lower():
+                    performance_instruction += "Emphasize organic, flowing movements with acoustic music responsiveness - gentle swaying, natural gestures, and smooth body motions that match acoustic rhythms. "
+                elif "rock" in audio_description.lower() or "metal" in audio_description.lower():
+                    performance_instruction += "Emphasize strong, rhythmic movements with rock music responsiveness - head nods, shoulder movements, and powerful gestures that match rock beats. "
+                elif "jazz" in audio_description.lower() or "blues" in audio_description.lower():
+                    performance_instruction += "Emphasize fluid, expressive movements with jazz responsiveness - smooth body motions, improvisational gestures, and rhythmic variations that match jazz rhythms. "
                 
                 # Add stability limiter (MANDATORY)
                 performance_instruction += "Natural motion, realistic timing, minimal facial distortion, no overacting or sudden movement. "
             
             meta_prompt = f"""You are a creative assistant for the LTX-2 text-to-video model. Create a concise, motion-focused prompt following this exact 7-point structure{instruction_text}.
 
-LTX-2 PROMPT STRUCTURE (follow this order):
-1. Main action in ONE sentence - What is happening right now?
-2. Movements and gestures - Head turns, walking pace, hair movement, hands, posture
-3. Character appearances - Clothing, age, accessories, expressions
-4. Environment - Location, background elements, depth
-5. Camera angle and movement - Tracking, static, close-up, wide, height
-6. Lighting and colors - Time of day, shadows, dominant tones
-7. Changes or events - Or clearly state that nothing changes
+LTX-2 PROMPT STRUCTURE (follow this order, no numbers):
+- Main action in ONE sentence - What is happening right now?
+- Movements and gestures - Head turns, walking pace, hair movement, hands, posture
+- Character appearances - Clothing, age, accessories, expressions
+- Environment - Location, background elements, depth
+- Camera angle and movement - Tracking, static, close-up, wide, height
+- Lighting and colors - Time of day, shadows, dominant tones
+- Changes or events - Or clearly state that nothing changes
 
 {resolution_instruction}{audio_instruction}{performance_instruction}
 
