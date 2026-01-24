@@ -1254,6 +1254,7 @@ CRITICAL FRAME AWARENESS:
 - Only describe movements that are VISIBLE in the specified frame
 - If user wants "no movement", "static", "singing only", "still", or "stationary": ONLY describe lip-sync and subtle facial expressions, NO arm movements, head tilts, or body swaying
 - If user says "static upper body" or "maintains static posture": NO arm movements, torso movements, or shoulder movements
+- ABSOLUTE STATIC RULE: If any static keywords are detected, NO hand gestures, arm movements, finger movements, or body movements of any kind - ONLY lip-sync and eye/eyebrow movements allowed
 
 {resolution_instruction}{audio_instruction}{performance_instruction}
 
