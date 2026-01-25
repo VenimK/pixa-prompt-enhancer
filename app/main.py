@@ -950,9 +950,14 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                     
                     log_debug(f"Vocal count analysis: density={vocal_density:.4f}, complexity={normalized_complexity:.2f}, count={characteristics['vocal_count']}")
                 else:
+                    characteristics["vocal_density"] = max(vocal_density, 1e-6)
                     characteristics["vocal_count"] = "unknown"
-                    characteristics["vocal_density"] = 0.0
                     characteristics["vocal_separation"] = "unknown"
+
+                # Fallback: if vocals are detected but count is unknown, assume solo
+                if characteristics["vocal_count"] == "unknown" and characteristics.get("vocal_confidence", 0) >= 0.6:
+                    characteristics["vocal_count"] = "solo"
+                    characteristics["vocal_separation"] = "single_voice"
                 
             except Exception as vocal_error:
                 log_debug(f"Vocal count analysis failed: {vocal_error}")
