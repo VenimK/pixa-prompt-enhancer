@@ -374,11 +374,33 @@ def generate_enhanced_ltx2_prompt(audio_characteristics: dict, base_prompt: str)
     # 12. Advanced Lip-Sync Instructions
     if audio_characteristics.get('has_vocals'):
         vocal_confidence = audio_characteristics.get('vocal_confidence', 0)
+        vocal_count = audio_characteristics.get('vocal_count', 'unknown')
+        vocal_separation = audio_characteristics.get('vocal_separation', 'unknown')
         
         if vocal_confidence > 0.8:
             prompt_parts.append("featuring precise, detailed lip-sync to every vocal nuance and syllable")
         elif vocal_confidence > 0.6:
             prompt_parts.append("with accurate lip-sync synchronized to vocal delivery")
+        
+        # Add vocal count specific instructions
+        if vocal_count == "solo":
+            prompt_parts.append("with focused single vocal performance and clear articulation")
+        elif vocal_count == "duo":
+            prompt_parts.append("with coordinated dual vocal performance and harmonized delivery")
+        elif vocal_count == "small_group":
+            prompt_parts.append("with small group vocal dynamics and collaborative performance")
+        elif vocal_count == "group":
+            prompt_parts.append("with ensemble vocal performance and group coordination")
+        elif vocal_count == "choir":
+            prompt_parts.append("with choral vocal arrangement and harmonized ensemble performance")
+        
+        # Add vocal separation instructions
+        if vocal_separation == "lead_with_backup":
+            prompt_parts.append("featuring prominent lead vocals with supporting harmonies")
+        elif vocal_separation == "harmonized_vocals":
+            prompt_parts.append("with blended harmonized vocal textures and balanced voices")
+        elif vocal_separation == "multiple_voices":
+            prompt_parts.append("with layered vocal performances and rich harmonic textures")
         
         # Add vocal style specific instructions
         if audio_characteristics.get('vocal_style') == 'spoken':
@@ -677,7 +699,11 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
             "genre": "unknown",
             "spectral_characteristics": {},
             "dynamic_range": "medium",
-            "emotional_arc": "stable"
+            "emotional_arc": "stable",
+            # NEW: Vocal count detection
+            "vocal_count": "unknown",
+            "vocal_density": 0.0,
+            "vocal_separation": "unknown"
         }
         
         # 1. Tempo Detection
@@ -841,7 +867,86 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                     characteristics["vocal_style"] = "unknown"
                 characteristics["vocal_range"] = "medium"
         
-        # 8. Syncopation Detection
+        # 8. Vocal Count Detection
+        if characteristics["has_vocals"]:
+            try:
+                # Advanced vocal analysis using harmonic-percussive separation
+                harmonic, percussive = librosa.effects.hpss(y)
+                
+                # Detect vocal activity across frequency ranges
+                # Human voices typically occupy 80-4000 Hz
+                vocal_freq_range = librosa.util.utils.cqt_frequencies(
+                    fmin=librosa.note_to_hz('E2'),  # ~82 Hz
+                    fmax=librosa.note_to_hz('C6'),  # ~1047 Hz
+                    n_bins=48
+                )
+                
+                # Compute spectral features for vocal detection
+                S = np.abs(librosa.stft(y))
+                S_harmonic = np.abs(librosa.stft(harmonic))
+                
+                # Find vocal-friendly frequency bands
+                vocal_bands = []
+                for i, freq in enumerate(vocal_freq_range):
+                    if 80 <= freq <= 4000:  # Human voice range
+                        band_energy = np.mean(S_harmonic[i, :])
+                        vocal_bands.append(band_energy)
+                
+                # Calculate vocal density (how much of the audio contains vocals)
+                if vocal_bands:
+                    vocal_density = float(np.mean(vocal_bands))
+                    characteristics["vocal_density"] = vocal_density
+                    
+                    # Detect multiple vocals through harmonic complexity
+                    harmonic_variance = float(np.var(vocal_bands))
+                    
+                    # Use MFCC analysis for vocal separation
+                    mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
+                    mfcc_std = np.std(mfccs, axis=1)
+                    
+                    # Count potential vocal sources based on:
+                    # 1. Harmonic complexity (multiple voices = more complex harmonics)
+                    # 2. MFCC variation (different voices = different patterns)
+                    # 3. Spectral variance (multiple voices = more variance)
+                    
+                    vocal_complexity = harmonic_variance + float(np.mean(mfcc_std[1:4]))
+                    spectral_variance = float(np.var(S_harmonic))
+                    
+                    # Vocal count estimation based on complexity
+                    if vocal_complexity < 10:
+                        characteristics["vocal_count"] = "solo"
+                        characteristics["vocal_separation"] = "single_voice"
+                    elif vocal_complexity < 25:
+                        characteristics["vocal_count"] = "duo"
+                        characteristics["vocal_separation"] = "two_voices"
+                    elif vocal_complexity < 50:
+                        characteristics["vocal_count"] = "small_group"
+                        characteristics["vocal_separation"] = "few_voices"
+                    elif vocal_complexity < 100:
+                        characteristics["vocal_count"] = "group"
+                        characteristics["vocal_separation"] = "multiple_voices"
+                    else:
+                        characteristics["vocal_count"] = "choir"
+                        characteristics["vocal_separation"] = "many_voices"
+                    
+                    # Detect lead vs backup vocals
+                    if characteristics["vocal_count"] in ["duo", "small_group", "group"]:
+                        # Look for dominant voice patterns
+                        dominant_freq = np.argmax(np.mean(S_harmonic, axis=1))
+                        if dominant_freq < len(vocal_freq_range) * 0.3:  # Lower frequencies dominate
+                            characteristics["vocal_separation"] = "lead_with_backup"
+                        elif dominant_freq > len(vocal_freq_range) * 0.7:  # Higher frequencies dominate
+                            characteristics["vocal_separation"] = "harmonized_vocals"
+                    
+                    log_debug(f"Vocal count analysis: complexity={vocal_complexity:.2f}, count={characteristics['vocal_count']}")
+                
+            except Exception as vocal_error:
+                log_debug(f"Vocal count analysis failed: {vocal_error}")
+                characteristics["vocal_count"] = "unknown"
+                characteristics["vocal_density"] = 0.0
+                characteristics["vocal_separation"] = "unknown"
+        
+        # 9. Syncopation Detection
         if len(beats) > 10:
             # Look for off-beat energy
             beat_frames = librosa.util.fix_frames(beats)
