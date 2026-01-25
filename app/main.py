@@ -889,66 +889,75 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                 
                 # Use mel spectrogram to estimate vocal-band energy (80-4000 Hz)
                 mel = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128, fmin=80, fmax=4000)
-                mel_db = librosa.power_to_db(mel, ref=np.max)
-                vocal_density = float(np.mean(mel_db))
+                vocal_energy = float(np.mean(mel))  # Use raw energy, not dB
                 
                 # Focus on vocal frequency range (80-4000 Hz)
-                freqs = librosa.fft_frequencies(sr=sr, n_fft=S.shape[0])
+                freqs = librosa.fft_frequencies(sr=sr, n_fft=S.shape[0]*2-1)
                 vocal_mask = (freqs >= 80) & (freqs <= 4000)
                 S_vocal = S_harmonic[vocal_mask, :]
                 
-                # Calculate vocal density (how much of the audio contains vocals)
+                # Calculate vocal density from harmonic content
                 if S_vocal.size > 0:
-                    vocal_density = max(vocal_density, 1e-6)
+                    vocal_density = float(np.mean(S_vocal))
                     characteristics["vocal_density"] = vocal_density
                     
                     # Detect multiple vocals through harmonic complexity
                     harmonic_variance = float(np.var(S_vocal))
                     
-                    # Use MFCC analysis for vocal separation
-                    mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
+                    # Use MFCC analysis for vocal separation - key for detecting multiple voices
+                    mfccs = librosa.feature.mfcc(y=harmonic, sr=sr, n_mfcc=20)
                     mfcc_std = np.std(mfccs, axis=1)
+                    mfcc_delta = librosa.feature.delta(mfccs)
+                    mfcc_delta_std = float(np.mean(np.std(mfcc_delta, axis=1)))
                     
-                    # Count potential vocal sources based on:
-                    # 1. Harmonic complexity (multiple voices = more complex harmonics)
-                    # 2. MFCC variation (different voices = different patterns)
-                    # 3. Spectral variance (multiple voices = more variance)
+                    # Spectral contrast - helps detect voice layering
+                    contrast = librosa.feature.spectral_contrast(y=harmonic, sr=sr)
+                    contrast_var = float(np.mean(np.var(contrast, axis=1)))
                     
-                    vocal_complexity = harmonic_variance + float(np.mean(mfcc_std[1:4]))
+                    # Chroma features - detect harmonic layering (multiple voices = more chroma activity)
+                    chroma = librosa.feature.chroma_stft(y=harmonic, sr=sr)
+                    chroma_complexity = float(np.mean(np.var(chroma, axis=1)))
                     
-                    # Normalize complexity based on vocal density
-                    if vocal_density > 0:
-                        normalized_complexity = vocal_complexity / vocal_density
-                    else:
-                        normalized_complexity = vocal_complexity
+                    # Combined vocal complexity score
+                    vocal_complexity = (
+                        harmonic_variance * 0.2 +
+                        float(np.mean(mfcc_std[1:6])) * 10 +
+                        mfcc_delta_std * 5 +
+                        contrast_var * 0.1 +
+                        chroma_complexity * 100
+                    )
                     
-                    # Vocal count estimation based on normalized complexity
-                    if normalized_complexity < 50:
+                    log_debug(f"Vocal analysis: energy={vocal_energy:.4f}, variance={harmonic_variance:.2f}, mfcc_delta={mfcc_delta_std:.4f}, contrast={contrast_var:.4f}, chroma={chroma_complexity:.4f}, complexity={vocal_complexity:.2f}")
+                    
+                    # Vocal count estimation based on complexity
+                    # Higher complexity = more voices/harmonies
+                    if vocal_complexity < 15:
                         characteristics["vocal_count"] = "solo"
                         characteristics["vocal_separation"] = "single_voice"
-                    elif normalized_complexity < 150:
+                    elif vocal_complexity < 25:
                         characteristics["vocal_count"] = "duo"
                         characteristics["vocal_separation"] = "two_voices"
-                    elif normalized_complexity < 300:
+                    elif vocal_complexity < 40:
                         characteristics["vocal_count"] = "small_group"
                         characteristics["vocal_separation"] = "few_voices"
-                    elif normalized_complexity < 600:
+                    elif vocal_complexity < 60:
                         characteristics["vocal_count"] = "group"
                         characteristics["vocal_separation"] = "multiple_voices"
                     else:
                         characteristics["vocal_count"] = "choir"
                         characteristics["vocal_separation"] = "many_voices"
                     
-                    # Detect lead vs backup vocals
+                    # Detect lead vs backup vocals for non-solo
                     if characteristics["vocal_count"] in ["duo", "small_group", "group"]:
-                        # Look for dominant voice patterns
-                        dominant_freq_idx = np.argmax(np.mean(S_vocal, axis=1))
-                        if dominant_freq_idx < len(S_vocal) * 0.3:  # Lower frequencies dominate
+                        # Look for dominant voice patterns using spectral centroid variance
+                        centroid = librosa.feature.spectral_centroid(y=harmonic, sr=sr)
+                        centroid_var = float(np.var(centroid))
+                        if centroid_var > 100000:  # High variance = distinct lead + backup
                             characteristics["vocal_separation"] = "lead_with_backup"
-                        elif dominant_freq_idx > len(S_vocal) * 0.7:  # Higher frequencies dominate
+                        else:  # Low variance = harmonized together
                             characteristics["vocal_separation"] = "harmonized_vocals"
                     
-                    log_debug(f"Vocal count analysis: density={vocal_density:.4f}, complexity={normalized_complexity:.2f}, count={characteristics['vocal_count']}")
+                    log_debug(f"Vocal count result: count={characteristics['vocal_count']}, separation={characteristics['vocal_separation']}")
                 else:
                     characteristics["vocal_count"] = "unknown"
                     characteristics["vocal_density"] = 0.0
