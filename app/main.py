@@ -887,6 +887,11 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                 S = np.abs(librosa.stft(y))
                 S_harmonic = np.abs(librosa.stft(harmonic))
                 
+                # Use mel spectrogram to estimate vocal-band energy (80-4000 Hz)
+                mel = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128, fmin=80, fmax=4000)
+                mel_db = librosa.power_to_db(mel, ref=np.max)
+                vocal_density = float(np.mean(mel_db))
+                
                 # Focus on vocal frequency range (80-4000 Hz)
                 freqs = librosa.fft_frequencies(sr=sr, n_fft=S.shape[0])
                 vocal_mask = (freqs >= 80) & (freqs <= 4000)
@@ -894,7 +899,7 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                 
                 # Calculate vocal density (how much of the audio contains vocals)
                 if S_vocal.size > 0:
-                    vocal_density = float(np.mean(S_vocal))
+                    vocal_density = max(vocal_density, 1e-6)
                     characteristics["vocal_density"] = vocal_density
                     
                     # Detect multiple vocals through harmonic complexity
