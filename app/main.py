@@ -1204,6 +1204,22 @@ Generate a brief animation prompt now."""
             character_coordination = getattr(request, 'character_coordination', 'independent') if hasattr(request, 'character_coordination') else 'independent'
             object_interaction = getattr(request, 'object_interaction', 'none') if hasattr(request, 'object_interaction') else 'none'
             
+            # Add specific instructions for singing/dancing with uploaded audio
+            performance_instruction = ""
+            
+            # Add movement level control
+            movement_instruction = ""
+            if movement_level == 'static':
+                movement_instruction = " ABSOLUTE STATIC PERFORMANCE: Only lip-sync and subtle eye movements allowed. No head movement, no arm gestures, no body swaying, no shoulder movements. Character remains completely still except for mouth movement and minimal facial expressions. "
+            elif movement_level == 'minimal':
+                movement_instruction = " MINIMAL MOVEMENT: Only subtle head movement, slight shoulder motion, and gentle hand gestures. No large body movements, no dramatic swaying, no exaggerated gestures. Focus on restrained, natural motion. "
+            elif movement_level == 'natural':
+                movement_instruction = " NATURAL MOVEMENT: Normal body movement including head turns, shoulder movements, arm gestures, and gentle body swaying. Maintain realistic motion without exaggeration. "
+            elif movement_level == 'expressive':
+                movement_instruction = " EXPRESSIVE MOVEMENT: Full body movement including dynamic gestures, head movement, shoulder motion, arm gestures, and body swaying. Emphasize rhythmic, energetic motion that matches the audio. "
+            elif movement_level == 'dynamic':
+                movement_instruction = " DYNAMIC MOVEMENT: Highly energetic and expressive full-body movement. Include dramatic gestures, head movement, shoulder motion, arm gestures, body swaying, and rhythmic dancing. Emphasize powerful, athletic motion. "
+            
             # AUTO-DETECT from audio_description if not explicitly set
             if audio_description:
                 # Auto-detect genre from audio description
@@ -1449,33 +1465,18 @@ Generate a brief animation prompt now."""
             
             resolution_instruction = f""
             
-            # Add specific instructions for singing/dancing with uploaded audio
-            performance_instruction = ""
-            
-            # Add movement level control
-            movement_instruction = ""
-            if movement_level == 'static':
-                movement_instruction = " ABSOLUTE STATIC PERFORMANCE: Only lip-sync and subtle eye movements allowed. No head movement, no arm gestures, no body swaying, no shoulder movements. Character remains completely still except for mouth movement and minimal facial expressions. "
-            elif movement_level == 'minimal':
-                movement_instruction = " MINIMAL MOVEMENT: Only subtle head movement, slight shoulder motion, and gentle hand gestures. No large body movements, no dramatic swaying, no exaggerated gestures. Focus on restrained, natural motion. "
-            elif movement_level == 'natural':
-                movement_instruction = " NATURAL MOVEMENT: Normal body movement including head turns, shoulder movements, arm gestures, and gentle body swaying. Maintain realistic motion without exaggeration. "
-            elif movement_level == 'expressive':
-                movement_instruction = " EXPRESSIVE MOVEMENT: Full body movement including dynamic gestures, head movement, shoulder motion, arm gestures, and body swaying. Emphasize rhythmic, energetic motion that matches the audio. "
-            elif movement_level == 'dynamic':
-                movement_instruction = " DYNAMIC MOVEMENT: Highly energetic and expressive full-body movement. Include dramatic gestures, head movement, shoulder motion, arm gestures, body swaying, and rhythmic dancing. Emphasize powerful, athletic motion. "
             if audio_description:
                 # Parse characteristics from audio_description
                 if "singing" in audio_description.lower() or "vocals" in audio_description.lower():
-                    performance_instruction = " Focus on subtle mouth motion and natural facial movement influenced by vocal rhythm - gentle lip movement, slight jaw motion, and expressive eyes that suggest singing without exaggerated mouth openings. "
+                    performance_instruction += " Focus on subtle mouth motion and natural facial movement influenced by vocal rhythm - gentle lip movement, slight jaw motion, and expressive eyes that suggest singing without exaggerated mouth openings. "
                 elif "dance" in request.prompt.lower() or "dancing" in request.prompt.lower():
                     # Use tempo information for more precise dance instructions
                     if "very_fast" in audio_description.lower() or "fast tempo" in audio_description.lower():
-                        performance_instruction = " Focus on energetic but controlled rhythmic body motion with quick, precise movements that match the fast tempo - head nods, shoulder movements, and hand gestures in sync with rapid beats. "
+                        performance_instruction += " Focus on energetic but controlled rhythmic body motion with quick, precise movements that match the fast tempo - head nods, shoulder movements, and hand gestures in sync with rapid beats. "
                     elif "very_slow" in audio_description.lower() or "slow tempo" in audio_description.lower():
-                        performance_instruction = " Focus on gentle, flowing body motion with slow, deliberate movements - subtle swaying, soft hand gestures, and gradual weight shifts synchronized to the slow rhythm. "
+                        performance_instruction += " Focus on gentle, flowing body motion with slow, deliberate movements - subtle swaying, soft hand gestures, and gradual weight shifts synchronized to the slow rhythm. "
                     else:
-                        performance_instruction = " Focus on rhythmic body motion with coordinated dance movements - head bobs, shoulder movements, and hand gestures that naturally respond to the musical beat and rhythm. "
+                        performance_instruction += " Focus on rhythmic body motion with coordinated dance movements - head bobs, shoulder movements, and hand gestures that naturally respond to the musical beat and rhythm. "
                 
                 # Add energy-based instructions
                 if "high energy" in audio_description.lower() or "very_high" in audio_description.lower():
