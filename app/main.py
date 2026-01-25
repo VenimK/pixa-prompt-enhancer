@@ -931,16 +931,16 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                     
                     # Vocal count estimation based on complexity
                     # Higher complexity = more voices/harmonies
-                    if vocal_complexity < 15:
+                    if vocal_complexity < 30:
                         characteristics["vocal_count"] = "solo"
                         characteristics["vocal_separation"] = "single_voice"
-                    elif vocal_complexity < 25:
+                    elif vocal_complexity < 50:
                         characteristics["vocal_count"] = "duo"
                         characteristics["vocal_separation"] = "two_voices"
-                    elif vocal_complexity < 40:
+                    elif vocal_complexity < 80:
                         characteristics["vocal_count"] = "small_group"
                         characteristics["vocal_separation"] = "few_voices"
-                    elif vocal_complexity < 60:
+                    elif vocal_complexity < 120:
                         characteristics["vocal_count"] = "group"
                         characteristics["vocal_separation"] = "multiple_voices"
                     else:
