@@ -1222,7 +1222,26 @@ Generate a brief animation prompt now."""
             
             # AUTO-DETECT from audio_description if not explicitly set
             if audio_description:
-                # Auto-detect genre from audio description
+                # CORRECT COMMON AUDIO ANALYSIS ERRORS
+                
+                # Get audio analysis values if available
+                energy_level = getattr(request, 'energy_level', 'medium') if hasattr(request, 'energy_level') else 'medium'
+                danceability = getattr(request, 'danceability', 0.5) if hasattr(request, 'danceability') else 0.5
+                mood = getattr(request, 'mood', 'neutral') if hasattr(request, 'mood') else 'neutral'
+                
+                # Fix incorrect energy level for fast tempo music
+                if "very_fast" in audio_description.lower() and energy_level == "low":
+                    energy_level = "high"  # Fast tempo music can't be low energy
+                
+                # Fix danceability values over 1.0
+                if danceability and float(danceability) > 1.0:
+                    danceability = 1.0  # Cap at maximum
+                
+                # Fix mood for high-energy rock music
+                if "very_fast" in audio_description.lower() and mood == "neutral":
+                    mood = "energetic"  # Fast music should be energetic
+                
+                # Enhanced genre detection with speech-specific logic
                 if not genre_movement:
                     if "rock" in audio_description.lower() or "heavy" in audio_description.lower():
                         genre_movement = "rock"
@@ -1236,27 +1255,47 @@ Generate a brief animation prompt now."""
                         genre_movement = "jazz"
                     elif "folk" in audio_description.lower() or "acoustic" in audio_description.lower() or "organic" in audio_description.lower():
                         genre_movement = "folk"
+                    elif "dialogue" in audio_description.lower() or "spoken" in audio_description.lower() or "speech" in audio_description.lower():
+                        genre_movement = "storytelling"
+                    elif "narrative" in audio_description.lower() or "storytelling" in audio_description.lower():
+                        genre_movement = "storytelling"
                 
-                # Auto-detect tempo for movement speed
+                # Enhanced tempo detection with speech consideration
                 if movement_speed == 'normal':  # Only override if not explicitly set
                     if "very_fast" in audio_description.lower() or "fast tempo" in audio_description.lower():
                         movement_speed = "fast"
                     elif "very_slow" in audio_description.lower() or "slow tempo" in audio_description.lower():
-                        movement_speed = "slow_motion"
+                        # For speech, use natural speed instead of slow motion
+                        if "speech" in audio_description.lower() or "dialogue" in audio_description.lower() or "spoken" in audio_description.lower():
+                            movement_speed = "natural"
+                        else:
+                            movement_speed = "slow_motion"
                 
-                # Auto-detect energy for audio reactivity
+                # Enhanced energy detection with danceability paradox fix
                 if audio_reactivity == 'medium':  # Only override if not explicitly set
                     if "high energy" in audio_description.lower() or "very_high" in audio_description.lower():
                         audio_reactivity = "high"
-                    elif "low energy" in audio_description.lower() or "calm" in audio_description.lower():
+                    elif "low energy" in audio_description.lower() or "calm" in audio_description.lower() or "peaceful" in audio_description.lower():
                         audio_reactivity = "low"
+                    # Use corrected energy_level
+                    elif energy_level == "high":
+                        audio_reactivity = "high"
+                    # Speech-specific reactivity
+                    elif "speech" in audio_description.lower() or "dialogue" in audio_description.lower():
+                        audio_reactivity = "low"  # Speech should have low reactivity
                 
-                # Auto-detect singing style for lipsync intensity
+                # Enhanced lipsync intensity with speech-specific logic
                 if lipsync_intensity == 'natural':  # Only override if not explicitly set
                     if "dramatic" in audio_description.lower() or "powerful" in audio_description.lower():
                         lipsync_intensity = "exaggerated"
                     elif "subtle" in audio_description.lower() or "gentle" in audio_description.lower():
                         lipsync_intensity = "subtle"
+                    # Fast tempo singing should be exaggerated
+                    elif "very_fast" in audio_description.lower() and "singing" in audio_description.lower():
+                        lipsync_intensity = "exaggerated"
+                    # Speech-specific lipsync
+                    elif "speech" in audio_description.lower() or "dialogue" in audio_description.lower() or "calm" in audio_description.lower():
+                        lipsync_intensity = "subtle"  # Natural speech should be subtle
                 
                 # Generate comprehensive audio characteristics for enhanced prompts
                 audio_characteristics = []
@@ -1266,12 +1305,24 @@ Generate a brief animation prompt now."""
                     audio_characteristics.append("singing")
                 if "speaking" in audio_description.lower() or "spoken" in audio_description.lower():
                     audio_characteristics.append("speaking")
+                if "dialogue" in audio_description.lower():
+                    audio_characteristics.append("dialogue")
+                if "speech" in audio_description.lower():
+                    audio_characteristics.append("speech")
                 if "rapping" in audio_description.lower() or "rap" in audio_description.lower():
                     audio_characteristics.append("rapping")
                 if "chanting" in audio_description.lower() or "chant" in audio_description.lower():
                     audio_characteristics.append("chanting")
                 if "whispering" in audio_description.lower() or "whisper" in audio_description.lower():
                     audio_characteristics.append("whispering")
+                if "storytelling" in audio_description.lower() or "narrative" in audio_description.lower():
+                    audio_characteristics.append("storytelling")
+                if "conversational" in audio_description.lower():
+                    audio_characteristics.append("conversational")
+                if "personal" in audio_description.lower():
+                    audio_characteristics.append("personal")
+                if "intimate" in audio_description.lower():
+                    audio_characteristics.append("intimate")
                 
                 # Emotional Tone Detection
                 if "angry" in audio_description.lower() or "aggressive" in audio_description.lower():
@@ -1385,13 +1436,24 @@ Generate a brief animation prompt now."""
                 
                 # Movement Triggers
                 if "highly danceable" in audio_description.lower() or "dance" in audio_description.lower():
-                    audio_characteristics.append("highly_danceable")
+                    # Fix danceability paradox for speech content
+                    if "speech" in audio_description.lower() or "dialogue" in audio_description.lower() or "spoken" in audio_description.lower():
+                        audio_characteristics.append("subtle_rhythm")  # More appropriate for speech
+                    else:
+                        audio_characteristics.append("highly_danceable")
                 if "minimal dance" in audio_description.lower():
                     audio_characteristics.append("minimal_dance")
                 if "head-nodding" in audio_description.lower() or "head nod" in audio_description.lower():
                     audio_characteristics.append("head_nodding")
                 if "full body movement" in audio_description.lower():
                     audio_characteristics.append("full_body_movement")
+                # Speech-specific movement triggers
+                if "peaceful" in audio_description.lower() or "serene" in audio_description.lower():
+                    audio_characteristics.append("gentle_swaying")
+                if "calm" in audio_description.lower():
+                    audio_characteristics.append("calm_presence")
+                if "slow tempo" in audio_description.lower() and ("speech" in audio_description.lower() or "dialogue" in audio_description.lower()):
+                    audio_characteristics.append("measured_speech")
                 
                 # Crowd Response
                 if "concert" in audio_description.lower() or "live" in audio_description.lower():
