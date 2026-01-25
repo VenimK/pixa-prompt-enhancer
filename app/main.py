@@ -950,20 +950,40 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                     
                     log_debug(f"Vocal count analysis: density={vocal_density:.4f}, complexity={normalized_complexity:.2f}, count={characteristics['vocal_count']}")
                 else:
-                    characteristics["vocal_density"] = max(vocal_density, 1e-6)
                     characteristics["vocal_count"] = "unknown"
+                    characteristics["vocal_density"] = 0.0
                     characteristics["vocal_separation"] = "unknown"
-
-                # Fallback: if vocals are detected but count is unknown, assume solo
-                if characteristics["vocal_count"] == "unknown" and characteristics.get("vocal_confidence", 0) >= 0.6:
-                    characteristics["vocal_count"] = "solo"
-                    characteristics["vocal_separation"] = "single_voice"
                 
             except Exception as vocal_error:
                 log_debug(f"Vocal count analysis failed: {vocal_error}")
                 characteristics["vocal_count"] = "unknown"
                 characteristics["vocal_density"] = 0.0
                 characteristics["vocal_separation"] = "unknown"
+        
+        # Fallback: If vocal count is still unknown but we have vocals, use heuristics
+        if characteristics["has_vocals"] and characteristics["vocal_count"] == "unknown":
+            # Use vocal confidence and style to estimate vocal count
+            vocal_conf = characteristics.get("vocal_confidence", 0)
+            vocal_style = characteristics.get("vocal_style", "unknown")
+            
+            if vocal_conf > 0.7:
+                # High confidence = clear single voice most likely
+                characteristics["vocal_count"] = "solo"
+                characteristics["vocal_separation"] = "single_voice"
+                characteristics["vocal_density"] = vocal_conf  # Use confidence as density proxy
+                log_debug(f"Vocal count fallback: solo (high confidence {vocal_conf})")
+            elif vocal_conf > 0.5:
+                # Medium confidence = could be solo or duo
+                characteristics["vocal_count"] = "solo"
+                characteristics["vocal_separation"] = "single_voice"
+                characteristics["vocal_density"] = vocal_conf
+                log_debug(f"Vocal count fallback: solo (medium confidence {vocal_conf})")
+            else:
+                # Low confidence = default to solo
+                characteristics["vocal_count"] = "solo"
+                characteristics["vocal_separation"] = "single_voice"
+                characteristics["vocal_density"] = 0.5
+                log_debug(f"Vocal count fallback: solo (low confidence, default)")
         
         # 9. Syncopation Detection
         if len(beats) > 10:
