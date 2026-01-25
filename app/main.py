@@ -307,7 +307,19 @@ def generate_enhanced_ltx2_prompt(audio_characteristics: dict, base_prompt: str)
         'electronic': "with futuristic visual effects synchronized to electronic elements",
         'ambient': "with atmospheric, ethereal visual quality and dreamlike movements",
         'spoken_word': "with theatrical, articulate performance and dramatic timing",
-        'instrumental': "with movements responding to instrumental textures and musical phrases"
+        'instrumental': "with movements responding to instrumental textures and musical phrases",
+        'rock': "with energetic, powerful movements and strong rhythmic gestures",
+        'folk': "with natural, grounded movements and organic, authentic performance style",
+        'singer_songwriter': "with intimate, personal performance and heartfelt expressions",
+        'metal': "with intense, aggressive movements and powerful headbanging gestures",
+        'hip_hop': "with confident street-style movements and rhythmic body language",
+        'rnb': "with smooth, soulful movements and groovy, flowing gestures",
+        'indie': "with alternative, expressive movements and artistic body language",
+        'jazz': "with sophisticated, improvisational movements and cool, flowing gestures",
+        'classical': "with elegant, refined movements and graceful, formal posture",
+        'latin': "with passionate, rhythmic dance movements and vibrant, energetic gestures",
+        'african': "with earthy, grounded movements and powerful rhythmic expressions",
+        'asian': "with precise, deliberate movements and graceful, controlled gestures"
     }
     
     if genre in genre_directions:
@@ -786,19 +798,23 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                 pitches, magnitudes = librosa.pyin(y, fmin=50, fmax=400, sr=sr)
                 pitch_variation = float(np.std(pitches[pitches > 0])) if len(pitches[pitches > 0]) > 0 else 0
                 
-                # Enhanced detection for rock music
+                # Enhanced detection for different music styles
                 if pitch_variation > 50:
                     characteristics["vocal_style"] = "singing"
                 elif pitch_variation > 20:
-                    # Check if it's rock with strong beat and moderate pitch variation
+                    # Check context for melodic speech vs singing
                     if characteristics.get("beat_strength") == "strong" and tempo > 120:
                         characteristics["vocal_style"] = "singing"  # Rock singing style
+                    elif tempo < 100 and characteristics.get("mood") in ["calm", "contemplative"]:
+                        characteristics["vocal_style"] = "melodic_speech"  # Folk storytelling
                     else:
                         characteristics["vocal_style"] = "melodic_speech"
                 else:
-                    # Check for rock with spoken vocals
+                    # Lower pitch variation - check context
                     if characteristics.get("beat_strength") == "strong" and tempo > 120:
                         characteristics["vocal_style"] = "singing"  # Rock often has spoken-style singing
+                    elif tempo < 100 and characteristics.get("mood") == "calm":
+                        characteristics["vocal_style"] = "spoken"  # Folk/calm speech
                     else:
                         characteristics["vocal_style"] = "spoken"
                 
@@ -816,8 +832,10 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                     
             except Exception as pitch_error:
                 log_debug(f"Pitch analysis failed: {pitch_error}")
-                # Fallback to basic classification based on tempo and beat
-                if characteristics.get("beat_strength") == "strong" and tempo > 120:
+                # Fallback to basic classification based on context
+                if tempo < 100 and characteristics.get("mood") == "calm":
+                    characteristics["vocal_style"] = "spoken"  # Folk/calm speech
+                elif characteristics.get("beat_strength") == "strong" and tempo > 120:
                     characteristics["vocal_style"] = "singing"  # Assume rock singing
                 else:
                     characteristics["vocal_style"] = "unknown"
@@ -850,32 +868,85 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
             tempo_factor = min(tempo / 120, 2.0)
             characteristics["danceability"] = float(beat_consistency * 0.6 + tempo_factor * 0.4)
         
-        # 10. Genre Classification (basic)
+        # 10. Enhanced Genre Classification
         if characteristics["has_vocals"]:
             if characteristics["vocal_style"] == "singing":
                 if tempo > 120 and energy > 0.15:
-                    characteristics["genre"] = "rock"  # Prioritize rock for fast tempo
+                    # Check for metal vs rock
+                    if energy > 0.25 and characteristics.get("spectral_characteristics", {}).get("brightness", 0) > 3000:
+                        characteristics["genre"] = "metal"  # High energy + bright = metal
+                    else:
+                        characteristics["genre"] = "rock"  # Standard rock
                 elif tempo > 110 and characteristics["danceability"] > 0.8:
-                    characteristics["genre"] = "pop"
+                    # Check for hip-hop vs pop
+                    if characteristics.get("syncopation") == "high" and characteristics.get("beat_strength") == "strong":
+                        characteristics["genre"] = "hip_hop"  # Strong syncopation = hip-hop
+                    else:
+                        characteristics["genre"] = "pop"
                 elif tempo < 90 and energy < 0.1:
                     characteristics["genre"] = "ballad"
+                elif tempo > 100 and tempo < 130 and characteristics.get("spectral_characteristics", {}).get("warmth", False):
+                    characteristics["genre"] = "rnb"  # Warm sound + medium tempo = R&B
+                elif tempo > 90 and characteristics.get("spectral_characteristics", {}).get("brightness", 0) < 2000:
+                    characteristics["genre"] = "indie"  # Darker sound = indie
                 else:
                     characteristics["genre"] = "singer_songwriter"
             elif characteristics["vocal_style"] == "spoken":
-                # Check if it's actually rock with strong beat
-                if characteristics["beat_strength"] == "strong" and tempo > 120:
+                # Check for hip-hop vs other spoken
+                if characteristics["beat_strength"] == "strong" and tempo > 90 and characteristics.get("syncopation") == "high":
+                    characteristics["genre"] = "hip_hop"  # Spoken hip-hop
+                elif characteristics["beat_strength"] == "strong" and tempo > 120:
                     characteristics["genre"] = "rock"  # Rock with spoken vocals
+                elif tempo < 100 and characteristics["mood"] == "calm":
+                    characteristics["genre"] = "folk"  # Folk with spoken vocals
                 else:
                     characteristics["genre"] = "spoken_word"
+            elif characteristics["vocal_style"] == "melodic_speech":
+                # Folk/singer-songwriter with melodic speech
+                if tempo < 100 and characteristics["mood"] in ["calm", "contemplative"]:
+                    characteristics["genre"] = "folk"
+                elif characteristics["danceability"] > 0.8:
+                    characteristics["genre"] = "pop"  # Pop with melodic speech
+                else:
+                    characteristics["genre"] = "singer_songwriter"
             else:
-                characteristics["genre"] = "unknown"
+                # Unknown vocal style - use tempo and mood
+                if tempo < 100 and characteristics["mood"] == "calm":
+                    characteristics["genre"] = "folk"
+                elif characteristics["beat_strength"] == "strong" and tempo > 120:
+                    characteristics["genre"] = "rock"
+                else:
+                    characteristics["genre"] = "unknown"
         else:
+            # Instrumental genres
             if tempo > 130:
                 characteristics["genre"] = "electronic"
             elif tempo < 80:
                 characteristics["genre"] = "ambient"
+            elif tempo > 100 and characteristics.get("spectral_characteristics", {}).get("brightness", 0) > 2500:
+                characteristics["genre"] = "classical"  # Bright + complex = classical
+            elif tempo > 80 and tempo < 120 and characteristics.get("beat_strength") == "strong":
+                # Check for jazz vs other instrumental
+                if characteristics.get("syncopation") == "high" and characteristics.get("dynamic_range") == "wide":
+                    characteristics["genre"] = "jazz"  # Complex rhythm + wide dynamics = jazz
+                else:
+                    characteristics["genre"] = "instrumental"
             else:
                 characteristics["genre"] = "instrumental"
+        
+        # World Music Detection (based on spectral and rhythmic characteristics)
+        spectral = characteristics.get("spectral_characteristics", {})
+        if spectral.get("brightness", 0) > 3000 and characteristics.get("syncopation") == "high":
+            # Latin music: bright + highly syncopated
+            if tempo > 110:
+                characteristics["genre"] = "latin"
+        elif spectral.get("brightness", 0) < 2000 and characteristics.get("beat_strength") == "strong":
+            # African music: warm + strong beat
+            if tempo > 100:
+                characteristics["genre"] = "african"
+        elif spectral.get("spectral_variance", 0) > 1000000 and tempo > 90:
+            # Asian music: complex spectral content
+            characteristics["genre"] = "asian"
         
         # 11. Performance Type Detection
         # Reverb analysis for live vs studio
@@ -1653,8 +1724,16 @@ Generate a brief animation prompt now."""
                 if not genre_movement:
                     if "rock" in audio_description.lower() or "heavy" in audio_description.lower():
                         genre_movement = "rock"
+                    elif "metal" in audio_description.lower() or "aggressive" in audio_description.lower():
+                        genre_movement = "metal"
                     elif "pop" in audio_description.lower() or "upbeat" in audio_description.lower():
                         genre_movement = "pop"
+                    elif "hip-hop" in audio_description.lower() or "hip hop" in audio_description.lower() or "rap" in audio_description.lower():
+                        genre_movement = "hip_hop"
+                    elif "r&b" in audio_description.lower() or "rnb" in audio_description.lower() or "soul" in audio_description.lower():
+                        genre_movement = "rnb"
+                    elif "indie" in audio_description.lower() or "alternative" in audio_description.lower():
+                        genre_movement = "indie"
                     elif "classical" in audio_description.lower() or "orchestral" in audio_description.lower():
                         genre_movement = "classical"
                     elif "electronic" in audio_description.lower() or "edm" in audio_description.lower() or "synth" in audio_description.lower():
@@ -1663,6 +1742,12 @@ Generate a brief animation prompt now."""
                         genre_movement = "jazz"
                     elif "folk" in audio_description.lower() or "acoustic" in audio_description.lower() or "organic" in audio_description.lower():
                         genre_movement = "folk"
+                    elif "latin" in audio_description.lower() or "salsa" in audio_description.lower() or "reggae" in audio_description.lower():
+                        genre_movement = "latin"
+                    elif "african" in audio_description.lower() or "afro" in audio_description.lower():
+                        genre_movement = "african"
+                    elif "asian" in audio_description.lower() or "oriental" in audio_description.lower():
+                        genre_movement = "asian"
                     elif "dialogue" in audio_description.lower() or "spoken" in audio_description.lower() or "speech" in audio_description.lower():
                         genre_movement = "storytelling"
                     elif "narrative" in audio_description.lower() or "storytelling" in audio_description.lower():
@@ -1990,6 +2075,20 @@ Generate a brief animation prompt now."""
                 audio_integration_instruction += "JAZZ MOVEMENT STYLE: Smooth, improvisational movements with natural flow. Relaxed swaying, cool hand gestures, casual shoulder movements, spontaneous expressive motions. "
             elif genre_movement == 'folk':
                 audio_integration_instruction += "FOLK MOVEMENT STYLE: Natural, grounded movements with organic feel. Gentle swaying, simple hand gestures, warm body language, authentic emotional expression. "
+            elif genre_movement == 'metal':
+                audio_integration_instruction += "METAL MOVEMENT STYLE: Intense, aggressive movements with powerful energy. Headbanging, aggressive gestures, strong arm movements, intense facial expressions, powerful body language. "
+            elif genre_movement == 'hip_hop':
+                audio_integration_instruction += "HIP-HOP MOVEMENT STYLE: Confident street-style movements with rhythmic precision. Cool gestures, rhythmic body language, confident posture, smooth flowing motions, urban dance elements. "
+            elif genre_movement == 'rnb':
+                audio_integration_instruction += "R&B MOVEMENT STYLE: Smooth, soulful movements with groovy flow. Graceful gestures, flowing body language, cool expressions, sophisticated rhythmic motions, soulful delivery. "
+            elif genre_movement == 'indie':
+                audio_integration_instruction += "INDIE MOVEMENT STYLE: Alternative, expressive movements with artistic flair. Unique gestures, creative body language, individualistic expressions, non-traditional movements, artistic performance style. "
+            elif genre_movement == 'latin':
+                audio_integration_instruction += "LATIN MOVEMENT STYLE: Passionate, rhythmic dance movements with vibrant energy. Hip movements, rhythmic footwork, expressive arm gestures, passionate expressions, dynamic dance elements. "
+            elif genre_movement == 'african':
+                audio_integration_instruction += "AFRICAN MOVEMENT STYLE: Earthy, grounded movements with powerful rhythm. Strong body movements, rhythmic foot patterns, expressive gestures, grounded posture, powerful rhythmic expressions. "
+            elif genre_movement == 'asian':
+                audio_integration_instruction += "ASIAN MOVEMENT STYLE: Precise, deliberate movements with graceful control. Refined gestures, controlled body language, elegant posture, precise timing, graceful flowing motions. "
             
             # Add Timing Control instructions
             timing_instruction = ""
