@@ -57,6 +57,7 @@ del python-embed.zip
 REM Configure Python for pip (fix embeddable package)
 echo Configuring Python for package installation...
 echo. > portable_python\python311._pth
+echo Lib >> portable_python\python311._pth
 echo import site >> portable_python\python311._pth
 
 echo.
