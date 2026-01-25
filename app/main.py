@@ -709,16 +709,27 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         rms = librosa.feature.rms(y=y)[0]
         energy = float(np.mean(rms))
         
-        if energy < 0.05:
-            characteristics["energy_level"] = "very_low"
-        elif energy < 0.1:
-            characteristics["energy_level"] = "low"
-        elif energy < 0.2:
-            characteristics["energy_level"] = "medium"
-        elif energy < 0.3:
-            characteristics["energy_level"] = "high"
+        # Enhanced energy detection for rock music
+        if characteristics.get("beat_strength") == "strong" and tempo > 120:
+            # Rock music should have higher energy even if RMS is low
+            if energy < 0.05:
+                characteristics["energy_level"] = "medium"  # Boost rock energy
+            elif energy < 0.1:
+                characteristics["energy_level"] = "high"
+            else:
+                characteristics["energy_level"] = "very_high"
         else:
-            characteristics["energy_level"] = "very_high"
+            # Standard energy detection
+            if energy < 0.05:
+                characteristics["energy_level"] = "very_low"
+            elif energy < 0.1:
+                characteristics["energy_level"] = "low"
+            elif energy < 0.2:
+                characteristics["energy_level"] = "medium"
+            elif energy < 0.3:
+                characteristics["energy_level"] = "high"
+            else:
+                characteristics["energy_level"] = "very_high"
         
         # 4. Dynamic Range Analysis
         dynamic_range = float(np.std(rms))
@@ -775,12 +786,21 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                 pitches, magnitudes = librosa.pyin(y, fmin=50, fmax=400, sr=sr)
                 pitch_variation = float(np.std(pitches[pitches > 0])) if len(pitches[pitches > 0]) > 0 else 0
                 
+                # Enhanced detection for rock music
                 if pitch_variation > 50:
                     characteristics["vocal_style"] = "singing"
                 elif pitch_variation > 20:
-                    characteristics["vocal_style"] = "melodic_speech"
+                    # Check if it's rock with strong beat and moderate pitch variation
+                    if characteristics.get("beat_strength") == "strong" and tempo > 120:
+                        characteristics["vocal_style"] = "singing"  # Rock singing style
+                    else:
+                        characteristics["vocal_style"] = "melodic_speech"
                 else:
-                    characteristics["vocal_style"] = "spoken"
+                    # Check for rock with spoken vocals
+                    if characteristics.get("beat_strength") == "strong" and tempo > 120:
+                        characteristics["vocal_style"] = "singing"  # Rock often has spoken-style singing
+                    else:
+                        characteristics["vocal_style"] = "spoken"
                 
                 # Vocal range estimation
                 if len(pitches[pitches > 0]) > 0:
@@ -796,8 +816,11 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                     
             except Exception as pitch_error:
                 log_debug(f"Pitch analysis failed: {pitch_error}")
-                # Fallback to basic classification
-                characteristics["vocal_style"] = "unknown"
+                # Fallback to basic classification based on tempo and beat
+                if characteristics.get("beat_strength") == "strong" and tempo > 120:
+                    characteristics["vocal_style"] = "singing"  # Assume rock singing
+                else:
+                    characteristics["vocal_style"] = "unknown"
                 characteristics["vocal_range"] = "medium"
         
         # 8. Syncopation Detection
@@ -831,13 +854,21 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         if characteristics["has_vocals"]:
             if characteristics["vocal_style"] == "singing":
                 if tempo > 120 and energy > 0.15:
+                    characteristics["genre"] = "rock"  # Prioritize rock for fast tempo
+                elif tempo > 110 and characteristics["danceability"] > 0.8:
                     characteristics["genre"] = "pop"
                 elif tempo < 90 and energy < 0.1:
                     characteristics["genre"] = "ballad"
                 else:
                     characteristics["genre"] = "singer_songwriter"
+            elif characteristics["vocal_style"] == "spoken":
+                # Check if it's actually rock with strong beat
+                if characteristics["beat_strength"] == "strong" and tempo > 120:
+                    characteristics["genre"] = "rock"  # Rock with spoken vocals
+                else:
+                    characteristics["genre"] = "spoken_word"
             else:
-                characteristics["genre"] = "spoken_word"
+                characteristics["genre"] = "unknown"
         else:
             if tempo > 130:
                 characteristics["genre"] = "electronic"
