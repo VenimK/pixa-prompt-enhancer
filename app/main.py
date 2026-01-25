@@ -639,8 +639,11 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
     """Analyze audio file characteristics using real audio processing."""
     
     try:
+        log_debug(f"Starting enhanced audio analysis for: {filename}")
+        
         # Load audio file
         y, sr = librosa.load(file_path, duration=30)  # Analyze first 30 seconds
+        log_debug(f"Audio loaded successfully: {len(y)} samples, {sr} Hz")
         
         characteristics = {
             "audio_type": "unknown",
@@ -766,25 +769,36 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         
         # 7. Vocal Style Analysis
         if characteristics["has_vocals"]:
-            # Detect singing vs speech
-            pitch_salience = librosa.feature.yin(y, fmin=50, fmax=400)[0]
-            pitch_variation = float(np.std(pitch_salience))
-            
-            if pitch_variation > 50:
-                characteristics["vocal_style"] = "singing"
-            elif pitch_variation > 20:
-                characteristics["vocal_style"] = "melodic_speech"
-            else:
-                characteristics["vocal_style"] = "spoken"
-            
-            # Vocal range estimation
-            avg_pitch = float(np.mean(pitch_salience[pitch_salience > 0]))
-            if avg_pitch > 400:
-                characteristics["vocal_range"] = "high"
-            elif avg_pitch > 200:
+            # Detect singing vs speech using pitch analysis
+            try:
+                # Use librosa.pyin instead of yin (more reliable)
+                pitches, magnitudes = librosa.pyin(y, fmin=50, fmax=400, sr=sr)
+                pitch_variation = float(np.std(pitches[pitches > 0])) if len(pitches[pitches > 0]) > 0 else 0
+                
+                if pitch_variation > 50:
+                    characteristics["vocal_style"] = "singing"
+                elif pitch_variation > 20:
+                    characteristics["vocal_style"] = "melodic_speech"
+                else:
+                    characteristics["vocal_style"] = "spoken"
+                
+                # Vocal range estimation
+                if len(pitches[pitches > 0]) > 0:
+                    avg_pitch = float(np.mean(pitches[pitches > 0]))
+                    if avg_pitch > 400:
+                        characteristics["vocal_range"] = "high"
+                    elif avg_pitch > 200:
+                        characteristics["vocal_range"] = "medium"
+                    else:
+                        characteristics["vocal_range"] = "low"
+                else:
+                    characteristics["vocal_range"] = "medium"
+                    
+            except Exception as pitch_error:
+                log_debug(f"Pitch analysis failed: {pitch_error}")
+                # Fallback to basic classification
+                characteristics["vocal_style"] = "unknown"
                 characteristics["vocal_range"] = "medium"
-            else:
-                characteristics["vocal_range"] = "low"
         
         # 8. Syncopation Detection
         if len(beats) > 10:
@@ -851,13 +865,17 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         
         if len(rms_frames) > 10:
             # Check if energy builds, falls, or stays stable
-            energy_trend = np.polyfit(range(len(rms_frames)), rms_frames, 1)[0]
-            
-            if energy_trend > 0.001:
-                characteristics["emotional_arc"] = "building"
-            elif energy_trend < -0.001:
-                characteristics["emotional_arc"] = "declining"
-            else:
+            try:
+                energy_trend = np.polyfit(range(len(rms_frames)), rms_frames, 1)[0]
+                
+                if energy_trend > 0.001:
+                    characteristics["emotional_arc"] = "building"
+                elif energy_trend < -0.001:
+                    characteristics["emotional_arc"] = "declining"
+                else:
+                    characteristics["emotional_arc"] = "stable"
+            except Exception as trend_error:
+                log_debug(f"Emotional arc analysis failed: {trend_error}")
                 characteristics["emotional_arc"] = "stable"
         
         # 13. Mood Detection (enhanced)
@@ -978,6 +996,9 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         
     except Exception as e:
         log_debug(f"Error in enhanced audio analysis: {str(e)}")
+        log_debug(f"Error type: {type(e).__name__}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
         # Fallback to filename-based analysis
         return analyze_audio_characteristics(filename, 0)
 
