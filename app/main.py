@@ -1278,6 +1278,14 @@ Generate a brief animation prompt now."""
                 if "very_fast" in audio_description.lower() and mood == "neutral":
                     mood = "energetic"  # Fast music should be energetic
                 
+                # Fix energy level for dance music
+                if "danceability" and float(danceability) > 0.9 and energy_level == "medium":
+                    energy_level = "high"  # Highly danceable music should be high energy
+                
+                # Fix mood for dance/electronic music
+                if ("dance" in audio_description.lower() or "electronic" in audio_description.lower() or "pump up" in audio_description.lower()) and mood == "emotional":
+                    mood = "energetic"  # Dance music should be energetic, not emotional
+                
                 # Enhanced genre detection with speech-specific logic
                 if not genre_movement:
                     if "rock" in audio_description.lower() or "heavy" in audio_description.lower():
