@@ -27,6 +27,9 @@ if errorlevel 1 (
     
     echo Python configuration fixed.
     echo.
+    echo Please run install_deps.bat again to apply the fix.
+    pause
+    exit /b 1
 )
 
 REM Test Python again
