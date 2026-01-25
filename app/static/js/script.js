@@ -517,6 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
         motionEffectContainer: document.getElementById('motion-effect-selector-container'),
         ltx2ControlsContainer: document.getElementById('ltx2-controls-container'),
         ltx2ResolutionContainer: document.getElementById('ltx2-resolution-container'),
+        ltx2MovementContainer: document.getElementById('ltx2-movement-container'),
         audioUploadCard: document.getElementById('audio-upload-card'),
         audioDropZone: document.getElementById('audio-drop-zone'),
         audioUpload: document.getElementById('audio-upload'),
@@ -2643,6 +2644,7 @@ POST-PROCESSING:
                         model_type: modelType,
                         audio_generation: promptType === 'LTX2' ? (document.getElementById('audio-generation-select')?.value || 'enabled') : null,
                         resolution: promptType === 'LTX2' ? (document.getElementById('resolution-select')?.value || '4K') : null,
+                        movement_level: promptType === 'LTX2' ? (document.getElementById('movement-level-select')?.value || 'natural') : null,
                         audio_description: promptType === 'LTX2' && audioAnalysisResult ? audioAnalysisResult.audio_description : null
                     }),
                 });
@@ -2743,10 +2745,12 @@ POST-PROCESSING:
             if (els.promptType.value === 'LTX2') {
                 if (els.ltx2ControlsContainer) els.ltx2ControlsContainer.style.display = 'flex';
                 if (els.ltx2ResolutionContainer) els.ltx2ResolutionContainer.style.display = 'flex';
+                if (els.ltx2MovementContainer) els.ltx2MovementContainer.style.display = 'flex';
                 if (els.audioUploadCard) els.audioUploadCard.style.display = 'block';
             } else {
                 if (els.ltx2ControlsContainer) els.ltx2ControlsContainer.style.display = 'none';
                 if (els.ltx2ResolutionContainer) els.ltx2ResolutionContainer.style.display = 'none';
+                if (els.ltx2MovementContainer) els.ltx2MovementContainer.style.display = 'none';
                 if (els.audioUploadCard) els.audioUploadCard.style.display = 'none';
             }
             

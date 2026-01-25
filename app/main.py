@@ -98,6 +98,7 @@ class EnhanceRequest(BaseModel):
     audio_generation: str | None = None  # LTX-2 audio generation: 'enabled' or 'disabled'
     resolution: str | None = None  # LTX-2 resolution: '4K', '1080p', '720p'
     audio_description: str | None = None  # Description of uploaded audio file
+    movement_level: str | None = None  # LTX-2 movement level: 'static', 'minimal', 'natural', 'expressive', 'dynamic'
 
 
 class EnhanceResponse(BaseModel):
@@ -1176,6 +1177,7 @@ Generate a brief animation prompt now."""
             audio_generation = getattr(request, 'audio_generation', 'enabled') if hasattr(request, 'audio_generation') else 'enabled'
             resolution = getattr(request, 'resolution', '4K') if hasattr(request, 'resolution') else '4K'
             audio_description = getattr(request, 'audio_description', '') if hasattr(request, 'audio_description') else ''
+            movement_level = getattr(request, 'movement_level', 'natural') if hasattr(request, 'movement_level') else 'natural'
             
             audio_instruction = ""
             if audio_generation == 'enabled':
@@ -1187,6 +1189,19 @@ Generate a brief animation prompt now."""
                 audio_instruction = " Video only generation - no audio."
             
             resolution_instruction = f""
+            
+            # Add movement level control
+            movement_instruction = ""
+            if movement_level == 'static':
+                movement_instruction = " ABSOLUTE STATIC PERFORMANCE: Only lip-sync and subtle eye movements allowed. No head movement, no arm gestures, no body swaying, no shoulder movements. Character remains completely still except for mouth movement and minimal facial expressions. "
+            elif movement_level == 'minimal':
+                movement_instruction = " MINIMAL MOVEMENT: Only subtle head movement, slight shoulder motion, and gentle hand gestures. No large body movements, no dramatic swaying, no exaggerated gestures. Focus on restrained, natural motion. "
+            elif movement_level == 'natural':
+                movement_instruction = " NATURAL MOVEMENT: Normal body movement including head turns, shoulder movements, arm gestures, and gentle body swaying. Maintain realistic motion without exaggeration. "
+            elif movement_level == 'expressive':
+                movement_instruction = " EXPRESSIVE MOVEMENT: Full body movement including dynamic gestures, head movement, shoulder motion, arm gestures, and body swaying. Emphasize rhythmic, energetic motion that matches the audio. "
+            elif movement_level == 'dynamic':
+                movement_instruction = " DYNAMIC MOVEMENT: Highly energetic and expressive full-body movement. Include dramatic gestures, head movement, shoulder motion, arm gestures, body swaying, and rhythmic dancing. Emphasize powerful, athletic motion. "
             
             # Add specific instructions for singing/dancing with uploaded audio
             performance_instruction = ""
@@ -1256,7 +1271,7 @@ CRITICAL FRAME AWARENESS:
 - If user says "static upper body" or "maintains static posture": NO arm movements, torso movements, or shoulder movements
 - ABSOLUTE STATIC RULE: If any static keywords are detected, NO hand gestures, arm movements, finger movements, or body movements of any kind - ONLY lip-sync and eye/eyebrow movements allowed
 
-{resolution_instruction}{audio_instruction}{performance_instruction}
+{resolution_instruction}{audio_instruction}{movement_instruction}{performance_instruction}
 
 CRITICAL: Keep your enhanced prompt under 1500 characters total. Use exactly 7 sentences maximum - one for each point above. Be concise and specific. Focus on natural motion and realistic timing. Do not add conversational fluff.
 
