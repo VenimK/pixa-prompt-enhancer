@@ -2316,7 +2316,10 @@ Generate a brief animation prompt now."""
                 try:
                     # Parse audio characteristics from the audio_description if available
                     # This would be enhanced to pass the full characteristics object
-                    enhanced_base_prompt = f"The character {request.prompt}"
+                    if request.image_description:
+                        enhanced_base_prompt = f"{request.image_description} {request.prompt}"
+                    else:
+                        enhanced_base_prompt = f"The character {request.prompt}"
                     
                     # For now, extract key characteristics from audio_description
                     audio_chars = {}
