@@ -7,9 +7,33 @@ echo.
 REM Check if portable Python exists
 if not exist "portable_python\python.exe" (
     echo ERROR: portable_python directory not found!
-    echo Please download Python embeddable package from:
-    echo https://www.python.org/downloads/windows/
-    echo Extract it as 'portable_python' folder in this directory
+    echo Please run setup_portable.bat first
+    echo.
+    pause
+    exit /b 1
+)
+
+REM Check if Python is properly configured
+echo Verifying Python configuration...
+portable_python\python.exe -c "import sys; print('Python path:', sys.path)" 2>nul
+if errorlevel 1 (
+    echo Python configuration issue detected. Fixing...
+    echo.
+    
+    REM Recreate the .pth file with correct configuration
+    echo. > portable_python\python311._pth
+    echo Lib >> portable_python\python311._pth
+    echo import site >> portable_python\python311._pth
+    
+    echo Python configuration fixed.
+    echo.
+)
+
+REM Test Python again
+portable_python\python.exe --version 2>nul
+if errorlevel 1 (
+    echo ERROR: Python still not working correctly
+    echo Please delete portable_python folder and run setup_portable.bat again
     echo.
     pause
     exit /b 1

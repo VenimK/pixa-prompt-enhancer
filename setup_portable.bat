@@ -60,6 +60,32 @@ echo. > portable_python\python311._pth
 echo Lib >> portable_python\python311._pth
 echo import site >> portable_python\python311._pth
 
+REM Verify Python works
+echo Testing Python configuration...
+portable_python\python.exe --version
+if errorlevel 1 (
+    echo ERROR: Python configuration failed
+    echo Trying alternative configuration...
+    echo.
+    
+    REM Alternative: Try without import site first
+    echo. > portable_python\python311._pth
+    echo Lib >> portable_python\python311._pth
+    
+    portable_python\python.exe --version
+    if errorlevel 1 (
+        echo ERROR: Python still not working
+        echo Please check the extraction and try again
+        pause
+        exit /b 1
+    )
+    
+    echo Basic Python working, adding site support...
+    echo import site >> portable_python\python311._pth
+)
+
+echo Python configuration successful!
+
 echo.
 echo ========================================
 echo SUCCESS: Portable Python setup complete!
