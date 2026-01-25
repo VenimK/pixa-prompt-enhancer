@@ -735,13 +735,23 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
             else:
                 characteristics["beat_strength"] = "weak"
             
-            # Time signature detection
-            beat_intervals = np.diff(beats)
-            avg_interval = np.mean(beat_intervals)
-            if avg_interval > 0.8:  # Slow beats
-                characteristics["time_signature"] = "3/4" if len(beats) % 3 == 0 else "4/4"
-            else:
-                characteristics["time_signature"] = "4/4"  # Most common
+            # 2. Time Signature Detection
+            if len(beats) > 10:
+                beat_intervals = np.diff(beats)
+                avg_interval = np.mean(beat_intervals)
+                
+                # Enhanced time signature detection based on genre
+                genre_hint = characteristics.get("genre", "unknown")
+                
+                if avg_interval > 0.8:  # Slow beats
+                    if genre_hint in ["rock", "metal", "pop"]:
+                        characteristics["time_signature"] = "4/4"  # Most rock is 4/4
+                    elif len(beats) % 3 == 0:
+                        characteristics["time_signature"] = "3/4"
+                    else:
+                        characteristics["time_signature"] = "4/4"  # Most common
+                else:
+                    characteristics["time_signature"] = "4/4"  # Most common for popular music
         
         # 3. Energy Level Detection
         rms = librosa.feature.rms(y=y)[0]
@@ -873,32 +883,22 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                 # Advanced vocal analysis using harmonic-percussive separation
                 harmonic, percussive = librosa.effects.hpss(y)
                 
-                # Detect vocal activity across frequency ranges
-                # Human voices typically occupy 80-4000 Hz
-                vocal_freq_range = librosa.util.utils.cqt_frequencies(
-                    fmin=librosa.note_to_hz('E2'),  # ~82 Hz
-                    fmax=librosa.note_to_hz('C6'),  # ~1047 Hz
-                    n_bins=48
-                )
-                
                 # Compute spectral features for vocal detection
                 S = np.abs(librosa.stft(y))
                 S_harmonic = np.abs(librosa.stft(harmonic))
                 
-                # Find vocal-friendly frequency bands
-                vocal_bands = []
-                for i, freq in enumerate(vocal_freq_range):
-                    if 80 <= freq <= 4000:  # Human voice range
-                        band_energy = np.mean(S_harmonic[i, :])
-                        vocal_bands.append(band_energy)
+                # Focus on vocal frequency range (80-4000 Hz)
+                freqs = librosa.fft_frequencies(sr=sr, n_fft=S.shape[0])
+                vocal_mask = (freqs >= 80) & (freqs <= 4000)
+                S_vocal = S_harmonic[vocal_mask, :]
                 
                 # Calculate vocal density (how much of the audio contains vocals)
-                if vocal_bands:
-                    vocal_density = float(np.mean(vocal_bands))
+                if S_vocal.size > 0:
+                    vocal_density = float(np.mean(S_vocal))
                     characteristics["vocal_density"] = vocal_density
                     
                     # Detect multiple vocals through harmonic complexity
-                    harmonic_variance = float(np.var(vocal_bands))
+                    harmonic_variance = float(np.var(S_vocal))
                     
                     # Use MFCC analysis for vocal separation
                     mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
@@ -910,19 +910,24 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                     # 3. Spectral variance (multiple voices = more variance)
                     
                     vocal_complexity = harmonic_variance + float(np.mean(mfcc_std[1:4]))
-                    spectral_variance = float(np.var(S_harmonic))
                     
-                    # Vocal count estimation based on complexity
-                    if vocal_complexity < 10:
+                    # Normalize complexity based on vocal density
+                    if vocal_density > 0:
+                        normalized_complexity = vocal_complexity / vocal_density
+                    else:
+                        normalized_complexity = vocal_complexity
+                    
+                    # Vocal count estimation based on normalized complexity
+                    if normalized_complexity < 50:
                         characteristics["vocal_count"] = "solo"
                         characteristics["vocal_separation"] = "single_voice"
-                    elif vocal_complexity < 25:
+                    elif normalized_complexity < 150:
                         characteristics["vocal_count"] = "duo"
                         characteristics["vocal_separation"] = "two_voices"
-                    elif vocal_complexity < 50:
+                    elif normalized_complexity < 300:
                         characteristics["vocal_count"] = "small_group"
                         characteristics["vocal_separation"] = "few_voices"
-                    elif vocal_complexity < 100:
+                    elif normalized_complexity < 600:
                         characteristics["vocal_count"] = "group"
                         characteristics["vocal_separation"] = "multiple_voices"
                     else:
@@ -932,13 +937,17 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                     # Detect lead vs backup vocals
                     if characteristics["vocal_count"] in ["duo", "small_group", "group"]:
                         # Look for dominant voice patterns
-                        dominant_freq = np.argmax(np.mean(S_harmonic, axis=1))
-                        if dominant_freq < len(vocal_freq_range) * 0.3:  # Lower frequencies dominate
+                        dominant_freq_idx = np.argmax(np.mean(S_vocal, axis=1))
+                        if dominant_freq_idx < len(S_vocal) * 0.3:  # Lower frequencies dominate
                             characteristics["vocal_separation"] = "lead_with_backup"
-                        elif dominant_freq > len(vocal_freq_range) * 0.7:  # Higher frequencies dominate
+                        elif dominant_freq_idx > len(S_vocal) * 0.7:  # Higher frequencies dominate
                             characteristics["vocal_separation"] = "harmonized_vocals"
                     
-                    log_debug(f"Vocal count analysis: complexity={vocal_complexity:.2f}, count={characteristics['vocal_count']}")
+                    log_debug(f"Vocal count analysis: density={vocal_density:.4f}, complexity={normalized_complexity:.2f}, count={characteristics['vocal_count']}")
+                else:
+                    characteristics["vocal_count"] = "unknown"
+                    characteristics["vocal_density"] = 0.0
+                    characteristics["vocal_separation"] = "unknown"
                 
             except Exception as vocal_error:
                 log_debug(f"Vocal count analysis failed: {vocal_error}")
@@ -983,9 +992,13 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                     else:
                         characteristics["genre"] = "rock"  # Standard rock
                 elif tempo > 110 and characteristics["danceability"] > 0.8:
-                    # Check for hip-hop vs pop
+                    # Check for hip-hop vs pop vs rock
                     if characteristics.get("syncopation") == "high" and characteristics.get("beat_strength") == "strong":
-                        characteristics["genre"] = "hip_hop"  # Strong syncopation = hip-hop
+                        # Additional check for rock vs hip-hop
+                        if characteristics.get("vocal_style") == "singing" and characteristics.get("energy_level") in ["high", "very_high"]:
+                            characteristics["genre"] = "rock"  # Rock with singing + high energy
+                        else:
+                            characteristics["genre"] = "hip_hop"  # Hip-hop with spoken vocals
                     else:
                         characteristics["genre"] = "pop"
                 elif tempo < 90 and energy < 0.1:
