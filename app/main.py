@@ -1449,6 +1449,9 @@ Generate a brief animation prompt now."""
             
             resolution_instruction = f""
             
+            # Add specific instructions for singing/dancing with uploaded audio
+            performance_instruction = ""
+            
             # Add movement level control
             movement_instruction = ""
             if movement_level == 'static':
@@ -1461,9 +1464,6 @@ Generate a brief animation prompt now."""
                 movement_instruction = " EXPRESSIVE MOVEMENT: Full body movement including dynamic gestures, head movement, shoulder motion, arm gestures, and body swaying. Emphasize rhythmic, energetic motion that matches the audio. "
             elif movement_level == 'dynamic':
                 movement_instruction = " DYNAMIC MOVEMENT: Highly energetic and expressive full-body movement. Include dramatic gestures, head movement, shoulder motion, arm gestures, body swaying, and rhythmic dancing. Emphasize powerful, athletic motion. "
-            
-            # Add specific instructions for singing/dancing with uploaded audio
-            performance_instruction = ""
             if audio_description:
                 # Parse characteristics from audio_description
                 if "singing" in audio_description.lower() or "vocals" in audio_description.lower():
