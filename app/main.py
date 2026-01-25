@@ -99,6 +99,17 @@ class EnhanceRequest(BaseModel):
     resolution: str | None = None  # LTX-2 resolution: '4K', '1080p', '720p'
     audio_description: str | None = None  # Description of uploaded audio file
     movement_level: str | None = None  # LTX-2 movement level: 'static', 'minimal', 'natural', 'expressive', 'dynamic'
+    # Audio Integration
+    lipsync_intensity: str | None = None  # 'subtle', 'natural', 'exaggerated'
+    audio_reactivity: str | None = None  # 'low', 'medium', 'high'
+    genre_movement: str | None = None  # 'rock', 'pop', 'classical', 'electronic', 'jazz', 'folk'
+    # Timing Control
+    movement_speed: str | None = None  # 'slow_motion', 'normal', 'fast'
+    pause_points: str | None = None  # 'none', 'occasional', 'frequent'
+    transition_smoothness: str | None = None  # 'smooth', 'natural', 'sharp'
+    # Character Interaction
+    character_coordination: str | None = None  # 'independent', 'synchronized', 'call_response'
+    object_interaction: str | None = None  # 'none', 'subtle', 'prominent'
 
 
 class EnhanceResponse(BaseModel):
@@ -1179,6 +1190,254 @@ Generate a brief animation prompt now."""
             audio_description = getattr(request, 'audio_description', '') if hasattr(request, 'audio_description') else ''
             movement_level = getattr(request, 'movement_level', 'natural') if hasattr(request, 'movement_level') else 'natural'
             
+            # Audio Integration parameters
+            lipsync_intensity = getattr(request, 'lipsync_intensity', 'natural') if hasattr(request, 'lipsync_intensity') else 'natural'
+            audio_reactivity = getattr(request, 'audio_reactivity', 'medium') if hasattr(request, 'audio_reactivity') else 'medium'
+            genre_movement = getattr(request, 'genre_movement', '') if hasattr(request, 'genre_movement') else ''
+            
+            # Timing Control parameters
+            movement_speed = getattr(request, 'movement_speed', 'normal') if hasattr(request, 'movement_speed') else 'normal'
+            pause_points = getattr(request, 'pause_points', 'none') if hasattr(request, 'pause_points') else 'none'
+            transition_smoothness = getattr(request, 'transition_smoothness', 'natural') if hasattr(request, 'transition_smoothness') else 'natural'
+            
+            # Character Interaction parameters
+            character_coordination = getattr(request, 'character_coordination', 'independent') if hasattr(request, 'character_coordination') else 'independent'
+            object_interaction = getattr(request, 'object_interaction', 'none') if hasattr(request, 'object_interaction') else 'none'
+            
+            # AUTO-DETECT from audio_description if not explicitly set
+            if audio_description:
+                # Auto-detect genre from audio description
+                if not genre_movement:
+                    if "rock" in audio_description.lower() or "heavy" in audio_description.lower():
+                        genre_movement = "rock"
+                    elif "pop" in audio_description.lower() or "upbeat" in audio_description.lower():
+                        genre_movement = "pop"
+                    elif "classical" in audio_description.lower() or "orchestral" in audio_description.lower():
+                        genre_movement = "classical"
+                    elif "electronic" in audio_description.lower() or "edm" in audio_description.lower() or "synth" in audio_description.lower():
+                        genre_movement = "electronic"
+                    elif "jazz" in audio_description.lower() or "smooth" in audio_description.lower():
+                        genre_movement = "jazz"
+                    elif "folk" in audio_description.lower() or "acoustic" in audio_description.lower() or "organic" in audio_description.lower():
+                        genre_movement = "folk"
+                
+                # Auto-detect tempo for movement speed
+                if movement_speed == 'normal':  # Only override if not explicitly set
+                    if "very_fast" in audio_description.lower() or "fast tempo" in audio_description.lower():
+                        movement_speed = "fast"
+                    elif "very_slow" in audio_description.lower() or "slow tempo" in audio_description.lower():
+                        movement_speed = "slow_motion"
+                
+                # Auto-detect energy for audio reactivity
+                if audio_reactivity == 'medium':  # Only override if not explicitly set
+                    if "high energy" in audio_description.lower() or "very_high" in audio_description.lower():
+                        audio_reactivity = "high"
+                    elif "low energy" in audio_description.lower() or "calm" in audio_description.lower():
+                        audio_reactivity = "low"
+                
+                # Auto-detect singing style for lipsync intensity
+                if lipsync_intensity == 'natural':  # Only override if not explicitly set
+                    if "dramatic" in audio_description.lower() or "powerful" in audio_description.lower():
+                        lipsync_intensity = "exaggerated"
+                    elif "subtle" in audio_description.lower() or "gentle" in audio_description.lower():
+                        lipsync_intensity = "subtle"
+                
+                # Generate comprehensive audio characteristics for enhanced prompts
+                audio_characteristics = []
+                
+                # Emotional & Performance Detection
+                if any(word in audio_description.lower() for word in ["singing", "vocals", "vocal"]):
+                    audio_characteristics.append("singing")
+                if "speaking" in audio_description.lower() or "spoken" in audio_description.lower():
+                    audio_characteristics.append("speaking")
+                if "rapping" in audio_description.lower() or "rap" in audio_description.lower():
+                    audio_characteristics.append("rapping")
+                if "chanting" in audio_description.lower() or "chant" in audio_description.lower():
+                    audio_characteristics.append("chanting")
+                if "whispering" in audio_description.lower() or "whisper" in audio_description.lower():
+                    audio_characteristics.append("whispering")
+                
+                # Emotional Tone Detection
+                if "angry" in audio_description.lower() or "aggressive" in audio_description.lower():
+                    audio_characteristics.append("angry")
+                if "joyful" in audio_description.lower() or "happy" in audio_description.lower():
+                    audio_characteristics.append("joyful")
+                if "sad" in audio_description.lower() or "melancholy" in audio_description.lower():
+                    audio_characteristics.append("sad")
+                if "romantic" in audio_description.lower() or "love" in audio_description.lower():
+                    audio_characteristics.append("romantic")
+                if "peaceful" in audio_description.lower() or "calm" in audio_description.lower():
+                    audio_characteristics.append("peaceful")
+                if "dramatic" in audio_description.lower() or "intense" in audio_description.lower():
+                    audio_characteristics.append("dramatic")
+                
+                # Performance Intensity
+                if "passionate" in audio_description.lower():
+                    audio_characteristics.append("passionate")
+                if "restrained" in audio_description.lower() or "subtle" in audio_description.lower():
+                    audio_characteristics.append("restrained")
+                if "casual" in audio_description.lower() or "relaxed" in audio_description.lower():
+                    audio_characteristics.append("casual")
+                
+                # Musical Structure Detection
+                if "strong beat" in audio_description.lower() or "heavy beat" in audio_description.lower():
+                    audio_characteristics.append("strong_beat")
+                if "subtle rhythm" in audio_description.lower() or "gentle rhythm" in audio_description.lower():
+                    audio_characteristics.append("subtle_rhythm")
+                if "complex percussion" in audio_description.lower() or "intricate" in audio_description.lower():
+                    audio_characteristics.append("complex_percussion")
+                if "minimal beat" in audio_description.lower() or "simple beat" in audio_description.lower():
+                    audio_characteristics.append("minimal_beat")
+                
+                # Instrumentation Detection
+                if "guitar" in audio_description.lower():
+                    audio_characteristics.append("guitar_driven")
+                if "piano" in audio_description.lower():
+                    audio_characteristics.append("piano_based")
+                if "orchestral" in audio_description.lower() or "orchestra" in audio_description.lower():
+                    audio_characteristics.append("orchestral")
+                if "electronic beats" in audio_description.lower() or "electronic" in audio_description.lower():
+                    audio_characteristics.append("electronic_beats")
+                
+                # Vocal Presence
+                if "lead vocals" in audio_description.lower() or "solo" in audio_description.lower():
+                    audio_characteristics.append("lead_vocals")
+                if "harmonies" in audio_description.lower() or "harmony" in audio_description.lower():
+                    audio_characteristics.append("harmonies")
+                if "backup vocals" in audio_description.lower() or "background vocals" in audio_description.lower():
+                    audio_characteristics.append("backup_vocals")
+                if "acapella" in audio_description.lower() or "a cappella" in audio_description.lower():
+                    audio_characteristics.append("acapella")
+                
+                # Dynamic Range Detection
+                if "dynamic shifts" in audio_description.lower() or "volume changes" in audio_description.lower():
+                    audio_characteristics.append("dynamic_shifts")
+                if "consistent volume" in audio_description.lower() or "steady" in audio_description.lower():
+                    audio_characteristics.append("consistent_volume")
+                if "crescendo" in audio_description.lower() or "building" in audio_description.lower():
+                    audio_characteristics.append("crescendo")
+                if "fade" in audio_description.lower():
+                    audio_characteristics.append("fade_effects")
+                
+                # Pace Variations
+                if "changing tempo" in audio_description.lower() or "tempo changes" in audio_description.lower():
+                    audio_characteristics.append("changing_tempo")
+                if "accelerating" in audio_description.lower() or "speeding up" in audio_description.lower():
+                    audio_characteristics.append("accelerating")
+                if "decelerating" in audio_description.lower() or "slowing down" in audio_description.lower():
+                    audio_characteristics.append("decelerating")
+                
+                # Energy Arcs
+                if "building energy" in audio_description.lower() or "energy builds" in audio_description.lower():
+                    audio_characteristics.append("building_energy")
+                if "climax" in audio_description.lower() or "peak" in audio_description.lower():
+                    audio_characteristics.append("climax_moments")
+                if "calm sections" in audio_description.lower() or "quiet parts" in audio_description.lower():
+                    audio_characteristics.append("calm_sections")
+                if "explosive" in audio_description.lower() or "powerful" in audio_description.lower():
+                    audio_characteristics.append("explosive_parts")
+                
+                # Stylistic Elements
+                if "vintage" in audio_description.lower() or "retro" in audio_description.lower():
+                    audio_characteristics.append("vintage_style")
+                if "modern" in audio_description.lower() or "contemporary" in audio_description.lower():
+                    audio_characteristics.append("modern_style")
+                if "futuristic" in audio_description.lower():
+                    audio_characteristics.append("futuristic_style")
+                if "latin" in audio_description.lower():
+                    audio_characteristics.append("latin_style")
+                if "african" in audio_description.lower():
+                    audio_characteristics.append("african_style")
+                if "asian" in audio_description.lower():
+                    audio_characteristics.append("asian_style")
+                if "western" in audio_description.lower():
+                    audio_characteristics.append("western_style")
+                if "middle eastern" in audio_description.lower():
+                    audio_characteristics.append("middle_eastern_style")
+                
+                # Atmospheric Quality
+                if "intimate" in audio_description.lower():
+                    audio_characteristics.append("intimate")
+                if "epic" in audio_description.lower():
+                    audio_characteristics.append("epic")
+                if "raw" in audio_description.lower():
+                    audio_characteristics.append("raw")
+                if "polished" in audio_description.lower() or "clean" in audio_description.lower():
+                    audio_characteristics.append("polished")
+                if "organic" in audio_description.lower():
+                    audio_characteristics.append("organic")
+                
+                # Movement Triggers
+                if "highly danceable" in audio_description.lower() or "dance" in audio_description.lower():
+                    audio_characteristics.append("highly_danceable")
+                if "minimal dance" in audio_description.lower():
+                    audio_characteristics.append("minimal_dance")
+                if "head-nodding" in audio_description.lower() or "head nod" in audio_description.lower():
+                    audio_characteristics.append("head_nodding")
+                if "full body movement" in audio_description.lower():
+                    audio_characteristics.append("full_body_movement")
+                
+                # Crowd Response
+                if "concert" in audio_description.lower() or "live" in audio_description.lower():
+                    audio_characteristics.append("concert_feel")
+                if "intimate performance" in audio_description.lower():
+                    audio_characteristics.append("intimate_performance")
+                if "group" in audio_description.lower() or "band" in audio_description.lower():
+                    audio_characteristics.append("group_energy")
+                
+                # Physicality
+                if "athletic" in audio_description.lower():
+                    audio_characteristics.append("athletic_performance")
+                if "gentle swaying" in audio_description.lower():
+                    audio_characteristics.append("gentle_swaying")
+                if "static singing" in audio_description.lower():
+                    audio_characteristics.append("static_singing")
+                if "dramatic gestures" in audio_description.lower():
+                    audio_characteristics.append("dramatic_gestures")
+                
+                # Technical Audio Features
+                if "bass-heavy" in audio_description.lower() or "heavy bass" in audio_description.lower():
+                    audio_characteristics.append("bass_heavy")
+                if "treble-focused" in audio_description.lower():
+                    audio_characteristics.append("treble_focused")
+                if "balanced" in audio_description.lower():
+                    audio_characteristics.append("balanced")
+                if "reverb" in audio_description.lower():
+                    audio_characteristics.append("reverb")
+                if "echo" in audio_description.lower():
+                    audio_characteristics.append("echo")
+                if "dry sound" in audio_description.lower():
+                    audio_characteristics.append("dry_sound")
+                if "distortion" in audio_description.lower():
+                    audio_characteristics.append("distortion")
+                
+                # Narrative Elements
+                if "storytelling" in audio_description.lower() or "narrative" in audio_description.lower():
+                    audio_characteristics.append("storytelling")
+                if "emotional journey" in audio_description.lower():
+                    audio_characteristics.append("emotional_journey")
+                if "character-driven" in audio_description.lower():
+                    audio_characteristics.append("character_driven")
+                if "abstract" in audio_description.lower():
+                    audio_characteristics.append("abstract")
+                
+                # Mood Progression
+                if "uplifting" in audio_description.lower():
+                    audio_characteristics.append("uplifting")
+                if "dark" in audio_description.lower():
+                    audio_characteristics.append("dark")
+                if "mysterious" in audio_description.lower():
+                    audio_characteristics.append("mysterious")
+                if "celebratory" in audio_description.lower():
+                    audio_characteristics.append("celebratory")
+                
+                # Create comprehensive audio instruction based on detected characteristics
+                if audio_characteristics:
+                    characteristic_instruction = "AUDIO CHARACTERISTICS: "
+                    characteristics_text = ", ".join(audio_characteristics)
+                    characteristic_instruction += f"Detected audio characteristics: {characteristics_text}. Generate movements and expressions that perfectly match these audio qualities. "
+                    performance_instruction += characteristic_instruction
+            
             audio_instruction = ""
             if audio_generation == 'enabled':
                 if audio_description:
@@ -1231,6 +1490,71 @@ Generate a brief animation prompt now."""
                     performance_instruction += "Create emotional presence through controlled body movement and expressive facial expressions - meaningful gestures and nuanced expressions that convey depth. "
                 elif "sad" in audio_description.lower() or "melancholy" in audio_description.lower():
                     performance_instruction += "Create somber presence through gentle, slow movements and soft facial expressions - downward gaze, slight shoulder movements, and restrained gestures. "
+            
+            # Add Audio Integration instructions
+            audio_integration_instruction = ""
+            
+            # Lip-sync intensity
+            if lipsync_intensity == 'subtle':
+                audio_integration_instruction += "SUBTLE LIP-SYNC: Minimal mouth movement, slight jaw motion, restrained lip articulation. Focus on natural, understated mouth movements that suggest singing without exaggeration. "
+            elif lipsync_intensity == 'exaggerated':
+                audio_integration_instruction += "EXAGGERATED LIP-SYNC: Pronounced mouth movements, wide jaw opening, dramatic lip articulation. Emphasize clear, visible mouth shapes and strong jaw motion for dramatic effect. "
+            
+            # Audio reactivity
+            if audio_reactivity == 'low':
+                audio_integration_instruction += "LOW AUDIO REACTIVITY: Movements should be loosely connected to audio rhythm. Focus on general mood rather than precise beat synchronization. Gentle, flowing motion that suggests the music without strict timing. "
+            elif audio_reactivity == 'high':
+                audio_integration_instruction += "HIGH AUDIO REACTIVITY: Movements must be precisely synchronized to audio beats and rhythm. Every gesture, head movement, and body motion should correspond directly to musical elements. Sharp, accurate timing. "
+            
+            # Genre-based movement
+            if genre_movement == 'rock':
+                audio_integration_instruction += "ROCK MOVEMENT STYLE: Energetic, powerful movements with strong emphasis on rhythm. Head banging, fist pumps, strong guitar-like arm movements, confident stance. "
+            elif genre_movement == 'pop':
+                audio_integration_instruction += "POP MOVEMENT STYLE: Choreographed, polished movements with smooth transitions. Graceful arm gestures, coordinated hand movements, stylish poses, dance-pop choreography. "
+            elif genre_movement == 'classical':
+                audio_integration_instruction += "CLASSICAL MOVEMENT STYLE: Elegant, refined movements with graceful flow. Subtle arm gestures, gentle swaying, dignified posture, controlled expressive movements. "
+            elif genre_movement == 'electronic':
+                audio_integration_instruction += "ELECTRONIC MOVEMENT STYLE: Rhythmic, robotic movements with sharp precision. Staccato gestures, mechanical head movements, digital dance moves, futuristic body language. "
+            elif genre_movement == 'jazz':
+                audio_integration_instruction += "JAZZ MOVEMENT STYLE: Smooth, improvisational movements with natural flow. Relaxed swaying, cool hand gestures, casual shoulder movements, spontaneous expressive motions. "
+            elif genre_movement == 'folk':
+                audio_integration_instruction += "FOLK MOVEMENT STYLE: Natural, grounded movements with organic feel. Gentle swaying, simple hand gestures, warm body language, authentic emotional expression. "
+            
+            # Add Timing Control instructions
+            timing_instruction = ""
+            
+            # Movement speed
+            if movement_speed == 'slow_motion':
+                timing_instruction += "SLOW MOTION: All movements should be gracefully slowed down with smooth, flowing transitions. Emphasize deliberate, controlled motion with extended timing. "
+            elif movement_speed == 'fast':
+                timing_instruction += "FAST MOVEMENT: Quick, energetic movements with rapid transitions. Emphasize speed and agility while maintaining coordination. "
+            
+            # Pause points
+            if pause_points == 'occasional':
+                timing_instruction += "OCCASIONAL PAUSES: Include brief moments of complete stillness between movements. Natural pauses that add rhythm and emphasis to the performance. "
+            elif pause_points == 'frequent':
+                timing_instruction += "FREQUENT PAUSES: Regular moments of stillness throughout the performance. Start-stop rhythm with deliberate pauses between movements. "
+            
+            # Transition smoothness
+            if transition_smoothness == 'smooth':
+                timing_instruction += "SMOOTH TRANSITIONS: All movements should flow seamlessly from one to another. No abrupt starts or stops, continuous fluid motion. "
+            elif transition_smoothness == 'sharp':
+                timing_instruction += "SHARP TRANSITIONS: Quick, precise movements with clear starts and stops. Defined, crisp movements with minimal blending. "
+            
+            # Add Character Interaction instructions
+            interaction_instruction = ""
+            
+            # Character coordination
+            if character_coordination == 'synchronized':
+                interaction_instruction += "SYNCHRONIZED MOVEMENT: All characters move in perfect coordination. Mirror movements, unified timing, identical gestures, and coordinated choreography. "
+            elif character_coordination == 'call_response':
+                interaction_instruction += "CALL AND RESPONSE: Characters interact through alternating movements. One character initiates movement, others respond in turn. Interactive, conversational motion. "
+            
+            # Object interaction
+            if object_interaction == 'subtle':
+                interaction_instruction += "SUBTLE OBJECT INTERACTION: Characters occasionally touch or interact with nearby objects naturally. Gentle, realistic object handling that enhances the scene. "
+            elif object_interaction == 'prominent':
+                interaction_instruction += "PROMINENT OBJECT INTERACTION: Characters actively engage with objects as part of the performance. Deliberate manipulation of props, instruments, or environmental elements. "
                 
                 # Add danceability-based instructions
                 if "highly danceable" in audio_description.lower():
@@ -1271,7 +1595,7 @@ CRITICAL FRAME AWARENESS:
 - If user says "static upper body" or "maintains static posture": NO arm movements, torso movements, or shoulder movements
 - ABSOLUTE STATIC RULE: If any static keywords are detected, NO hand gestures, arm movements, finger movements, or body movements of any kind - ONLY lip-sync and eye/eyebrow movements allowed
 
-{resolution_instruction}{audio_instruction}{movement_instruction}{performance_instruction}
+{resolution_instruction}{audio_instruction}{movement_instruction}{performance_instruction}{audio_integration_instruction}{timing_instruction}{interaction_instruction}
 
 CRITICAL: Keep your enhanced prompt under 1500 characters total. Use exactly 7 sentences maximum - one for each point above. Be concise and specific. Focus on natural motion and realistic timing. Do not add conversational fluff.
 
