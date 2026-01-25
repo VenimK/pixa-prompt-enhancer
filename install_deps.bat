@@ -21,9 +21,14 @@ if errorlevel 1 (
     echo.
     
     REM Recreate the .pth file with correct configuration
-    echo. > portable_python\python311._pth
-    echo Lib >> portable_python\python311._pth
-    echo import site >> portable_python\python311._pth
+    REM The embeddable package stores stdlib in python311.zip
+    (
+        echo python311.zip
+        echo .
+        echo Lib
+        echo Lib\site-packages
+        echo import site
+    ) > portable_python\python311._pth
     
     echo Python configuration fixed.
     echo.

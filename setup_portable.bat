@@ -56,32 +56,25 @@ del python-embed.zip
 
 REM Configure Python for pip (fix embeddable package)
 echo Configuring Python for package installation...
-echo. > portable_python\python311._pth
-echo Lib >> portable_python\python311._pth
-echo import site >> portable_python\python311._pth
+
+REM The embeddable package stores stdlib in python311.zip
+REM We need: python311.zip, current dir, Lib, and import site
+(
+    echo python311.zip
+    echo .
+    echo Lib
+    echo Lib\site-packages
+    echo import site
+) > portable_python\python311._pth
 
 REM Verify Python works
 echo Testing Python configuration...
 portable_python\python.exe --version
 if errorlevel 1 (
     echo ERROR: Python configuration failed
-    echo Trying alternative configuration...
-    echo.
-    
-    REM Alternative: Try without import site first
-    echo. > portable_python\python311._pth
-    echo Lib >> portable_python\python311._pth
-    
-    portable_python\python.exe --version
-    if errorlevel 1 (
-        echo ERROR: Python still not working
-        echo Please check the extraction and try again
-        pause
-        exit /b 1
-    )
-    
-    echo Basic Python working, adding site support...
-    echo import site >> portable_python\python311._pth
+    echo Please delete portable_python folder and try again
+    pause
+    exit /b 1
 )
 
 echo Python configuration successful!
