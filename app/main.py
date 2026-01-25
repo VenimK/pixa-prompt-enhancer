@@ -237,6 +237,146 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
         return f"An unexpected error occurred: {e}. Please try again later."
 
 
+def generate_enhanced_ltx2_prompt(audio_characteristics: dict, base_prompt: str) -> str:
+    """Generate enhanced LTX-2 prompt using advanced audio analysis."""
+    
+    prompt_parts = [base_prompt.strip()]
+    
+    # 1. Performance Style Enhancements
+    if audio_characteristics.get('vocal_style') == 'spoken':
+        prompt_parts.append("delivering spoken dialogue with precise lip-sync and clear diction")
+        if audio_characteristics.get('vocal_confidence', 0) > 0.8:
+            prompt_parts.append("with articulate vocal performance and natural speech patterns")
+    elif audio_characteristics.get('vocal_style') == 'singing':
+        prompt_parts.append(f"singing with {audio_characteristics.get('vocal_range', 'medium')} vocal range")
+        if audio_characteristics.get('vocal_range') == 'high':
+            prompt_parts.append("featuring high-reaching gestures during peak vocal notes")
+    elif audio_characteristics.get('vocal_style') == 'melodic_speech':
+        prompt_parts.append("delivering melodic speech with rhythmic cadence")
+    
+    # 2. Rhythm and Timing Integration
+    if audio_characteristics.get('beat_strength') == 'strong':
+        prompt_parts.append("with subtle body movements synchronized to strong rhythmic beats")
+        if audio_characteristics.get('time_signature') != '4/4':
+            prompt_parts.append(f"movements following {audio_characteristics['time_signature']} time signature")
+    
+    if audio_characteristics.get('syncopation') == 'high':
+        prompt_parts.append("incorporating off-beat movements and syncopated gestures")
+    elif audio_characteristics.get('syncopation') == 'medium':
+        prompt_parts.append("with subtle rhythmic variations in movement")
+    
+    # 3. Tempo-Based Visual Elements
+    tempo = audio_characteristics.get('tempo', 'medium')
+    tempo_bpm = audio_characteristics.get('tempo_bpm', 120)
+    
+    if tempo == 'slow':
+        prompt_parts.append(f"with gentle, measured movements timed to the slow {tempo_bpm:.1f} BPM tempo")
+        if audio_characteristics.get('danceability', 0) > 0.7:
+            prompt_parts.append("creating a calming, meditative visual rhythm despite the danceable beat")
+    elif tempo == 'fast':
+        prompt_parts.append(f"with energetic movements responding to the driving {tempo_bpm:.1f} BPM tempo")
+        prompt_parts.append("quick visual elements synchronized to rapid rhythm")
+    
+    # 4. Emotional and Dynamic Elements
+    mood = audio_characteristics.get('mood', 'neutral')
+    emotional_arc = audio_characteristics.get('emotional_arc', 'stable')
+    
+    mood_enhancements = {
+        'calm': "creating a serene, peaceful atmosphere with soft, gentle expressions",
+        'contemplative': "with thoughtful, introspective facial expressions and measured movements",
+        'energetic': "with dynamic, high-energy movements and vibrant expressions",
+        'emotional': "with expressive facial changes and emotional body language",
+        'futuristic': "with modern, innovative visual styling and contemporary movements"
+    }
+    
+    if mood in mood_enhancements:
+        prompt_parts.append(mood_enhancements[mood])
+    
+    # 5. Emotional Arc Integration
+    if emotional_arc == 'building':
+        prompt_parts.append("with intensity and expressiveness gradually building throughout the performance")
+    elif emotional_arc == 'declining':
+        prompt_parts.append("with movements and expressions gradually softening and calming")
+    
+    # 6. Genre-Specific Visual Direction
+    genre = audio_characteristics.get('genre', 'unknown')
+    
+    genre_directions = {
+        'pop': "with contemporary, polished performance style and modern visual aesthetics",
+        'ballad': "with intimate, emotional delivery and heartfelt expressions",
+        'electronic': "with futuristic visual effects synchronized to electronic elements",
+        'ambient': "with atmospheric, ethereal visual quality and dreamlike movements",
+        'spoken_word': "with theatrical, articulate performance and dramatic timing",
+        'instrumental': "with movements responding to instrumental textures and musical phrases"
+    }
+    
+    if genre in genre_directions:
+        prompt_parts.append(genre_directions[genre])
+    
+    # 7. Performance Type Integration
+    performance_type = audio_characteristics.get('performance_type', 'studio_recording')
+    
+    if performance_type == 'live_performance':
+        prompt_parts.append("with natural, authentic performance quality and spontaneous movements")
+    elif performance_type == 'studio_recording':
+        prompt_parts.append("with polished, precise performance and refined movements")
+    
+    # 8. Dynamic Range Visual Effects
+    dynamic_range = audio_characteristics.get('dynamic_range', 'medium')
+    
+    if dynamic_range == 'wide':
+        prompt_parts.append("with dramatic contrasts between quiet, subtle moments and powerful, expressive peaks")
+    elif dynamic_range == 'narrow':
+        prompt_parts.append("with consistent, steady performance quality and even visual intensity")
+    
+    # 9. Spectral Characteristics to Visual Elements
+    spectral = audio_characteristics.get('spectral_characteristics', {})
+    
+    if spectral.get('warmth', False):
+        prompt_parts.append("with warm, soft lighting and gentle visual atmosphere")
+    elif spectral.get('brightness', 0) > 2500:
+        prompt_parts.append("with bright, vibrant visual elements and crisp lighting")
+    
+    # 10. Danceability and Movement
+    danceability = audio_characteristics.get('danceability', 0.5)
+    
+    if danceability > 0.8:
+        prompt_parts.append("with highly danceable rhythmic movements and natural groove")
+    elif danceability > 0.6:
+        prompt_parts.append("with subtle rhythmic movements and natural flow")
+    
+    # 11. Energy Level Integration
+    energy_level = audio_characteristics.get('energy_level', 'medium')
+    
+    energy_enhancements = {
+        'very_low': "with minimal, subtle movements and gentle expressions",
+        'low': "with restrained, calm movements and soft delivery",
+        'medium': "with balanced, natural movements and moderate expressiveness",
+        'high': "with energetic, confident movements and strong expressions",
+        'very_high': "with dynamic, powerful movements and intense expressiveness"
+    }
+    
+    if energy_level in energy_enhancements:
+        prompt_parts.append(energy_enhancements[energy_level])
+    
+    # 12. Advanced Lip-Sync Instructions
+    if audio_characteristics.get('has_vocals'):
+        vocal_confidence = audio_characteristics.get('vocal_confidence', 0)
+        
+        if vocal_confidence > 0.8:
+            prompt_parts.append("featuring precise, detailed lip-sync to every vocal nuance and syllable")
+        elif vocal_confidence > 0.6:
+            prompt_parts.append("with accurate lip-sync synchronized to vocal delivery")
+        
+        # Add vocal style specific instructions
+        if audio_characteristics.get('vocal_style') == 'spoken':
+            prompt_parts.append("with natural mouth movements matching speech patterns and articulation")
+        elif audio_characteristics.get('vocal_style') == 'singing':
+            prompt_parts.append("with expressive mouth movements matching melodic phrases and vocal dynamics")
+    
+    return " ".join(prompt_parts)
+
+
 def limit_prompt_length(enhanced_prompt: str, model_type: str) -> str:
     """
     Limit the length of the enhanced prompt based on the model type.
@@ -511,7 +651,18 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
             "has_vocals": False,
             "vocal_confidence": 0.0,
             "danceability": 0.5,
-            "description": ""
+            "description": "",
+            # Enhanced features
+            "time_signature": "4/4",
+            "beat_strength": "medium",
+            "syncopation": "low",
+            "vocal_style": "unknown",
+            "vocal_range": "medium",
+            "performance_type": "studio_recording",
+            "genre": "unknown",
+            "spectral_characteristics": {},
+            "dynamic_range": "medium",
+            "emotional_arc": "stable"
         }
         
         # 1. Tempo Detection
@@ -532,10 +683,28 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         else:
             characteristics["tempo"] = "very_fast"
         
-        # 2. Energy Level Detection
-        # Compute RMS energy
+        # 2. Enhanced Beat Analysis
+        if len(beats) > 10:
+            # Beat strength analysis
+            beat_consistency = 1.0 - np.std(np.diff(beats)) / np.mean(np.diff(beats))
+            if beat_consistency > 0.8:
+                characteristics["beat_strength"] = "strong"
+            elif beat_consistency > 0.5:
+                characteristics["beat_strength"] = "medium"
+            else:
+                characteristics["beat_strength"] = "weak"
+            
+            # Time signature detection
+            beat_intervals = np.diff(beats)
+            avg_interval = np.mean(beat_intervals)
+            if avg_interval > 0.8:  # Slow beats
+                characteristics["time_signature"] = "3/4" if len(beats) % 3 == 0 else "4/4"
+            else:
+                characteristics["time_signature"] = "4/4"  # Most common
+        
+        # 3. Energy Level Detection
         rms = librosa.feature.rms(y=y)[0]
-        energy = float(np.mean(rms))  # Convert to Python float
+        energy = float(np.mean(rms))
         
         if energy < 0.05:
             characteristics["energy_level"] = "very_low"
@@ -548,21 +717,33 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         else:
             characteristics["energy_level"] = "very_high"
         
-        # 3. Vocal Detection using Spectral Analysis
-        # Compute spectral features
+        # 4. Dynamic Range Analysis
+        dynamic_range = float(np.std(rms))
+        if dynamic_range < 0.02:
+            characteristics["dynamic_range"] = "narrow"
+        elif dynamic_range < 0.05:
+            characteristics["dynamic_range"] = "medium"
+        else:
+            characteristics["dynamic_range"] = "wide"
+        
+        # 5. Enhanced Spectral Analysis
         spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
         spectral_rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr)[0]
         mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
         
-        # Detect vocals based on spectral characteristics
-        # Human voices typically have higher spectral centroids and specific MFCC patterns
+        characteristics["spectral_characteristics"] = {
+            "brightness": float(np.mean(spectral_centroids)),
+            "warmth": float(np.mean(spectral_centroids) < 2000),
+            "spectral_variance": float(np.var(spectral_centroids))
+        }
+        
+        # 6. Advanced Vocal Detection
         avg_spectral_centroid = float(np.mean(spectral_centroids))
         spectral_variance = float(np.var(spectral_centroids))
         
-        # Simple vocal detection heuristic
         vocal_score = 0.0
         
-        # High spectral centroid suggests vocals or high-frequency content
+        # High spectral centroid suggests vocals
         if avg_spectral_centroid > 2000:
             vocal_score += 0.3
         
@@ -572,7 +753,7 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         
         # MFCC analysis for vocal patterns
         mfcc_std = np.std(mfccs, axis=1)
-        if float(np.mean(mfcc_std[1:4])) > 15:  # MFCC coefficients 1-3 are important for vocals
+        if float(np.mean(mfcc_std[1:4])) > 15:
             vocal_score += 0.3
         
         # Zero crossing rate (vocals typically have higher ZCR)
@@ -583,90 +764,220 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         characteristics["vocal_confidence"] = min(float(vocal_score), 1.0)
         characteristics["has_vocals"] = vocal_score > 0.5
         
-        # 4. Danceability (based on beat consistency and tempo)
+        # 7. Vocal Style Analysis
+        if characteristics["has_vocals"]:
+            # Detect singing vs speech
+            pitch_salience = librosa.feature.yin(y, fmin=50, fmax=400)[0]
+            pitch_variation = float(np.std(pitch_salience))
+            
+            if pitch_variation > 50:
+                characteristics["vocal_style"] = "singing"
+            elif pitch_variation > 20:
+                characteristics["vocal_style"] = "melodic_speech"
+            else:
+                characteristics["vocal_style"] = "spoken"
+            
+            # Vocal range estimation
+            avg_pitch = float(np.mean(pitch_salience[pitch_salience > 0]))
+            if avg_pitch > 400:
+                characteristics["vocal_range"] = "high"
+            elif avg_pitch > 200:
+                characteristics["vocal_range"] = "medium"
+            else:
+                characteristics["vocal_range"] = "low"
+        
+        # 8. Syncopation Detection
+        if len(beats) > 10:
+            # Look for off-beat energy
+            beat_frames = librosa.util.fix_frames(beats)
+            onset_frames = librosa.onset.onset_detect(y=y, sr=sr)
+            
+            # Count how many onsets fall between beats (syncopation)
+            syncopated_count = 0
+            for onset in onset_frames:
+                if not any(abs(onset - beat) < 2 for beat in beat_frames):
+                    syncopated_count += 1
+            
+            syncopation_ratio = syncopated_count / len(onset_frames) if len(onset_frames) > 0 else 0
+            if syncopation_ratio > 0.3:
+                characteristics["syncopation"] = "high"
+            elif syncopation_ratio > 0.1:
+                characteristics["syncopation"] = "medium"
+            else:
+                characteristics["syncopation"] = "low"
+        
+        # 9. Danceability (based on beat consistency and tempo)
         if len(beats) > 10:
             beat_diffs = np.diff(beats)
             beat_consistency = float(1.0 - np.std(beat_diffs) / np.mean(beat_diffs))
-            tempo_factor = min(tempo / 120, 2.0)  # Normalize around 120 BPM
+            tempo_factor = min(tempo / 120, 2.0)
             characteristics["danceability"] = float(beat_consistency * 0.6 + tempo_factor * 0.4)
-        else:
-            characteristics["danceability"] = 0.3
         
-        # 5. Mood Detection based on audio features
-        # Combine tempo, energy, and spectral features for mood
+        # 10. Genre Classification (basic)
+        if characteristics["has_vocals"]:
+            if characteristics["vocal_style"] == "singing":
+                if tempo > 120 and energy > 0.15:
+                    characteristics["genre"] = "pop"
+                elif tempo < 90 and energy < 0.1:
+                    characteristics["genre"] = "ballad"
+                else:
+                    characteristics["genre"] = "singer_songwriter"
+            else:
+                characteristics["genre"] = "spoken_word"
+        else:
+            if tempo > 130:
+                characteristics["genre"] = "electronic"
+            elif tempo < 80:
+                characteristics["genre"] = "ambient"
+            else:
+                characteristics["genre"] = "instrumental"
+        
+        # 11. Performance Type Detection
+        # Reverb analysis for live vs studio
+        harmonic, percussive = librosa.effects.hpss(y)
+        reverb_indicator = float(np.mean(harmonic) / np.mean(percussive))
+        
+        if reverb_indicator > 2.0:
+            characteristics["performance_type"] = "live_performance"
+        elif reverb_indicator < 0.5:
+            characteristics["performance_type"] = "studio_recording"
+        else:
+            characteristics["performance_type"] = "home_recording"
+        
+        # 12. Emotional Arc Detection
+        # Analyze energy progression over time
+        hop_length = 512
+        rms_frames = librosa.feature.rms(y=y, hop_length=hop_length)[0]
+        
+        if len(rms_frames) > 10:
+            # Check if energy builds, falls, or stays stable
+            energy_trend = np.polyfit(range(len(rms_frames)), rms_frames, 1)[0]
+            
+            if energy_trend > 0.001:
+                characteristics["emotional_arc"] = "building"
+            elif energy_trend < -0.001:
+                characteristics["emotional_arc"] = "declining"
+            else:
+                characteristics["emotional_arc"] = "stable"
+        
+        # 13. Mood Detection (enhanced)
         if characteristics["energy_level"] in ["high", "very_high"] and characteristics["tempo"] in ["fast", "very_fast"]:
             if characteristics["has_vocals"]:
                 characteristics["mood"] = "energetic"
             else:
                 characteristics["mood"] = "energetic_instrumental"
         elif characteristics["energy_level"] in ["low", "very_low"] and characteristics["tempo"] in ["slow", "very_slow"]:
-            characteristics["mood"] = "calm"
+            if characteristics["vocal_style"] == "spoken":
+                characteristics["mood"] = "contemplative"
+            else:
+                characteristics["mood"] = "calm"
         elif characteristics["has_vocals"] and characteristics["energy_level"] == "medium":
             characteristics["mood"] = "emotional"
+        elif characteristics["genre"] == "electronic":
+            characteristics["mood"] = "futuristic"
         else:
             characteristics["mood"] = "neutral"
         
-        # 6. Audio Type Classification
+        # 14. Audio Type Classification (enhanced)
         if characteristics["has_vocals"]:
-            if characteristics["tempo"] in ["medium", "fast", "very_fast"]:
-                characteristics["audio_type"] = "singing"
-            else:
+            if characteristics["vocal_style"] == "singing":
+                if characteristics["tempo"] in ["medium", "fast", "very_fast"]:
+                    characteristics["audio_type"] = "singing"
+                else:
+                    characteristics["audio_type"] = "ballad"
+            elif characteristics["vocal_style"] == "spoken":
                 characteristics["audio_type"] = "speech"
+            else:
+                characteristics["audio_type"] = "melodic_speech"
         else:
             if characteristics["danceability"] > 0.6:
                 characteristics["audio_type"] = "instrumental_dance"
             else:
                 characteristics["audio_type"] = "instrumental"
         
-        # 7. Generate Description
+        # 15. Enhanced Description Generation
         description_parts = []
         
-        # Audio type
-        if characteristics["audio_type"] == "singing":
-            description_parts.append(f"singing performance with vocals ({characteristics['vocal_confidence']:.1f} confidence)")
-        elif characteristics["audio_type"] == "speech":
-            description_parts.append("spoken dialogue/voice")
-        elif characteristics["audio_type"] == "instrumental_dance":
-            description_parts.append("instrumental dance music")
-        elif characteristics["audio_type"] == "instrumental":
-            description_parts.append("instrumental music")
+        # Audio type and style
+        if characteristics["vocal_style"] == "singing":
+            description_parts.append(f"{characteristics['vocal_style']} performance with {characteristics['vocal_range']} vocal range")
+        elif characteristics["vocal_style"] == "spoken":
+            description_parts.append("spoken dialogue with clear diction")
+        elif characteristics["vocal_style"] == "melodic_speech":
+            description_parts.append("melodic speech with rhythmic delivery")
         else:
-            description_parts.append("audio track")
+            description_parts.append("instrumental performance")
         
-        # Tempo with BPM
-        description_parts.append(f"with {characteristics['tempo']} tempo ({characteristics['tempo_bpm']:.1f} BPM)")
+        # Tempo and rhythm
+        if characteristics["beat_strength"] == "strong":
+            description_parts.append(f"with strong {characteristics['tempo']} tempo ({characteristics['tempo_bpm']:.1f} BPM)")
+        else:
+            description_parts.append(f"with {characteristics['tempo']} tempo ({characteristics['tempo_bpm']:.1f} BPM)")
         
-        # Energy and danceability
+        # Time signature
+        if characteristics["time_signature"] != "4/4":
+            description_parts.append(f"in {characteristics['time_signature']} time")
+        
+        # Danceability and syncopation
         if characteristics["danceability"] > 0.7:
-            description_parts.append("highly danceable rhythm")
-        elif characteristics["danceability"] > 0.4:
-            description_parts.append("moderate danceability")
-        else:
-            description_parts.append("low danceability")
+            if characteristics["syncopation"] == "high":
+                description_parts.append("highly syncopated danceable rhythm")
+            else:
+                description_parts.append("strong danceable rhythm")
+        elif characteristics["syncopation"] == "high":
+            description_parts.append("complex syncopated rhythm")
         
-        # Mood
+        # Mood and emotional arc
         mood_descriptions = {
             "energetic": "creating high energy and excitement",
             "energetic_instrumental": "building instrumental energy",
             "calm": "establishing a peaceful, serene mood",
-            "emotional": "with emotional, expressive atmosphere",
+            "contemplative": "creating an introspective, thoughtful atmosphere",
+            "emotional": "with emotional, expressive delivery",
+            "futuristic": "with modern, innovative soundscapes",
             "neutral": "with balanced mood"
         }
         description_parts.append(mood_descriptions.get(characteristics["mood"], "with neutral mood"))
         
-        # Performance instructions
+        # Emotional arc
+        if characteristics["emotional_arc"] == "building":
+            description_parts.append("with intensity building throughout")
+        elif characteristics["emotional_arc"] == "declining":
+            description_parts.append("gradually calming down")
+        
+        # Performance characteristics
+        if characteristics["performance_type"] == "live_performance":
+            description_parts.append("captured in a live setting with natural ambiance")
+        elif characteristics["performance_type"] == "studio_recording":
+            description_parts.append("with polished studio production quality")
+        
+        # Genre-specific details
+        genre_details = {
+            "pop": "featuring catchy melodic hooks",
+            "ballad": "with intimate, emotional delivery",
+            "electronic": "with synthesized textures and electronic elements",
+            "ambient": "creating atmospheric soundscapes",
+            "instrumental": "showcasing musical instrumentation",
+            "spoken_word": "with articulate vocal performance"
+        }
+        if characteristics["genre"] in genre_details:
+            description_parts.append(genre_details[characteristics["genre"]])
+        
+        # Vocal performance details
         if characteristics["has_vocals"]:
-            description_parts.append("featuring vocal performance that should be precisely lip-synced")
+            if characteristics["vocal_confidence"] > 0.8:
+                description_parts.append("featuring prominent vocal performance")
+            description_parts.append("requiring precise lip-sync synchronization")
         
         characteristics["description"] = " ".join(description_parts) + "."
         
-        log_debug(f"Real audio analysis completed: {filename}")
-        log_debug(f"Tempo: {characteristics['tempo_bpm']:.1f} BPM, Vocals: {characteristics['has_vocals']}, Energy: {characteristics['energy_level']}")
+        log_debug(f"Enhanced audio analysis completed: {filename}")
+        log_debug(f"Genre: {characteristics['genre']}, Style: {characteristics['vocal_style']}, Beat: {characteristics['beat_strength']}")
         
         return characteristics
         
     except Exception as e:
-        log_debug(f"Error in real audio analysis: {str(e)}")
+        log_debug(f"Error in enhanced audio analysis: {str(e)}")
         # Fallback to filename-based analysis
         return analyze_audio_characteristics(filename, 0)
 
@@ -1680,8 +1991,123 @@ Generate a brief animation prompt now."""
                 elif "jazz" in audio_description.lower() or "blues" in audio_description.lower():
                     performance_instruction += "Emphasize fluid, expressive movements with jazz responsiveness - smooth body motions, improvisational gestures, and rhythmic variations that match jazz rhythms. "
                 
-                # Add stability limiter (MANDATORY)
-                performance_instruction += "Natural motion, realistic timing, minimal facial distortion, no overacting or sudden movement. "
+                # ENHANCED AUDIO ANALYSIS INTEGRATION
+            # Use enhanced audio characteristics to generate better prompt
+            if audio_description and hasattr(request, 'audio_characteristics'):
+                try:
+                    # Parse audio characteristics from the audio_description if available
+                    # This would be enhanced to pass the full characteristics object
+                    enhanced_base_prompt = f"The character {request.prompt}"
+                    
+                    # For now, extract key characteristics from audio_description
+                    audio_chars = {}
+                    
+                    # Extract enhanced characteristics from audio_description
+                    if "spoken dialogue" in audio_description.lower():
+                        audio_chars['vocal_style'] = 'spoken'
+                    elif "singing performance" in audio_description.lower():
+                        audio_chars['vocal_style'] = 'singing'
+                    elif "melodic speech" in audio_description.lower():
+                        audio_chars['vocal_style'] = 'melodic_speech'
+                    
+                    # Extract tempo
+                    import re
+                    tempo_match = re.search(r'(\d+\.?\d*)\s*BPM', audio_description)
+                    if tempo_match:
+                        audio_chars['tempo_bpm'] = float(tempo_match.group(1))
+                        if audio_chars['tempo_bpm'] < 90:
+                            audio_chars['tempo'] = 'slow'
+                        elif audio_chars['tempo_bpm'] < 120:
+                            audio_chars['tempo'] = 'medium'
+                        else:
+                            audio_chars['tempo'] = 'fast'
+                    
+                    # Extract mood
+                    if "peaceful" in audio_description.lower() or "serene" in audio_description.lower():
+                        audio_chars['mood'] = 'calm'
+                    elif "energetic" in audio_description.lower() or "high energy" in audio_description.lower():
+                        audio_chars['mood'] = 'energetic'
+                    elif "emotional" in audio_description.lower():
+                        audio_chars['mood'] = 'emotional'
+                    elif "contemplative" in audio_description.lower():
+                        audio_chars['mood'] = 'contemplative'
+                    
+                    # Extract danceability
+                    if "highly danceable" in audio_description.lower():
+                        audio_chars['danceability'] = 0.85
+                    elif "danceable" in audio_description.lower():
+                        audio_chars['danceability'] = 0.7
+                    else:
+                        audio_chars['danceability'] = 0.4
+                    
+                    # Extract beat strength
+                    if "strong rhythm" in audio_description.lower() or "strong beat" in audio_description.lower():
+                        audio_chars['beat_strength'] = 'strong'
+                    elif "weak rhythm" in audio_description.lower():
+                        audio_chars['beat_strength'] = 'weak'
+                    else:
+                        audio_chars['beat_strength'] = 'medium'
+                    
+                    # Extract vocal confidence
+                    if "prominent vocal" in audio_description.lower():
+                        audio_chars['vocal_confidence'] = 0.9
+                    elif "featuring vocal" in audio_description.lower():
+                        audio_chars['vocal_confidence'] = 0.7
+                    else:
+                        audio_chars['vocal_confidence'] = 0.5
+                    
+                    # Extract has_vocals
+                    audio_chars['has_vocals'] = any([
+                        "vocal" in audio_description.lower(),
+                        "singing" in audio_description.lower(),
+                        "speech" in audio_description.lower(),
+                        "dialogue" in audio_description.lower(),
+                        "spoken" in audio_description.lower()
+                    ])
+                    
+                    # Extract genre
+                    if "pop" in audio_description.lower():
+                        audio_chars['genre'] = 'pop'
+                    elif "electronic" in audio_description.lower():
+                        audio_chars['genre'] = 'electronic'
+                    elif "rock" in audio_description.lower():
+                        audio_chars['genre'] = 'rock'
+                    elif "jazz" in audio_description.lower():
+                        audio_chars['genre'] = 'jazz'
+                    elif "classical" in audio_description.lower():
+                        audio_chars['genre'] = 'classical'
+                    elif "ambient" in audio_description.lower():
+                        audio_chars['genre'] = 'ambient'
+                    elif "spoken_word" in audio_description.lower():
+                        audio_chars['genre'] = 'spoken_word'
+                    else:
+                        audio_chars['genre'] = 'unknown'
+                    
+                    # Extract energy level
+                    if "very high energy" in audio_description.lower():
+                        audio_chars['energy_level'] = 'very_high'
+                    elif "high energy" in audio_description.lower():
+                        audio_chars['energy_level'] = 'high'
+                    elif "low energy" in audio_description.lower():
+                        audio_chars['energy_level'] = 'low'
+                    elif "very low energy" in audio_description.lower():
+                        audio_chars['energy_level'] = 'very_low'
+                    else:
+                        audio_chars['energy_level'] = 'medium'
+                    
+                    # Generate enhanced prompt using the new function
+                    if audio_chars:
+                        enhanced_prompt = generate_enhanced_ltx2_prompt(audio_chars, enhanced_base_prompt)
+                        # Update the base prompt with enhanced audio-driven description
+                        request.prompt = enhanced_prompt
+                        log_debug(f"Enhanced prompt generated using audio analysis: {len(enhanced_prompt)} characters")
+                
+                except Exception as e:
+                    log_debug(f"Error generating enhanced audio prompt: {e}")
+                    # Continue with original prompt if enhancement fails
+            
+            # Add stability limiter (MANDATORY)
+            performance_instruction += "Natural motion, realistic timing, minimal facial distortion, no overacting or sudden movement. "
             
             meta_prompt = f"""You are a creative assistant for the LTX-2 text-to-video model. Create a concise, motion-focused prompt following this exact 7-point structure{instruction_text}.
 

@@ -85,13 +85,36 @@ portable_python\python.exe -c "import urllib.request; urllib.request.urlretrieve
 portable_python\python.exe get-pip.py --no-warn-script-location
 del get-pip.py
 
+REM Check for .env file
+if not exist ".env" (
+    echo.
+    echo ========================================
+    echo API KEY SETUP REQUIRED
+    echo ========================================
+    echo.
+    echo You need a Google API key to use this application.
+    echo.
+    echo 1. Go to: https://aistudio.google.com/app/apikey
+    echo 2. Create a new API key
+    echo 3. Create a .env file with: GOOGLE_API_KEY=your_key_here
+    echo.
+    echo Would you like to create a .env file template now? (Y/N)
+    set /p create_env=
+    if /i "%create_env%"=="Y" (
+        echo GOOGLE_API_KEY=your_api_key_here > .env
+        echo Created .env file template.
+        echo Please edit it with your actual API key.
+    )
+)
+
 echo.
 echo ========================================
 echo SUCCESS: Portable Python setup complete!
 echo ========================================
 echo.
 echo Next steps:
-echo 1. Run install_deps.bat
-echo 2. Run run_app.bat
+echo 1. Edit .env file with your Google API key (if not done)
+echo 2. Run install_deps.bat
+echo 3. Run run_app.bat
 echo.
 pause
