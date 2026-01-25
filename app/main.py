@@ -1188,7 +1188,7 @@ Generate a brief animation prompt now."""
             audio_generation = getattr(request, 'audio_generation', 'enabled') if hasattr(request, 'audio_generation') else 'enabled'
             resolution = getattr(request, 'resolution', '4K') if hasattr(request, 'resolution') else '4K'
             audio_description = getattr(request, 'audio_description', '') if hasattr(request, 'audio_description') else ''
-            movement_level = getattr(request, 'movement_level', 'natural') if hasattr(request, 'movement_level') else 'natural'
+            movement_level = getattr(request, 'movement_level', 'auto') if hasattr(request, 'movement_level') else 'auto'
             
             # Audio Integration parameters
             lipsync_intensity = getattr(request, 'lipsync_intensity', 'natural') if hasattr(request, 'lipsync_intensity') else 'natural'
@@ -1209,16 +1209,53 @@ Generate a brief animation prompt now."""
             
             # Add movement level control
             movement_instruction = ""
-            if movement_level == 'static':
-                movement_instruction = " ABSOLUTE STATIC PERFORMANCE: Only lip-sync and subtle eye movements allowed. No head movement, no arm gestures, no body swaying, no shoulder movements. Character remains completely still except for mouth movement and minimal facial expressions. "
-            elif movement_level == 'minimal':
-                movement_instruction = " MINIMAL MOVEMENT: Only subtle head movement, slight shoulder motion, and gentle hand gestures. No large body movements, no dramatic swaying, no exaggerated gestures. Focus on restrained, natural motion. "
-            elif movement_level == 'natural':
-                movement_instruction = " NATURAL MOVEMENT: Normal body movement including head turns, shoulder movements, arm gestures, and gentle body swaying. Maintain realistic motion without exaggeration. "
-            elif movement_level == 'expressive':
-                movement_instruction = " EXPRESSIVE MOVEMENT: Full body movement including dynamic gestures, head movement, shoulder motion, arm gestures, and body swaying. Emphasize rhythmic, energetic motion that matches the audio. "
-            elif movement_level == 'dynamic':
-                movement_instruction = " DYNAMIC MOVEMENT: Highly energetic and expressive full-body movement. Include dramatic gestures, head movement, shoulder motion, arm gestures, body swaying, and rhythmic dancing. Emphasize powerful, athletic motion. "
+            
+            # Smart priority system: Auto-detect vs Manual selection
+            if movement_level == 'auto' and audio_description:
+                # AUTO MODE: Use audio detection to determine optimal movement level
+                if "very_fast" in audio_description.lower() and "singing" in audio_description.lower():
+                    auto_movement_level = "dynamic"  # Fast singing = dynamic
+                elif "high energy" in audio_description.lower() or "very_high" in audio_description.lower():
+                    auto_movement_level = "expressive"  # High energy = expressive
+                elif "low energy" in audio_description.lower() or "calm" in audio_description.lower() or "peaceful" in audio_description.lower():
+                    auto_movement_level = "minimal"  # Low energy = minimal
+                elif "speech" in audio_description.lower() or "dialogue" in audio_description.lower() or "spoken" in audio_description.lower():
+                    auto_movement_level = "minimal"  # Speech = minimal
+                elif "dance" in audio_description.lower() or "highly danceable" in audio_description.lower():
+                    auto_movement_level = "expressive"  # Danceable = expressive
+                else:
+                    auto_movement_level = "natural"  # Default to natural
+                
+                # Generate movement instruction based on auto-detected level
+                if auto_movement_level == 'static':
+                    movement_instruction = " ABSOLUTE STATIC PERFORMANCE: Only lip-sync and subtle eye movements allowed. No head movement, no arm gestures, no body swaying, no shoulder movements. Character remains completely still except for mouth movement and minimal facial expressions. "
+                elif auto_movement_level == 'minimal':
+                    movement_instruction = " MINIMAL MOVEMENT: Only subtle head movement, slight shoulder motion, and gentle hand gestures. No large body movements, no dramatic swaying, no exaggerated gestures. Focus on restrained, natural motion. "
+                elif auto_movement_level == 'natural':
+                    movement_instruction = " NATURAL MOVEMENT: Normal body movement including head turns, shoulder movements, arm gestures, and gentle body swaying. Maintain realistic motion without exaggeration. "
+                elif auto_movement_level == 'expressive':
+                    movement_instruction = " EXPRESSIVE MOVEMENT: Full body movement including dynamic gestures, head movement, shoulder motion, arm gestures, and body swaying. Emphasize rhythmic, energetic motion that matches the audio. "
+                elif auto_movement_level == 'dynamic':
+                    movement_instruction = " DYNAMIC MOVEMENT: Highly energetic and expressive full-body movement. Include dramatic gestures, head movement, shoulder motion, arm gestures, body swaying, and rhythmic dancing. Emphasize powerful, athletic motion. "
+                
+                # Add auto-detection info to performance instruction
+                performance_instruction += f"AUTO-DETECTED MOVEMENT: Selected '{auto_movement_level}' movement level based on audio analysis. "
+                
+            else:
+                # MANUAL MODE: Use user-selected movement level
+                if movement_level == 'static':
+                    movement_instruction = " ABSOLUTE STATIC PERFORMANCE: Only lip-sync and subtle eye movements allowed. No head movement, no arm gestures, no body swaying, no shoulder movements. Character remains completely still except for mouth movement and minimal facial expressions. "
+                elif movement_level == 'minimal':
+                    movement_instruction = " MINIMAL MOVEMENT: Only subtle head movement, slight shoulder motion, and gentle hand gestures. No large body movements, no dramatic swaying, no exaggerated gestures. Focus on restrained, natural motion. "
+                elif movement_level == 'natural':
+                    movement_instruction = " NATURAL MOVEMENT: Normal body movement including head turns, shoulder movements, arm gestures, and gentle body swaying. Maintain realistic motion without exaggeration. "
+                elif movement_level == 'expressive':
+                    movement_instruction = " EXPRESSIVE MOVEMENT: Full body movement including dynamic gestures, head movement, shoulder motion, arm gestures, and body swaying. Emphasize rhythmic, energetic motion that matches the audio. "
+                elif movement_level == 'dynamic':
+                    movement_instruction = " DYNAMIC MOVEMENT: Highly energetic and expressive full-body movement. Include dramatic gestures, head movement, shoulder motion, arm gestures, body swaying, and rhythmic dancing. Emphasize powerful, athletic motion. "
+                elif movement_level == 'auto' and not audio_description:
+                    # Auto selected but no audio - default to natural
+                    movement_instruction = " NATURAL MOVEMENT: Normal body movement including head turns, shoulder movements, arm gestures, and gentle body swaying. Maintain realistic motion without exaggeration. "
             
             # AUTO-DETECT from audio_description if not explicitly set
             if audio_description:
