@@ -79,6 +79,12 @@ if errorlevel 1 (
 
 echo Python configuration successful!
 
+REM Install pip
+echo Installing pip...
+portable_python\python.exe -c "import urllib.request; urllib.request.urlretrieve('https://bootstrap.pypa.io/get-pip.py', 'get-pip.py')"
+portable_python\python.exe get-pip.py --no-warn-script-location
+del get-pip.py
+
 echo.
 echo ========================================
 echo SUCCESS: Portable Python setup complete!
