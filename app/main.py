@@ -1066,6 +1066,17 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
             # Asian music: complex spectral content
             characteristics["genre"] = "asian"
         
+        # 12. Post-Genre Time Signature Correction
+        # Fix time signature based on detected genre
+        if characteristics["genre"] in ["rock", "metal", "pop", "hip_hop", "electronic"]:
+            characteristics["time_signature"] = "4/4"  # Most popular music is 4/4
+        elif characteristics["genre"] in ["classical", "folk"]:
+            # Keep original detection for classical/folk (could be 3/4 or 4/4)
+            pass
+        else:
+            # For other genres, default to 4/4
+            characteristics["time_signature"] = "4/4"
+        
         # 11. Performance Type Detection
         # Reverb analysis for live vs studio
         harmonic, percussive = librosa.effects.hpss(y)
