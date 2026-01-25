@@ -920,27 +920,27 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                     
                     # Combined vocal complexity score
                     vocal_complexity = (
-                        harmonic_variance * 0.2 +
-                        float(np.mean(mfcc_std[1:6])) * 10 +
-                        mfcc_delta_std * 5 +
-                        contrast_var * 0.1 +
-                        chroma_complexity * 100
+                        harmonic_variance * 0.01 +
+                        float(np.mean(mfcc_std[1:6])) * 0.5 +
+                        mfcc_delta_std * 2 +
+                        contrast_var * 0.05 +
+                        chroma_complexity * 20
                     )
                     
                     log_debug(f"Vocal analysis: energy={vocal_energy:.4f}, variance={harmonic_variance:.2f}, mfcc_delta={mfcc_delta_std:.4f}, contrast={contrast_var:.4f}, chroma={chroma_complexity:.4f}, complexity={vocal_complexity:.2f}")
                     
                     # Vocal count estimation based on complexity
                     # Higher complexity = more voices/harmonies
-                    if vocal_complexity < 30:
+                    if vocal_complexity < 8:
                         characteristics["vocal_count"] = "solo"
                         characteristics["vocal_separation"] = "single_voice"
-                    elif vocal_complexity < 50:
+                    elif vocal_complexity < 12:
                         characteristics["vocal_count"] = "duo"
                         characteristics["vocal_separation"] = "two_voices"
-                    elif vocal_complexity < 80:
+                    elif vocal_complexity < 18:
                         characteristics["vocal_count"] = "small_group"
                         characteristics["vocal_separation"] = "few_voices"
-                    elif vocal_complexity < 120:
+                    elif vocal_complexity < 25:
                         characteristics["vocal_count"] = "group"
                         characteristics["vocal_separation"] = "multiple_voices"
                     else:
