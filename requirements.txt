@@ -4,3 +4,6 @@ google-generativeai
 Pillow
 python-multipart
 Jinja2
+librosa
+numpy
+scipy
