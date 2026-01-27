@@ -765,19 +765,23 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
             elif energy < 0.1:
                 characteristics["energy_level"] = "high"
             else:
-                characteristics["energy_level"] = "very_high"
-        else:
-            # Standard energy detection
-            if energy < 0.05:
-                characteristics["energy_level"] = "very_low"
-            elif energy < 0.1:
-                characteristics["energy_level"] = "low"
-            elif energy < 0.2:
                 characteristics["energy_level"] = "medium"
-            elif energy < 0.3:
+        elif genre in ["african", "latin", "electronic"]:
+            # Higher threshold for these genres
+            if energy > 0.15:
                 characteristics["energy_level"] = "high"
+            elif energy > 0.10:
+                characteristics["energy_level"] = "medium"
             else:
-                characteristics["energy_level"] = "very_high"
+                characteristics["energy_level"] = "low"
+        else:
+            # Default thresholds
+            if energy > 0.15:
+                characteristics["energy_level"] = "high"
+            elif energy > 0.10:
+                characteristics["energy_level"] = "medium"
+            else:
+                characteristics["energy_level"] = "low"
         
         # 4. Dynamic Range Analysis
         dynamic_range = float(np.std(rms))
@@ -873,6 +877,10 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                     characteristics["vocal_style"] = "spoken"  # Folk/calm speech
                 elif characteristics.get("beat_strength") == "strong" and tempo > 120:
                     characteristics["vocal_style"] = "singing"  # Assume rock singing
+                elif characteristics.get("beat_strength") == "strong" and characteristics.get("vocal_confidence", 0) > 0.6:
+                    characteristics["vocal_style"] = "singing"  # Strong beat + high confidence = singing
+                elif characteristics.get("genre") in ["rock", "pop", "metal", "hip_hop", "r&b"]:
+                    characteristics["vocal_style"] = "singing"  # Music genres = singing
                 else:
                     characteristics["vocal_style"] = "unknown"
                 characteristics["vocal_range"] = "medium"
@@ -1098,9 +1106,11 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
             if tempo > 110:
                 characteristics["genre"] = "latin"
         elif spectral.get("brightness", 0) < 2000 and characteristics.get("beat_strength") == "strong":
-            # African music: warm + strong beat
-            if tempo > 100:
-                characteristics["genre"] = "african"
+            # Check if it's actually rock/pop with warm tones
+            if characteristics.get("vocal_style") == "singing" and characteristics.get("vocal_confidence", 0) > 0.6:
+                characteristics["genre"] = "rock"  # Rock with warm tones
+            elif tempo > 100:
+                characteristics["genre"] = "african"  # African music: warm + strong beat
         elif spectral.get("spectral_variance", 0) > 1000000 and tempo > 90:
             # Asian music: complex spectral content
             characteristics["genre"] = "asian"
