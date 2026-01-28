@@ -130,6 +130,29 @@ class AnalyzeResponseMulti(BaseModel):
 genai_client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"]) if "GOOGLE_API_KEY" in os.environ else None
 
 
+def _extract_genai_text(response) -> str | None:
+    if hasattr(response, "text") and response.text:
+        return response.text
+    candidates = getattr(response, "candidates", None)
+    if not candidates:
+        return None
+    for candidate in candidates:
+        content = getattr(candidate, "content", None)
+        if not content:
+            continue
+        parts = getattr(content, "parts", None)
+        if not parts:
+            continue
+        texts = []
+        for part in parts:
+            text = getattr(part, "text", None)
+            if text:
+                texts.append(text)
+        if texts:
+            return "".join(texts).strip()
+    return None
+
+
 def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str] | None = None):
     # The genai client is initialized at module load time.
     # If the key is not set, calls will return a helpful error.
@@ -155,8 +178,10 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
                     model=model_name,
                     contents=[prompt, *images]
                 )
-                if hasattr(response, "text") and response.text:
-                    return response.text
+                extracted = _extract_genai_text(response)
+                if extracted:
+                    return extracted
+                log_debug(f"Gemini API empty response (multi-image): {response}")
                 return "Error: Gemini API returned empty response. Please try again."
                         
             except Exception as api_error:
@@ -172,8 +197,10 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
                     model=model_name,
                     contents=[prompt, image]
                 )
-                if hasattr(response, "text") and response.text:
-                    return response.text
+                extracted = _extract_genai_text(response)
+                if extracted:
+                    return extracted
+                log_debug(f"Gemini API empty response (single image): {response}")
                 return "Error: Gemini API returned empty response. Please try again."
                         
             except Exception as api_error:
@@ -184,8 +211,10 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
                     model=model_name,
                     contents=prompt
                 )
-                if hasattr(response, "text") and response.text:
-                    return response.text
+                extracted = _extract_genai_text(response)
+                if extracted:
+                    return extracted
+                log_debug(f"Gemini API empty response (text): {response}")
                 return "Error: Gemini API returned empty response. Please try again."
                         
             except Exception as api_error:
