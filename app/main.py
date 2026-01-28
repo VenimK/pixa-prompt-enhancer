@@ -130,29 +130,6 @@ class AnalyzeResponseMulti(BaseModel):
 genai_client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"]) if "GOOGLE_API_KEY" in os.environ else None
 
 
-def _extract_genai_text(response) -> str | None:
-    if hasattr(response, "text") and response.text:
-        return response.text
-    candidates = getattr(response, "candidates", None)
-    if not candidates:
-        return None
-    for candidate in candidates:
-        content = getattr(candidate, "content", None)
-        if not content:
-            continue
-        parts = getattr(content, "parts", None)
-        if not parts:
-            continue
-        texts = []
-        for part in parts:
-            text = getattr(part, "text", None)
-            if text:
-                texts.append(text)
-        if texts:
-            return "".join(texts).strip()
-    return None
-
-
 def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str] | None = None):
     # The genai client is initialized at module load time.
     # If the key is not set, calls will return a helpful error.
@@ -174,14 +151,14 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
                 return f"Error loading image(s): {img_error}. Please check the image file format and try again."
 
             try:
+                start_time = time.time()
                 response = genai_client.models.generate_content(
                     model=model_name,
                     contents=[prompt, *images]
                 )
-                extracted = _extract_genai_text(response)
-                if extracted:
-                    return extracted
-                log_debug(f"Gemini API empty response (multi-image): {response}")
+                log_debug(f"Gemini API call (multi-image) took {time.time() - start_time:.2f}s")
+                if hasattr(response, "text") and response.text:
+                    return response.text
                 return "Error: Gemini API returned empty response. Please try again."
                         
             except Exception as api_error:
@@ -193,28 +170,28 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
                 return f"Error loading image: {img_error}. Please check the image file format and try again."
 
             try:
+                start_time = time.time()
                 response = genai_client.models.generate_content(
                     model=model_name,
                     contents=[prompt, image]
                 )
-                extracted = _extract_genai_text(response)
-                if extracted:
-                    return extracted
-                log_debug(f"Gemini API empty response (single image): {response}")
+                log_debug(f"Gemini API call (single image) took {time.time() - start_time:.2f}s")
+                if hasattr(response, "text") and response.text:
+                    return response.text
                 return "Error: Gemini API returned empty response. Please try again."
                         
             except Exception as api_error:
                 return f"Error processing image with Gemini API: {api_error}. The image may be too large or in an unsupported format."
         else:
             try:
+                start_time = time.time()
                 response = genai_client.models.generate_content(
                     model=model_name,
                     contents=prompt
                 )
-                extracted = _extract_genai_text(response)
-                if extracted:
-                    return extracted
-                log_debug(f"Gemini API empty response (text): {response}")
+                log_debug(f"Gemini API call (text) took {time.time() - start_time:.2f}s")
+                if hasattr(response, "text") and response.text:
+                    return response.text
                 return "Error: Gemini API returned empty response. Please try again."
                         
             except Exception as api_error:
