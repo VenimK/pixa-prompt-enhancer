@@ -162,6 +162,8 @@ install_dependencies() {
 
         # Install Python dependencies
         pip install -r requirements.txt
+        # Install google-generativeai for Linux compatibility
+        pip install google-generativeai
 
         # Create uploads directory
         mkdir -p uploads
@@ -196,7 +198,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/opt/pixa-enhancer
-ExecStart=/opt/pixa-enhancer/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+ExecStart=/opt/pixa-enhancer/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
 Restart=always
 RestartSec=5
 
@@ -221,7 +223,7 @@ EOF
 get_container_ip() {
     IP=$(pct exec $CONTAINER_ID -- hostname -I | awk '{print $1}')
     log "Container IP: $IP"
-    log "Access the app at: http://$IP:8000"
+    log "Access the app at: http://$IP:8002"
 }
 
 # Main execution
