@@ -757,31 +757,13 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         rms = librosa.feature.rms(y=y)[0]
         energy = float(np.mean(rms))
         
-        # Enhanced energy detection for rock music
-        if characteristics.get("beat_strength") == "strong" and tempo > 120:
-            # Rock music should have higher energy even if RMS is low
-            if energy < 0.05:
-                characteristics["energy_level"] = "medium"  # Boost rock energy
-            elif energy < 0.1:
-                characteristics["energy_level"] = "high"
-            else:
-                characteristics["energy_level"] = "medium"
-        elif genre in ["african", "latin", "electronic"]:
-            # Higher threshold for these genres
-            if energy > 0.15:
-                characteristics["energy_level"] = "high"
-            elif energy > 0.10:
-                characteristics["energy_level"] = "medium"
-            else:
-                characteristics["energy_level"] = "low"
+        # Default thresholds for now (genre-based adjustment will happen later)
+        if energy > 0.15:
+            characteristics["energy_level"] = "high"
+        elif energy > 0.10:
+            characteristics["energy_level"] = "medium"
         else:
-            # Default thresholds
-            if energy > 0.15:
-                characteristics["energy_level"] = "high"
-            elif energy > 0.10:
-                characteristics["energy_level"] = "medium"
-            else:
-                characteristics["energy_level"] = "low"
+            characteristics["energy_level"] = "low"
         
         # 4. Dynamic Range Analysis
         dynamic_range = float(np.std(rms))
@@ -835,32 +817,33 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
             # Detect singing vs speech using pitch analysis
             try:
                 # Use librosa.pyin instead of yin (more reliable)
-                pitches, magnitudes = librosa.pyin(y, fmin=50, fmax=400, sr=sr)
-                pitch_variation = float(np.std(pitches[pitches > 0])) if len(pitches[pitches > 0]) > 0 else 0
                 
-                # Enhanced detection for different music styles
-                if pitch_variation > 50:
-                    characteristics["vocal_style"] = "singing"
-                elif pitch_variation > 20:
-                    # Check context for melodic speech vs singing
-                    if characteristics.get("beat_strength") == "strong" and tempo > 120:
-                        characteristics["vocal_style"] = "singing"  # Rock singing style
-                    elif tempo < 100 and characteristics.get("mood") in ["calm", "contemplative"]:
-                        characteristics["vocal_style"] = "melodic_speech"  # Folk storytelling
-                    else:
+                # Extract pitch using harmonic component
+                pitches, magnitudes = librosa.piptrack(y=harmonic, sr=sr, threshold=0.1)
+                
+                # Get dominant pitch for each frame
+                pitch_values = []
+                for t in range(pitches.shape[1]):
+                    index = magnitudes[:, t].argmax()
+                    pitch = pitches[index, t]
+                    if pitch > 0:
+                        pitch_values.append(pitch)
+                
+                if len(pitch_values) > 0:
+                    # Analyze pitch variation
+                    pitch_std = np.std(pitch_values)
+                    pitch_range = np.max(pitch_values) - np.min(pitch_values)
+                    
+                    # Classify vocal style based on pitch characteristics
+                    if pitch_std > 50:  # High variation
+                        characteristics["vocal_style"] = "singing"
+                    elif pitch_std > 20:  # Medium variation
                         characteristics["vocal_style"] = "melodic_speech"
-                else:
-                    # Lower pitch variation - check context
-                    if characteristics.get("beat_strength") == "strong" and tempo > 120:
-                        characteristics["vocal_style"] = "singing"  # Rock often has spoken-style singing
-                    elif tempo < 100 and characteristics.get("mood") == "calm":
-                        characteristics["vocal_style"] = "spoken"  # Folk/calm speech
-                    else:
+                    else:  # Low variation
                         characteristics["vocal_style"] = "spoken"
-                
-                # Vocal range estimation
-                if len(pitches[pitches > 0]) > 0:
-                    avg_pitch = float(np.mean(pitches[pitches > 0]))
+                    
+                    # Vocal range estimation
+                    avg_pitch = float(np.mean(pitch_values))
                     if avg_pitch > 400:
                         characteristics["vocal_range"] = "high"
                     elif avg_pitch > 200:
@@ -868,6 +851,7 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                     else:
                         characteristics["vocal_range"] = "low"
                 else:
+                    characteristics["vocal_style"] = "unknown"
                     characteristics["vocal_range"] = "medium"
                     
             except Exception as pitch_error:
@@ -876,17 +860,15 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                 if tempo < 100 and characteristics.get("mood") == "calm":
                     characteristics["vocal_style"] = "spoken"  # Folk/calm speech
                 elif characteristics.get("beat_strength") == "strong" and tempo > 120:
-                    characteristics["vocal_style"] = "singing"  # Assume rock singing
-                elif characteristics.get("beat_strength") == "strong" and characteristics.get("vocal_confidence", 0) > 0.6:
-                    characteristics["vocal_style"] = "singing"  # Strong beat + high confidence = singing
-                elif characteristics.get("genre") in ["rock", "pop", "metal", "hip_hop", "r&b"]:
-                    characteristics["vocal_style"] = "singing"  # Music genres = singing
+                    characteristics["vocal_style"] = "singing"  # Rock singing style
+                elif tempo < 100 and characteristics.get("mood") in ["calm", "contemplative"]:
+                    characteristics["vocal_style"] = "melodic_speech"  # Folk storytelling
                 else:
-                    characteristics["vocal_style"] = "unknown"
-                characteristics["vocal_range"] = "medium"
+                    characteristics["vocal_style"] = "melodic_speech"
         
         # 8. Vocal Count Detection
         if characteristics["has_vocals"]:
+            log_debug("Starting vocal count detection...")
             try:
                 # Advanced vocal analysis using harmonic-percussive separation
                 harmonic, percussive = librosa.effects.hpss(y)
@@ -979,6 +961,7 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         
         # Fallback: If vocal count is still unknown but we have vocals, use heuristics
         if characteristics["has_vocals"] and characteristics["vocal_count"] == "unknown":
+            log_debug(f"Vocal count fallback triggered: has_vocals={characteristics['has_vocals']}, current_count={characteristics['vocal_count']}")
             # Use vocal confidence and style to estimate vocal count
             vocal_conf = characteristics.get("vocal_confidence", 0)
             vocal_style = characteristics.get("vocal_style", "unknown")
@@ -1001,6 +984,8 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                 characteristics["vocal_separation"] = "single_voice"
                 characteristics["vocal_density"] = 0.5
                 log_debug(f"Vocal count fallback: solo (low confidence, default)")
+        else:
+            log_debug(f"Vocal count fallback NOT triggered: has_vocals={characteristics['has_vocals']}, current_count={characteristics['vocal_count']}")
         
         # 9. Syncopation Detection
         if len(beats) > 10:
@@ -1059,7 +1044,7 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
             elif characteristics["vocal_style"] == "spoken":
                 # Check for hip-hop vs other spoken
                 if characteristics["beat_strength"] == "strong" and tempo > 90 and characteristics.get("syncopation") == "high":
-                    characteristics["genre"] = "hip_hop"  # Spoken hip-hop
+                    characteristics["genre"] = "hip_hop"  # Hip-hop with spoken vocals
                 elif characteristics["beat_strength"] == "strong" and tempo > 120:
                     characteristics["genre"] = "rock"  # Rock with spoken vocals
                 elif tempo < 100 and characteristics["mood"] == "calm":
@@ -1067,8 +1052,10 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
                 else:
                     characteristics["genre"] = "spoken_word"
             elif characteristics["vocal_style"] == "melodic_speech":
-                # Folk/singer-songwriter with melodic speech
-                if tempo < 100 and characteristics["mood"] in ["calm", "contemplative"]:
+                # Melodic speech with strong beat often maps to rock/pop
+                if characteristics["beat_strength"] == "strong" and tempo > 100:
+                    characteristics["genre"] = "rock"
+                elif tempo < 100 and characteristics["mood"] in ["calm", "contemplative"]:
                     characteristics["genre"] = "folk"
                 elif characteristics["danceability"] > 0.8:
                     characteristics["genre"] = "pop"  # Pop with melodic speech
@@ -1101,7 +1088,9 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         
         # World Music Detection (based on spectral and rhythmic characteristics)
         spectral = characteristics.get("spectral_characteristics", {})
-        if spectral.get("brightness", 0) > 3000 and characteristics.get("syncopation") == "high":
+        if characteristics.get("genre") in ["rock", "pop", "metal", "hip_hop", "rnb", "indie"]:
+            pass
+        elif spectral.get("brightness", 0) > 3000 and characteristics.get("syncopation") == "high":
             # Latin music: bright + highly syncopated
             if tempo > 110:
                 characteristics["genre"] = "latin"
@@ -1125,6 +1114,22 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         else:
             # For other genres, default to 4/4
             characteristics["time_signature"] = "4/4"
+        
+        # 13. Genre-Based Energy Adjustment
+        # Adjust energy level based on detected genre
+        genre = characteristics["genre"]
+        current_energy = characteristics["energy_level"]
+        
+        if genre in ["rock", "pop", "hip_hop"]:
+            # Rock/pop should feel more energetic
+            if current_energy == "low":
+                characteristics["energy_level"] = "medium"
+            elif current_energy == "medium" and characteristics.get("beat_strength") == "strong":
+                characteristics["energy_level"] = "high"
+        elif genre in ["classical", "folk"]:
+            # Classical/folk should feel calmer
+            if current_energy == "high":
+                characteristics["energy_level"] = "medium"
         
         # 11. Performance Type Detection
         # Reverb analysis for live vs studio
@@ -1271,6 +1276,7 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         
         log_debug(f"Enhanced audio analysis completed: {filename}")
         log_debug(f"Genre: {characteristics['genre']}, Style: {characteristics['vocal_style']}, Beat: {characteristics['beat_strength']}")
+        log_debug(f"Vocal Count: {characteristics['vocal_count']}, Vocal Density: {characteristics['vocal_density']}, Vocal Separation: {characteristics['vocal_separation']}")
         
         return characteristics
         
