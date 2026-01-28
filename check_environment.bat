@@ -30,10 +30,10 @@ if errorlevel 1 (
 
 portable_python\python.exe -c "import google.genai" 2>nul
 if errorlevel 1 (
-    echo ✗ Google Generative AI not installed  
+    echo ✗ Google GenAI not installed  
     set NEED_DEPS=1
 ) else (
-    echo ✓ Google Generative AI installed
+    echo ✓ Google GenAI installed
 )
 
 portable_python\python.exe -c "import librosa" 2>nul

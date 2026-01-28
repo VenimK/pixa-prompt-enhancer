@@ -30,15 +30,15 @@ if errorlevel 1 (
 
 echo Starting FastAPI server...
 echo.
-echo The app will be available at: http://localhost:8000
+echo The app will be available at: http://localhost:8002
 echo Press Ctrl+C to stop the server
 echo.
 
 REM Open browser after a short delay
 start /min timeout /t 3 /nobreak >nul 2>&1
-start http://localhost:8000
+start http://localhost:8002
 
 REM Start the FastAPI app
-portable_python\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+portable_python\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
 
 pause

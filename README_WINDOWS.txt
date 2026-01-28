@@ -9,7 +9,7 @@ QUICK START (One Click Setup):
    - Automatically downloads Python (first time only)
    - Installs all dependencies 
    - Starts the application
-   - Browser opens at http://localhost:8000
+   - Browser opens at http://localhost:8002
 
 That's it! Everything is handled automatically.
 
