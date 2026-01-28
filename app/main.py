@@ -7,7 +7,21 @@ from pydantic import BaseModel
 import subprocess
 import shutil
 import os
-import google.genai as genai
+# Compatibility layer: try new google.genai first, fall back to old google.generativeai
+USE_NEW_GENAI = False
+try:
+    import google.genai as genai_new
+    USE_NEW_GENAI = True
+except ImportError:
+    genai_new = None
+
+try:
+    import google.generativeai as genai_old
+except ImportError:
+    genai_old = None
+
+if not USE_NEW_GENAI and genai_old is None:
+    raise ImportError("Neither google.genai nor google.generativeai is installed. Please install one of them.")
 import PIL.Image
 import time
 from datetime import datetime
@@ -127,78 +141,127 @@ class AnalyzeResponseMulti(BaseModel):
 
 # Make sure to set your GOOGLE_API_KEY environment variable.
 # You can get one here: https://aistudio.google.com/app/apikey
-genai_client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"]) if "GOOGLE_API_KEY" in os.environ else None
+
+# Initialize based on which package is available
+genai_client = None
+genai_model = None
+
+if "GOOGLE_API_KEY" in os.environ:
+    if USE_NEW_GENAI and genai_new:
+        genai_client = genai_new.Client(api_key=os.environ["GOOGLE_API_KEY"])
+        log_debug("Using google.genai (new package)")
+    elif genai_old:
+        genai_old.configure(api_key=os.environ["GOOGLE_API_KEY"])
+        genai_model = genai_old.GenerativeModel("gemini-2.5-flash")
+        log_debug("Using google.generativeai (old package)")
 
 
 def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str] | None = None):
-    # The genai client is initialized at module load time.
-    # If the key is not set, calls will return a helpful error.
     if "GOOGLE_API_KEY" not in os.environ:
         return "Error: Google API key is not set. Please set the GOOGLE_API_KEY environment variable."
 
     try:
-        if genai_client is None:
-            return "Error: Google API key is not set. Please set the GOOGLE_API_KEY environment variable."
         model_name = "gemini-2.5-flash"
 
-        # Multi-image support
-        if image_paths and len(image_paths) > 0:
-            images = []
-            try:
-                for p in image_paths:
-                    images.append(PIL.Image.open(p))
-            except Exception as img_error:
-                return f"Error loading image(s): {img_error}. Please check the image file format and try again."
+        # Use NEW google.genai package
+        if USE_NEW_GENAI and genai_client:
+            if image_paths and len(image_paths) > 0:
+                images = []
+                try:
+                    for p in image_paths:
+                        images.append(PIL.Image.open(p))
+                except Exception as img_error:
+                    return f"Error loading image(s): {img_error}. Please check the image file format and try again."
+                try:
+                    start_time = time.time()
+                    response = genai_client.models.generate_content(
+                        model=model_name,
+                        contents=[prompt, *images]
+                    )
+                    log_debug(f"Gemini API call (multi-image) took {time.time() - start_time:.2f}s")
+                    if hasattr(response, "text") and response.text:
+                        return response.text
+                    return "Error: Gemini API returned empty response. Please try again."
+                except Exception as api_error:
+                    return f"Error processing image(s) with Gemini API: {api_error}."
+            elif image_path:
+                try:
+                    image = PIL.Image.open(image_path)
+                except Exception as img_error:
+                    return f"Error loading image: {img_error}. Please check the image file format and try again."
+                try:
+                    start_time = time.time()
+                    response = genai_client.models.generate_content(
+                        model=model_name,
+                        contents=[prompt, image]
+                    )
+                    log_debug(f"Gemini API call (single image) took {time.time() - start_time:.2f}s")
+                    if hasattr(response, "text") and response.text:
+                        return response.text
+                    return "Error: Gemini API returned empty response. Please try again."
+                except Exception as api_error:
+                    return f"Error processing image with Gemini API: {api_error}."
+            else:
+                try:
+                    start_time = time.time()
+                    response = genai_client.models.generate_content(
+                        model=model_name,
+                        contents=prompt
+                    )
+                    log_debug(f"Gemini API call (text) took {time.time() - start_time:.2f}s")
+                    if hasattr(response, "text") and response.text:
+                        return response.text
+                    return "Error: Gemini API returned empty response. Please try again."
+                except Exception as api_error:
+                    return f"Error with Gemini API: {api_error}."
 
-            try:
-                start_time = time.time()
-                response = genai_client.models.generate_content(
-                    model=model_name,
-                    contents=[prompt, *images]
-                )
-                log_debug(f"Gemini API call (multi-image) took {time.time() - start_time:.2f}s")
-                if hasattr(response, "text") and response.text:
-                    return response.text
-                return "Error: Gemini API returned empty response. Please try again."
-                        
-            except Exception as api_error:
-                return f"Error processing image(s) with Gemini API: {api_error}. One of the images may be too large or in an unsupported format."
-        elif image_path:
-            try:
-                image = PIL.Image.open(image_path)
-            except Exception as img_error:
-                return f"Error loading image: {img_error}. Please check the image file format and try again."
-
-            try:
-                start_time = time.time()
-                response = genai_client.models.generate_content(
-                    model=model_name,
-                    contents=[prompt, image]
-                )
-                log_debug(f"Gemini API call (single image) took {time.time() - start_time:.2f}s")
-                if hasattr(response, "text") and response.text:
-                    return response.text
-                return "Error: Gemini API returned empty response. Please try again."
-                        
-            except Exception as api_error:
-                return f"Error processing image with Gemini API: {api_error}. The image may be too large or in an unsupported format."
+        # Use OLD google.generativeai package
+        elif genai_model:
+            if image_paths and len(image_paths) > 0:
+                images = []
+                try:
+                    for p in image_paths:
+                        images.append(PIL.Image.open(p))
+                except Exception as img_error:
+                    return f"Error loading image(s): {img_error}. Please check the image file format and try again."
+                try:
+                    start_time = time.time()
+                    response = genai_model.generate_content([prompt, *images])
+                    log_debug(f"Gemini API call (multi-image) took {time.time() - start_time:.2f}s")
+                    if response.candidates:
+                        return response.text
+                    return "Error: Gemini API returned empty response. Please try again."
+                except Exception as api_error:
+                    return f"Error processing image(s) with Gemini API: {api_error}."
+            elif image_path:
+                try:
+                    image = PIL.Image.open(image_path)
+                except Exception as img_error:
+                    return f"Error loading image: {img_error}. Please check the image file format and try again."
+                try:
+                    start_time = time.time()
+                    response = genai_model.generate_content([prompt, image])
+                    log_debug(f"Gemini API call (single image) took {time.time() - start_time:.2f}s")
+                    if response.candidates:
+                        return response.text
+                    return "Error: Gemini API returned empty response. Please try again."
+                except Exception as api_error:
+                    return f"Error processing image with Gemini API: {api_error}."
+            else:
+                try:
+                    start_time = time.time()
+                    response = genai_model.generate_content(prompt)
+                    log_debug(f"Gemini API call (text) took {time.time() - start_time:.2f}s")
+                    if response.candidates:
+                        return response.text
+                    return "Error: Gemini API returned empty response. Please try again."
+                except Exception as api_error:
+                    return f"Error with Gemini API: {api_error}."
         else:
-            try:
-                start_time = time.time()
-                response = genai_client.models.generate_content(
-                    model=model_name,
-                    contents=prompt
-                )
-                log_debug(f"Gemini API call (text) took {time.time() - start_time:.2f}s")
-                if hasattr(response, "text") and response.text:
-                    return response.text
-                return "Error: Gemini API returned empty response. Please try again."
-                        
-            except Exception as api_error:
-                return f"Error with Gemini API: {api_error}. Your prompt may contain content that violates usage policies."
+            return "Error: No Gemini API client available. Check your API key and package installation."
+
     except Exception as e:
         import traceback
-
         error_details = traceback.format_exc()
         print(f"Detailed error: {error_details}")
         return f"An unexpected error occurred: {e}. Please try again later."
