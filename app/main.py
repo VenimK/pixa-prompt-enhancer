@@ -7,7 +7,7 @@ from pydantic import BaseModel
 import subprocess
 import shutil
 import os
-import google.generativeai as genai
+import google.genai as genai
 import PIL.Image
 import time
 from datetime import datetime
@@ -127,38 +127,19 @@ class AnalyzeResponseMulti(BaseModel):
 
 # Make sure to set your GOOGLE_API_KEY environment variable.
 # You can get one here: https://aistudio.google.com/app/apikey
-if "GOOGLE_API_KEY" in os.environ:
-    genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+genai_client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"]) if "GOOGLE_API_KEY" in os.environ else None
 
 
 def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str] | None = None):
-    # The genai.configure call at the top of the file handles the API key.
-    # If the key is not set, the model.generate_content call will raise an exception.
+    # The genai client is initialized at module load time.
+    # If the key is not set, calls will return a helpful error.
     if "GOOGLE_API_KEY" not in os.environ:
         return "Error: Google API key is not set. Please set the GOOGLE_API_KEY environment variable."
 
     try:
-        # Configure safety settings to be less restrictive
-        safety_settings = [
-            {
-                "category": "HARM_CATEGORY_HARASSMENT",
-                "threshold": "BLOCK_NONE"
-            },
-            {
-                "category": "HARM_CATEGORY_HATE_SPEECH", 
-                "threshold": "BLOCK_NONE"
-            },
-            {
-                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                "threshold": "BLOCK_NONE"
-            },
-            {
-                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                "threshold": "BLOCK_NONE"
-            }
-        ]
-        
-        model = genai.GenerativeModel("gemini-2.5-flash", safety_settings=safety_settings)
+        if genai_client is None:
+            return "Error: Google API key is not set. Please set the GOOGLE_API_KEY environment variable."
+        model_name = "gemini-2.5-flash"
 
         # Multi-image support
         if image_paths and len(image_paths) > 0:
@@ -170,19 +151,13 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
                 return f"Error loading image(s): {img_error}. Please check the image file format and try again."
 
             try:
-                response = model.generate_content([prompt, *images])
-                
-                # Check for blocked content
-                if response.candidates:
+                response = genai_client.models.generate_content(
+                    model=model_name,
+                    contents=[prompt, *images]
+                )
+                if hasattr(response, "text") and response.text:
                     return response.text
-                else:
-                    if hasattr(response, 'prompt_feedback') and response.prompt_feedback:
-                        block_reason = response.prompt_feedback.block_reason.name if hasattr(response.prompt_feedback.block_reason, 'name') else str(response.prompt_feedback.block_reason)
-                        error_msg = f"Prompt blocked by Gemini API: {block_reason}"
-                        log_debug(f"Gemini API blocked content (multi-image): {block_reason}")
-                        return f"Error: {error_msg}. Please try rephrasing your prompt."
-                    else:
-                        return "Error: Gemini API returned empty response. Please try again."
+                return "Error: Gemini API returned empty response. Please try again."
                         
             except Exception as api_error:
                 return f"Error processing image(s) with Gemini API: {api_error}. One of the images may be too large or in an unsupported format."
@@ -193,39 +168,25 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
                 return f"Error loading image: {img_error}. Please check the image file format and try again."
 
             try:
-                response = model.generate_content([prompt, image])
-                
-                # Check for blocked content
-                if response.candidates:
+                response = genai_client.models.generate_content(
+                    model=model_name,
+                    contents=[prompt, image]
+                )
+                if hasattr(response, "text") and response.text:
                     return response.text
-                else:
-                    if hasattr(response, 'prompt_feedback') and response.prompt_feedback:
-                        block_reason = response.prompt_feedback.block_reason.name if hasattr(response.prompt_feedback.block_reason, 'name') else str(response.prompt_feedback.block_reason)
-                        error_msg = f"Prompt blocked by Gemini API: {block_reason}"
-                        log_debug(f"Gemini API blocked content (single image): {block_reason}")
-                        return f"Error: {error_msg}. Please try rephrasing your prompt."
-                    else:
-                        return "Error: Gemini API returned empty response. Please try again."
+                return "Error: Gemini API returned empty response. Please try again."
                         
             except Exception as api_error:
                 return f"Error processing image with Gemini API: {api_error}. The image may be too large or in an unsupported format."
         else:
             try:
-                response = model.generate_content(prompt)
-                
-                # Check for blocked content
-                if response.candidates:
+                response = genai_client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+                if hasattr(response, "text") and response.text:
                     return response.text
-                else:
-                    if hasattr(response, 'prompt_feedback') and response.prompt_feedback:
-                        block_reason = response.prompt_feedback.block_reason.name if hasattr(response.prompt_feedback.block_reason, 'name') else str(response.prompt_feedback.block_reason)
-                        error_msg = f"Prompt blocked by Gemini API: {block_reason}"
-                        log_debug(f"Gemini API blocked content (text only): {block_reason}")
-                        log_debug(f"Prompt was: {prompt[:200]}...")
-                        return f"Error: {error_msg}. Please try rephrasing your prompt."
-                    else:
-                        log_debug("Gemini API returned empty candidates without feedback")
-                        return "Error: Gemini API returned empty response. Please try again."
+                return "Error: Gemini API returned empty response. Please try again."
                         
             except Exception as api_error:
                 return f"Error with Gemini API: {api_error}. Your prompt may contain content that violates usage policies."

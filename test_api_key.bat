@@ -29,7 +29,7 @@ REM Create test script
 (
 echo import os
 echo from dotenv import load_dotenv
-echo import google.generativeai as genai
+echo import google.genai as genai
 echo.
 echo load_dotenv^(^)
 echo.
@@ -42,9 +42,8 @@ echo print^(f"API Key found: {api_key[:10]}...{api_key[-4:]}"^)
 echo print^(f"API Key length: {len(api_key)} characters"^)
 echo.
 echo try:
-echo     genai.configure^(api_key=api_key^)
-echo     model = genai.GenerativeModel^("gemini-2.5-flash"^)
-echo     response = model.generate_content^("Hello"^)
+echo     client = genai.Client^(api_key=api_key^)
+echo     response = client.models.generate_content^(model="gemini-2.5-flash", contents="Hello"^)
 echo     print^("SUCCESS: API key is working correctly!"^)
 echo     print^(f"Response: {response.text[:100]}..."^)
 echo except Exception as e:

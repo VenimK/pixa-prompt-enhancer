@@ -28,7 +28,7 @@ if errorlevel 1 (
     echo ✓ FastAPI installed
 )
 
-portable_python\python.exe -c "import google.generativeai" 2>nul
+portable_python\python.exe -c "import google.genai" 2>nul
 if errorlevel 1 (
     echo ✗ Google Generative AI not installed  
     set NEED_DEPS=1
