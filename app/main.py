@@ -270,6 +270,34 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
 def generate_enhanced_ltx2_prompt(audio_characteristics: dict, base_prompt: str) -> str:
     """Generate enhanced LTX-2 prompt using advanced audio analysis."""
     
+    # Check for preservation constraints - if user wants strict preservation, be conservative
+    base_lower = base_prompt.lower()
+    preservation_keywords = [
+        "strictly preserve", "preserve exactly", "keep exactly", "no changes", 
+        "don't change", "maintain exactly", "preserve the", "keep the", 
+        "same character", "same outfit", "same background", "no extra"
+    ]
+    
+    has_preservation_constraint = any(keyword in base_lower for keyword in preservation_keywords)
+    
+    # If user wants strict preservation, only add minimal audio-driven enhancements
+    if has_preservation_constraint:
+        prompt_parts = [base_prompt.strip()]
+        
+        # Only add very conservative enhancements that don't violate preservation
+        if audio_characteristics.get('has_vocals'):
+            vocal_confidence = audio_characteristics.get('vocal_confidence', 0)
+            if vocal_confidence > 0.7:
+                prompt_parts.append("with precise lip-sync to the vocal performance")
+        
+        # Add subtle movement only if base prompt doesn't forbid it
+        if "gentle swaying" in base_lower or "subtle movement" in base_lower:
+            if audio_characteristics.get('beat_strength') == 'strong':
+                prompt_parts.append("with subtle rhythmic movement synchronized to the music")
+        
+        return " ".join(prompt_parts)
+    
+    # Normal enhancement mode - proceed with detailed analysis
     prompt_parts = [base_prompt.strip()]
     
     # 1. Performance Style Enhancements
