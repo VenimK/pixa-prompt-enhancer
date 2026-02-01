@@ -95,6 +95,9 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 UPLOADS_DIR = "uploads"
 
+# Ensure uploads directory exists
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+
 
 # --- Pydantic Models ---
 class EnhanceRequest(BaseModel):
@@ -265,6 +268,662 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
         error_details = traceback.format_exc()
         print(f"Detailed error: {error_details}")
         return f"An unexpected error occurred: {e}. Please try again later."
+
+
+    return max(quality_score, 0.0)
+
+
+def analyze_artistic_style(image_path: str) -> dict:
+    """Analyze artistic style from an image using advanced AI analysis."""
+    
+    style_prompt = """Analyze this image and determine its artistic style. Provide a detailed analysis including:
+
+1. Primary artistic style (e.g., photorealistic, impressionist, abstract, cartoon, anime, etc.)
+2. Secondary style characteristics
+3. Color palette and mood
+4. Technical characteristics (brushwork, lighting, composition)
+5. Historical/artistic influences
+6. Recommended prompt keywords for similar images
+
+Respond with a JSON object containing:
+{
+  "primary_style": "string",
+  "secondary_styles": ["array"],
+  "color_palette": "string",
+  "mood_atmosphere": "string",
+  "technical_characteristics": "string",
+  "artistic_influences": "string",
+  "recommended_keywords": ["array"],
+  "confidence_score": 0.0-1.0
+}"""
+    
+    try:
+        style_analysis = run_gemini(style_prompt, image_path=image_path)
+        
+        # Parse JSON response
+        try:
+            style_data = json.loads(style_analysis)
+            return style_data
+        except json.JSONDecodeError:
+            # Fallback parsing for non-JSON responses
+            return {
+                "primary_style": "unknown",
+                "secondary_styles": [],
+                "color_palette": "mixed",
+                "mood_atmosphere": "neutral",
+                "technical_characteristics": "standard",
+                "artistic_influences": "contemporary",
+                "recommended_keywords": ["detailed", "professional"],
+                "confidence_score": 0.5
+            }
+            
+    except Exception as e:
+        log_debug(f"Style analysis failed: {e}")
+        return {
+            "primary_style": "photorealistic",
+            "secondary_styles": [],
+            "color_palette": "natural",
+            "mood_atmosphere": "neutral",
+            "technical_characteristics": "professional photography",
+            "artistic_influences": "contemporary",
+            "recommended_keywords": ["photorealistic", "detailed", "professional"],
+            "confidence_score": 0.7
+        }
+
+
+def generate_enhanced_ltx2_prompt(audio_characteristics: dict, base_prompt: str) -> str:
+    """Generate enhanced LTX-2 prompt using advanced audio analysis."""
+    
+    # Check for preservation constraints - if user wants strict preservation, be conservative
+    base_lower = base_prompt.lower()
+    preservation_keywords = [
+        "strictly preserve", "preserve exactly", "keep exactly", "no changes", 
+        "don't change", "maintain exactly", "preserve the", "keep the", 
+        "same character", "same outfit", "same background", "no extra"
+    ]
+    
+    has_preservation_constraint = any(keyword in base_lower for keyword in preservation_keywords)
+    
+    # If user wants strict preservation, only add minimal audio-driven enhancements
+    if has_preservation_constraint:
+        prompt_parts = [base_prompt.strip()]
+        
+        # Only add very conservative enhancements that don't violate preservation
+        if audio_characteristics.get('has_vocals'):
+            vocal_confidence = audio_characteristics.get('vocal_confidence', 0)
+            if vocal_confidence > 0.7:
+                prompt_parts.append("with precise lip-sync to the vocal performance")
+        
+        # Add subtle movement only if base prompt doesn't forbid it
+        if "gentle swaying" in base_lower or "subtle movement" in base_lower:
+            if audio_characteristics.get('beat_strength') == 'strong':
+                prompt_parts.append("with subtle rhythmic movement synchronized to the music")
+        
+        return " ".join(prompt_parts)
+    
+    # Normal enhancement mode - proceed with detailed analysis
+    prompt_parts = [base_prompt.strip()]
+    
+    # 1. Performance Style Enhancements
+    if audio_characteristics.get('vocal_style') == 'spoken':
+        prompt_parts.append("delivering spoken dialogue with precise lip-sync and clear diction")
+        if audio_characteristics.get('vocal_confidence', 0) > 0.8:
+            prompt_parts.append("with articulate vocal performance and natural speech patterns")
+    elif audio_characteristics.get('vocal_style') == 'singing':
+        prompt_parts.append(f"singing with {audio_characteristics.get('vocal_range', 'medium')} vocal range")
+        if audio_characteristics.get('vocal_range') == 'high':
+            prompt_parts.append("featuring high-reaching gestures during peak vocal notes")
+    elif audio_characteristics.get('vocal_style') == 'melodic_speech':
+        prompt_parts.append("delivering melodic speech with rhythmic cadence")
+    
+    # 2. Rhythm and Timing Integration
+    if audio_characteristics.get('beat_strength') == 'strong':
+        prompt_parts.append("with subtle body movements synchronized to strong rhythmic beats")
+        if audio_characteristics.get('time_signature') != '4/4':
+            prompt_parts.append(f"movements following {audio_characteristics['time_signature']} time signature")
+    
+    if audio_characteristics.get('syncopation') == 'high':
+        prompt_parts.append("incorporating off-beat movements and syncopated gestures")
+    elif audio_characteristics.get('syncopation') == 'medium':
+        prompt_parts.append("with subtle rhythmic variations in movement")
+    
+    # 3. Tempo-Based Visual Elements
+    tempo = audio_characteristics.get('tempo', 'medium')
+    tempo_bpm = audio_characteristics.get('tempo_bpm', 120)
+    
+    if tempo == 'slow':
+        prompt_parts.append(f"with gentle, measured movements timed to the slow {tempo_bpm:.1f} BPM tempo")
+        if audio_characteristics.get('danceability', 0) > 0.7:
+            prompt_parts.append("creating a calming, meditative visual rhythm despite the danceable beat")
+    elif tempo == 'fast':
+        prompt_parts.append(f"with energetic movements responding to the driving {tempo_bpm:.1f} BPM tempo")
+        prompt_parts.append("quick visual elements synchronized to rapid rhythm")
+    
+    # 4. Emotional and Dynamic Elements
+    mood = audio_characteristics.get('mood', 'neutral')
+    emotional_arc = audio_characteristics.get('emotional_arc', 'stable')
+    
+    mood_enhancements = {
+        'calm': "creating a serene, peaceful atmosphere with soft, gentle expressions",
+        'contemplative': "with thoughtful, introspective facial expressions and measured movements",
+        'energetic': "with dynamic, high-energy movements and vibrant expressions",
+        'emotional': "with expressive facial changes and emotional body language",
+        'futuristic': "with modern, innovative visual styling and contemporary movements"
+    }
+    
+    return " ".join(prompt_parts)
+
+
+def enhance_prompt_commercial(base_prompt: str, image_description: str = "", audio_characteristics: dict = None) -> str:
+    """Enhance prompt for commercial photography/product shots."""
+    
+    commercial_prompt = f"""Transform this prompt into a professional commercial photography style:
+
+{base_prompt}
+
+**Commercial Photography Requirements:**
+- Clean, polished, professional aesthetic
+- Perfect lighting and composition
+- High-end product photography quality
+- Commercial brand standards
+- Market-ready presentation
+- Attention to detail and finish
+
+**Technical Specifications:**
+- Studio lighting setup
+- Professional camera equipment
+- Commercial post-processing
+- Brand-appropriate styling
+
+**Additional Context:**
+{image_description}
+
+Generate an enhanced prompt optimized for commercial use:"""
+
+    enhanced = run_gemini(commercial_prompt)
+    return limit_prompt_length(enhanced, "image")
+
+
+def enhance_prompt_cinematic(base_prompt: str, image_description: str = "", audio_characteristics: dict = None) -> str:
+    """Enhance prompt for cinematic film/video production."""
+    
+    cinematic_prompt = f"""Transform this prompt into a cinematic film production style:
+
+{base_prompt}
+
+**Cinematic Requirements:**
+- Epic, dramatic visual storytelling
+- Professional cinematography techniques
+- Cinematic lighting and composition
+- Film industry production values
+- Narrative depth and atmosphere
+
+**Production Elements:**
+- Camera movement and framing
+- Professional lighting setups
+- Cinematic color grading
+- Dramatic atmosphere and mood
+- Production design elements
+
+**Audio Integration:**
+{audio_characteristics.get('description', 'No audio context provided') if audio_characteristics else 'No audio context provided'}
+
+**Additional Context:**
+{image_description}
+
+Generate an enhanced cinematic prompt:"""
+
+    enhanced = run_gemini(cinematic_prompt)
+    return limit_prompt_length(enhanced, "veo")
+
+
+def enhance_prompt_character_design(base_prompt: str, image_description: str = "", audio_characteristics: dict = None) -> str:
+    """Enhance prompt for character design and animation."""
+    
+    character_prompt = f"""Transform this prompt into a professional character design style:
+
+{base_prompt}
+
+**Character Design Requirements:**
+- Consistent character aesthetics
+- Professional illustration/animation quality
+- Expressive character features
+- Design consistency across poses/expressions
+- Production-ready character design
+
+**Design Elements:**
+- Character anatomy and proportions
+- Facial expressions and personality
+- Costume and accessory design
+- Color palette and style consistency
+- Animation-friendly design principles
+
+**Additional Context:**
+{image_description}
+
+Generate an enhanced character design prompt:"""
+
+    enhanced = run_gemini(character_prompt)
+    return limit_prompt_length(enhanced, "wan2")
+
+
+class SpecializedEnhanceRequest(BaseModel):
+    prompt: str
+    enhancement_mode: str  # 'commercial', 'cinematic', 'character'
+    image_description: str | None = None
+    audio_characteristics: dict | None = None
+    prompt_type: str | None = None
+    model: str | None = None
+
+
+@app.post("/enhance-specialized", response_model=EnhanceResponse)
+async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
+    """Handle specialized enhancement modes (commercial, cinematic, character design)."""
+    
+    try:
+        log_debug(f"Specialized enhancement request: mode={request.enhancement_mode}, prompt_type={request.prompt_type}")
+        
+        # Apply specialized enhancement based on mode
+        if request.enhancement_mode == 'commercial':
+            enhanced_prompt = enhance_prompt_commercial(
+                request.prompt,
+                request.image_description or "",
+                request.audio_characteristics
+            )
+        elif request.enhancement_mode == 'cinematic':
+            enhanced_prompt = enhance_prompt_cinematic(
+                request.prompt,
+                request.image_description or "",
+                request.audio_characteristics
+            )
+        elif request.enhancement_mode == 'character':
+            enhanced_prompt = enhance_prompt_character_design(
+                request.prompt,
+                request.image_description or "",
+                request.audio_characteristics
+            )
+        else:
+            # Fallback to general enhancement
+            enhanced_prompt = run_gemini(f"Enhance this prompt for AI image generation: {request.prompt}")
+            enhanced_prompt = limit_prompt_length(enhanced_prompt, request.prompt_type or "image")
+        
+        log_debug(f"Specialized enhancement completed: {len(enhanced_prompt)} chars")
+        return EnhanceResponse(enhanced_prompt=enhanced_prompt)
+        
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        log_debug(f"Error in specialized enhancement: {e}")
+        log_debug(f"Error details: {error_details}")
+        return EnhanceResponse(
+            enhanced_prompt=f"An error occurred during specialized enhancement: {e}. Please try again."
+        )
+
+
+def validate_prompt_quality(prompt: str, prompt_type: str = "image") -> dict:
+    """Comprehensive prompt quality validation and analysis."""
+    
+    validation_results = {
+        "overall_score": 0.0,
+        "issues": [],
+        "warnings": [],
+        "suggestions": [],
+        "strengths": [],
+        "coherence_score": 0.0,
+        "technical_accuracy": 0.0,
+        "completeness_score": 0.0
+    }
+    
+    try:
+        # 1. Basic validation checks
+        if len(prompt.strip()) == 0:
+            validation_results["issues"].append("Prompt is empty")
+            return validation_results
+        
+        if len(prompt) < 10:
+            validation_results["issues"].append("Prompt is too short (minimum 10 characters recommended)")
+        
+        if len(prompt) > 2000:
+            validation_results["warnings"].append("Prompt is very long and may be truncated by some models")
+        
+        # 2. Coherence checking
+        coherence_score = analyze_prompt_coherence(prompt)
+        validation_results["coherence_score"] = coherence_score
+        
+        if coherence_score < 0.5:
+            validation_results["issues"].append("Prompt may have logical inconsistencies")
+            validation_results["suggestions"].append("Consider restructuring for better logical flow")
+        elif coherence_score > 0.8:
+            validation_results["strengths"].append("Good logical coherence and structure")
+        
+        # 3. Technical accuracy validation
+        technical_score = validate_technical_accuracy(prompt, prompt_type)
+        validation_results["technical_accuracy"] = technical_score
+        
+        if technical_score < 0.6:
+            validation_results["warnings"].append("Some technical specifications may be inaccurate")
+        
+        # 4. Completeness analysis
+        completeness_score = analyze_prompt_completeness(prompt, prompt_type)
+        validation_results["completeness_score"] = completeness_score
+        
+        if completeness_score < 0.7:
+            validation_results["suggestions"].append("Consider adding more descriptive details (lighting, composition, style)")
+        else:
+            validation_results["strengths"].append("Well-detailed and complete prompt")
+        
+        # 5. Content quality checks
+        content_issues = check_content_quality(prompt)
+        validation_results["issues"].extend(content_issues.get("issues", []))
+        validation_results["warnings"].extend(content_issues.get("warnings", []))
+        
+        # 6. Calculate overall score
+        validation_results["overall_score"] = (
+            coherence_score * 0.3 +
+            technical_score * 0.25 +
+            completeness_score * 0.25 +
+            (1.0 - len(validation_results["issues"]) * 0.1) * 0.2
+        )
+        
+        # Clamp to 0-1 range
+        validation_results["overall_score"] = max(0.0, min(1.0, validation_results["overall_score"]))
+        
+        return validation_results
+        
+    except Exception as e:
+        log_debug(f"Error in prompt validation: {e}")
+        return {
+            "overall_score": 0.5,
+            "issues": ["Validation failed - please try again"],
+            "warnings": [],
+            "suggestions": ["Consider reviewing your prompt manually"],
+            "strengths": [],
+            "coherence_score": 0.5,
+            "technical_accuracy": 0.5,
+            "completeness_score": 0.5
+        }
+
+
+def analyze_prompt_coherence(prompt: str) -> float:
+    """Analyze logical coherence of the prompt."""
+    try:
+        coherence_prompt = f"""Analyze the logical coherence of this prompt on a scale of 0-1, where 1 is perfectly coherent and 0 is completely illogical. Consider:
+
+1. Logical consistency between elements
+2. Clear subject-verb relationships  
+3. Sensible spatial relationships
+4. Reasonable attribute combinations
+5. Clear intent and purpose
+
+Prompt: "{prompt}"
+
+Respond with only a number between 0 and 1."""
+
+        result = run_gemini(coherence_prompt)
+        
+        # Extract numeric score
+        import re
+        match = re.search(r'(\d*\.?\d+)', result)
+        if match:
+            score = float(match.group(1))
+            return max(0.0, min(1.0, score))
+        
+        return 0.7  # Default moderate score
+        
+    except Exception as e:
+        log_debug(f"Coherence analysis failed: {e}")
+        return 0.5
+
+
+def validate_technical_accuracy(prompt: str, prompt_type: str) -> float:
+    """Validate technical accuracy of specifications."""
+    try:
+        tech_prompt = f"""Validate the technical accuracy of this {prompt_type} prompt. Check for:
+
+1. Realistic camera settings and lens specifications
+2. Physically plausible lighting setups
+3. Accurate technical terminology
+4. Sensible composition rules
+5. Realistic material properties
+
+Rate technical accuracy from 0-1, where 1 is completely accurate and 0 has major technical errors.
+
+Prompt: "{prompt}"
+
+Respond with only a number between 0 and 1."""
+
+        result = run_gemini(tech_prompt)
+        
+        # Extract numeric score
+        import re
+        match = re.search(r'(\d*\.?\d+)', result)
+        if match:
+            score = float(match.group(1))
+            return max(0.0, min(1.0, score))
+        
+        return 0.8  # Default good score
+        
+    except Exception as e:
+        log_debug(f"Technical validation failed: {e}")
+        return 0.7
+
+
+def analyze_prompt_completeness(prompt: str, prompt_type: str) -> float:
+    """Analyze how complete and detailed the prompt is."""
+    try:
+        # Check for presence of key elements based on prompt type
+        elements_present = 0
+        total_elements = 0
+        
+        # Common elements for all prompts
+        common_elements = ["subject", "action/scene", "setting", "style"]
+        for element in common_elements:
+            total_elements += 1
+            # Simple keyword checking
+            if any(keyword in prompt.lower() for keyword in ["subject", "character", "scene", "setting", "style", "mood"]):
+                elements_present += 1
+                break
+        
+        # Type-specific elements
+        if prompt_type.lower() in ["image", "photo"]:
+            image_elements = ["lighting", "camera", "composition", "resolution", "quality"]
+            for element in image_elements:
+                total_elements += 1
+                if element in prompt.lower() or any(kw in prompt.lower() for kw in ["light", "shot", "angle", "focus", "detailed"]):
+                    elements_present += 1
+                    break
+        
+        elif prompt_type.lower() in ["veo", "video"]:
+            video_elements = ["movement", "timing", "duration", "framerate", "transition"]
+            for element in video_elements:
+                total_elements += 1
+                if element in prompt.lower() or any(kw in prompt.lower() for kw in ["motion", "dynamic", "flow", "sequence"]):
+                    elements_present += 1
+                    break
+        
+        completeness = elements_present / max(total_elements, 1)
+        return min(1.0, completeness)
+        
+    except Exception as e:
+        log_debug(f"Completeness analysis failed: {e}")
+        return 0.6
+
+
+def check_content_quality(prompt: str) -> dict:
+    """Check for content quality issues and potential biases."""
+    issues = []
+    warnings = []
+    
+    try:
+        # Length checks
+        word_count = len(prompt.split())
+        if word_count < 5:
+            issues.append("Prompt is too brief - consider adding more descriptive details")
+        elif word_count > 150:
+            warnings.append("Prompt is very detailed - some models may truncate long prompts")
+        
+        # Check for common issues
+        prompt_lower = prompt.lower()
+        
+        # Repetitive language
+        words = prompt_lower.split()
+        if len(words) > 10:
+            word_freq = {}
+            for word in words:
+                if len(word) > 3:  # Skip short words
+                    word_freq[word] = word_freq.get(word, 0) + 1
+            
+            max_freq = max(word_freq.values()) if word_freq else 0
+            if max_freq > len(words) * 0.1:  # More than 10% repetition
+                warnings.append("Consider varying your vocabulary to avoid repetitive language")
+        
+        # Ambiguous terms
+        ambiguous_terms = ["nice", "good", "beautiful", "amazing", "perfect"]
+        ambiguous_count = sum(1 for term in ambiguous_terms if term in prompt_lower)
+        if ambiguous_count > 2:
+            suggestions.append("Consider replacing generic terms with more specific descriptions")
+        
+        # Check for contradictory terms
+        contradictions = [
+            (["bright", "dark"], "Conflicting lighting terms detected"),
+            (["fast", "slow"], "Conflicting motion terms detected"),
+            (["simple", "complex"], "Conflicting complexity terms detected")
+        ]
+        
+        for term_pairs, message in contradictions:
+            found_terms = [term for term in term_pairs if term in prompt_lower]
+            if len(found_terms) > 1:
+                warnings.append(message)
+        
+        return {"issues": issues, "warnings": warnings}
+        
+    except Exception as e:
+        log_debug(f"Content quality check failed: {e}")
+        return {"issues": [], "warnings": ["Content quality analysis failed"]}
+
+
+# Helper functions for enhanced audio analysis
+def _calculate_emotion_score(energy, spectral_contrast, mfccs, tempo):
+    """Calculate emotion score based on acoustic features."""
+    # Normalize features
+    energy_norm = min(energy / 0.2, 1.0)
+    tempo_norm = min(tempo / 180.0, 1.0) if tempo else 0.5
+    
+    # Spectral contrast indicates emotional intensity
+    contrast_mean = np.mean(spectral_contrast)
+    contrast_norm = min(contrast_mean / 20.0, 1.0)
+    
+    # MFCCs indicate emotional valence
+    mfcc_std = np.std(mfccs, axis=1).mean()
+    mfcc_norm = min(mfcc_std / 50.0, 1.0)
+    
+    # Combine features with weights
+    emotion_score = (
+        energy_norm * 0.3 +
+        contrast_norm * 0.25 +
+        mfcc_norm * 0.25 +
+        tempo_norm * 0.2
+    )
+    
+    return emotion_score
+
+def _analyze_vocal_density(y, sr):
+    """Analyze vocal density to determine vocal count."""
+    # Use harmonic-percussive source separation
+    y_harmonic, y_percussive = librosa.effects.hpss(y)
+    
+    # Calculate harmonic content as indicator of vocals
+    harmonic_energy = np.sum(y_harmonic ** 2)
+    total_energy = np.sum(y ** 2)
+    
+    if total_energy > 0:
+        vocal_density = harmonic_energy / total_energy
+    else:
+        vocal_density = 0.0
+        
+    return vocal_density
+
+def _analyze_vocal_separation(y, sr):
+    """Analyze how vocals are separated from instrumentation."""
+    # Use spectral features to determine vocal separation
+    chroma = librosa.feature.chroma_stft(y=y, sr=sr)
+    chroma_std = np.std(chroma, axis=1).mean()
+    
+    if chroma_std > 0.15:
+        return "lead_with_backup"
+    elif chroma_std > 0.10:
+        return "harmonized_vocals"
+    elif chroma_std > 0.05:
+        return "multiple_voices"
+    else:
+        return "unknown"
+
+def _analyze_performance_energy(y, sr, tempo):
+    """Analyze overall performance energy."""
+    # Combine multiple energy indicators
+    rms = librosa.feature.rms(y=y)[0]
+    onset_strength = librosa.onset.onset_strength(y=y, sr=sr)
+    
+    rms_energy = np.mean(rms)
+    onset_energy = np.mean(onset_strength)
+    
+    combined_energy = (rms_energy + onset_energy) / 2
+    
+    if combined_energy > 0.15:
+        return "high_energy"
+    elif combined_energy > 0.10:
+        return "balanced"
+    elif combined_energy > 0.05:
+        return "subtle"
+    else:
+        return "minimal"
+
+def _calculate_musical_complexity(y, sr, spectral_centroids, spectral_rolloff):
+    """Calculate musical complexity score."""
+    # Measure complexity through spectral variation
+    centroid_variation = np.std(spectral_centroids) / np.mean(spectral_centroids)
+    rolloff_variation = np.std(spectral_rolloff) / np.mean(spectral_rolloff)
+    
+    # Rhythm complexity
+    tempo_variation = 0.0
+    try:
+        tempo, beats = librosa.beat.beat_track(y=y, sr=sr)
+        if len(beats) > 1:
+            beat_intervals = np.diff(beats)
+            tempo_variation = np.std(beat_intervals) / np.mean(beat_intervals)
+    except:
+        tempo_variation = 0.0
+    
+    complexity_score = (
+        centroid_variation * 0.4 +
+        rolloff_variation * 0.4 +
+        tempo_variation * 0.2
+    )
+    
+    return min(complexity_score, 1.0)
+
+def _assess_audio_quality(y, sr, rms):
+    """Assess overall audio quality."""
+    # Check for clipping
+    clipping_ratio = np.sum(np.abs(y) > 0.95) / len(y)
+    
+    # Check signal-to-noise ratio (approximate)
+    signal_power = np.mean(y ** 2)
+    noise_power = np.mean((y - librosa.util.normalize(y)) ** 2)
+    snr = 10 * np.log10(signal_power / (noise_power + 1e-10)) if noise_power > 0 else 100
+    
+    # RMS consistency
+    rms_std = np.std(rms) / np.mean(rms)
+    
+    quality_score = 1.0
+    if clipping_ratio > 0.001:
+        quality_score -= 0.2  # Clipping penalty
+    if snr < 20:
+        quality_score -= 0.3  # Poor SNR penalty
+    if rms_std > 0.5:
+        quality_score -= 0.1  # Inconsistent levels penalty
+        
+    return max(quality_score, 0.0)
 
 
 def generate_enhanced_ltx2_prompt(audio_characteristics: dict, base_prompt: str) -> str:
@@ -681,8 +1340,13 @@ async def analyze_image_endpoint(images: list[UploadFile] = File(...)):
                     image_a_description=None,
                     image_b_description=None,
                 )
+            
+            # Add style analysis for single image
+            style_info = analyze_artistic_style(saved_paths[0])
+            enhanced_description = f"{combined}\n\n🎨 **Artistic Style Analysis:**\n• Primary Style: {style_info['primary_style']}\n• Color Palette: {style_info['color_palette']}\n• Mood: {style_info['mood_atmosphere']}\n• Recommended Keywords: {', '.join(style_info['recommended_keywords'][:5])}"
+            
             return AnalyzeResponseMulti(
-                combined_description=combined,
+                combined_description=enhanced_description,
                 image_a_description=None,
                 image_b_description=None,
             )
@@ -711,6 +1375,14 @@ async def analyze_image_endpoint(images: list[UploadFile] = File(...)):
             combined = run_gemini(combined_prompt, image_paths=saved_paths[:2])
             if combined.startswith("Error") or combined.startswith("An unexpected error"):
                 combined = (a_desc or "") + ("\n\n" if a_desc and b_desc else "") + (b_desc or "")
+            
+            # Add style analysis for both images
+            style_a = analyze_artistic_style(saved_paths[0])
+            style_b = analyze_artistic_style(saved_paths[1])
+            
+            style_comparison = f"\n\n🎨 **Style Comparison:**\n• Image A: {style_a['primary_style']} ({style_a['color_palette']})\n• Image B: {style_b['primary_style']} ({style_b['color_palette']})\n• Shared Keywords: {', '.join(set(style_a['recommended_keywords'][:3]) & set(style_b['recommended_keywords'][:3]))}"
+            
+            combined += style_comparison
 
             return AnalyzeResponseMulti(
                 combined_description=combined,
@@ -815,6 +1487,9 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         rms = librosa.feature.rms(y=y)[0]
         energy = float(np.mean(rms))
         
+        # Calculate dynamic range (difference between max and min RMS)
+        dynamic_range = float(np.max(rms) - np.min(rms)) if len(rms) > 0 else 0.1
+        
         # Default thresholds for now (genre-based adjustment will happen later)
         if energy > 0.15:
             characteristics["energy_level"] = "high"
@@ -823,11 +1498,76 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         else:
             characteristics["energy_level"] = "low"
         
-        # 4. Dynamic Range Analysis
-        dynamic_range = float(np.std(rms))
-        if dynamic_range < 0.02:
+        # 5. Enhanced Emotion Detection using advanced analysis
+        spectral_contrast = librosa.feature.spectral_contrast(y=y, sr=sr)
+        mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
+        
+        emotion_score = _calculate_emotion_score(energy, spectral_contrast, mfccs, characteristics["tempo_bpm"])
+        
+        if emotion_score > 0.7:
+            characteristics["mood"] = "energetic"
+            characteristics["emotional_intensity"] = "high"
+        elif emotion_score > 0.4:
+            characteristics["mood"] = "emotional" 
+            characteristics["emotional_intensity"] = "medium"
+        elif emotion_score > 0.2:
+            characteristics["mood"] = "contemplative"
+            characteristics["emotional_intensity"] = "low"
+        else:
+            characteristics["mood"] = "futuristic"
+            characteristics["emotional_intensity"] = "very_low"
+        
+        # 6. Advanced Vocal Analysis using enhanced methods
+        if characteristics["has_vocals"]:
+            # Vocal count detection using density analysis
+            vocal_density = _analyze_vocal_density(y, sr)
+            characteristics["vocal_density"] = vocal_density
+            
+            if vocal_density > 0.8:
+                characteristics["vocal_count"] = "choir"
+            elif vocal_density > 0.6:
+                characteristics["vocal_count"] = "group"
+            elif vocal_density > 0.4:
+                characteristics["vocal_count"] = "duo"
+            elif vocal_density > 0.2:
+                characteristics["vocal_count"] = "solo"
+            else:
+                characteristics["vocal_count"] = "minimal"
+            
+            # Vocal separation analysis
+            characteristics["vocal_separation"] = _analyze_vocal_separation(y, sr)
+        
+        # 7. Performance Energy Analysis
+        characteristics["performance_energy"] = _analyze_performance_energy(y, sr, characteristics["tempo_bpm"])
+        
+        # 7b. Compute spectral features needed for complexity assessment
+        spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
+        spectral_rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr)[0]
+        
+        # 8. Musical Complexity Assessment
+        complexity_score = _calculate_musical_complexity(y, sr, spectral_centroids, spectral_rolloff)
+        if complexity_score > 0.8:
+            characteristics["musical_complexity"] = "complex"
+        elif complexity_score > 0.5:
+            characteristics["musical_complexity"] = "moderate"
+        else:
+            characteristics["musical_complexity"] = "simple"
+        
+        # 9. Audio Quality Assessment
+        quality_score = _assess_audio_quality(y, sr, rms)
+        if quality_score > 0.8:
+            characteristics["audio_quality"] = "excellent"
+        elif quality_score > 0.6:
+            characteristics["audio_quality"] = "good"
+        elif quality_score > 0.4:
+            characteristics["audio_quality"] = "fair"
+        else:
+            characteristics["audio_quality"] = "poor"
+        
+        # 9b. Dynamic Range Assessment
+        if dynamic_range < 0.05:
             characteristics["dynamic_range"] = "narrow"
-        elif dynamic_range < 0.05:
+        elif dynamic_range < 0.2:
             characteristics["dynamic_range"] = "medium"
         else:
             characteristics["dynamic_range"] = "wide"

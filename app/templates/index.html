@@ -26,8 +26,40 @@
     </button>
     <div class="page-wrapper">
         <nav class="navbar">
-            <h1 class="nav-title">PiXa Prompt Enhancer</h1>
+            <div class="nav-brand">
+                <div class="brand-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1 class="nav-title">PiXa Prompt Editor</h1>
+                    <span class="nav-subtitle">Professional AI Prompt Enhancement</span>
+                </div>
+            </div>
             <div class="nav-actions">
+                <button id="new-prompt-btn" class="btn btn-ghost" title="New Prompt">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                </button>
+                <button id="save-prompt-btn" class="btn btn-ghost" title="Save Prompt">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                        <polyline points="17,21 17,13 7,13 7,21"/>
+                        <polyline points="7,3 7,8 15,8"/>
+                    </svg>
+                </button>
+                <button id="load-prompt-btn" class="btn btn-ghost" title="Load Prompt">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10,9 9,9 8,9"/>
+                    </svg>
+                </button>
+                <div class="nav-divider"></div>
                 <label class="theme-switch" for="theme-toggle" title="Toggle Dark Mode">
                     <input type="checkbox" id="theme-toggle" />
                     <span class="slider round"></span>
@@ -188,44 +220,248 @@
                                 <button id="remove-audio-btn" class="btn btn-secondary btn-small">Remove Audio</button>
                             </div>
                         </div>
+                        <!-- Audio Analysis Results -->
+                        <div id="audio-analysis-results" class="audio-analysis-results" style="display: none;">
+                            <h4 class="analysis-title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 18V5l12-2v13"></path>
+                                    <circle cx="6" cy="18" r="3"></circle>
+                                    <circle cx="18" cy="16" r="3"></circle>
+                                </svg>
+                                Audio Analysis
+                            </h4>
+                            <div class="analysis-grid">
+                                <div class="analysis-item">
+                                    <span class="analysis-label">Type</span>
+                                    <span class="analysis-value" id="audio-type">—</span>
+                                </div>
+                                <div class="analysis-item">
+                                    <span class="analysis-label">Tempo</span>
+                                    <span class="analysis-value" id="audio-tempo">—</span>
+                                </div>
+                                <div class="analysis-item">
+                                    <span class="analysis-label">BPM</span>
+                                    <span class="analysis-value" id="audio-bpm">—</span>
+                                </div>
+                                <div class="analysis-item">
+                                    <span class="analysis-label">Mood</span>
+                                    <span class="analysis-value" id="audio-mood">—</span>
+                                </div>
+                                <div class="analysis-item">
+                                    <span class="analysis-label">Energy</span>
+                                    <span class="analysis-value" id="audio-energy">—</span>
+                                </div>
+                                <div class="analysis-item">
+                                    <span class="analysis-label">Vocals</span>
+                                    <span class="analysis-value" id="audio-vocals">—</span>
+                                </div>
+                                <div class="analysis-item">
+                                    <span class="analysis-label">Danceability</span>
+                                    <div class="analysis-bar">
+                                        <div class="analysis-bar-fill" id="audio-danceability-bar" style="width: 0%;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="analysis-description" id="audio-description-text"></div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="card prompt-card">
-                <h2>Step 2: Enhance Your Prompt</h2>
-                <div class="selector">
-                    <label for="prompt-type-select">Prompt Type:</label>
-                    <select id="prompt-type-select">
-                        <option value="Image">Image</option>
-                        <option value="3D">3D Model</option>
-                        <option value="VEO">Video (VEO)</option>
-                        <option value="WAN2">Animation (WAN2)</option>
-                        <option value="LTX2">Video (LTX-2)</option>
-                    </select>
+                <div class="editor-header">
+                    <h2 class="editor-title">Prompt Editor</h2>
+                    <div class="editor-tabs">
+                        <button class="editor-tab active" data-tab="compose">Compose</button>
+                        <button class="editor-tab" data-tab="templates">Templates</button>
+                        <button class="editor-tab" data-tab="history">History</button>
+                        <button class="editor-tab" data-tab="compare">Compare</button>
+                    </div>
                 </div>
-                <div class="selector" id="model-selector-container">
-                    <label for="model-select">AI Model:</label>
-                    <select id="model-select">
-                        <option value="default" title="Standard prompt formatting without model-specific optimizations">Default</option>
-                        <optgroup label="Photorealistic Models">
-                            <option value="flux" title="Optimized for photorealistic imagery with detailed technical specifications. Best for photography-style images with fine details.">Flux (Photorealistic)</option>
-                            <option value="z-image-turbo" title="Fast photorealistic image model. Uses standard prompt formatting unless customized.">Z-Image Turbo</option>
-                            <option value="pixart" title="Excellent for detailed compositions with strong artistic direction. Good balance of realism and artistic flair.">PixArt (Detailed)</option>
-                            <option value="dalle3" title="Excellent for following complex instructions and generating coherent scenes with accurate text rendering.">DALL-E 3 (Coherent)</option>
-                        </optgroup>
-                        <optgroup label="Versatile Models">
-                            <option value="qwen" title="Balanced approach with clear subject descriptions and compositional instructions. Good for versatile, well-composed images.">Qwen (Versatile)</option>
-                            <option value="midjourney" title="Excellent for artistic compositions with strong aesthetic appeal. Best for stylized, visually striking imagery.">Midjourney (Aesthetic)</option>
-                            <option value="sdxl" title="Good for detailed compositions with strong artistic direction. Versatile across many styles and subjects.">SDXL (Balanced)</option>
-                        </optgroup>
-                        <optgroup label="Artistic Models">
-                            <option value="nunchaku" title="Focuses on style coherence and artistic interpretations. Ideal for creative, stylized imagery with strong mood/atmosphere.">Nunchaku (Artistic)</option>
-                            <option value="kandinsky" title="Excellent for abstract and artistic compositions with unique stylistic elements.">Kandinsky (Abstract)</option>
-                            <option value="imagen" title="Strong at following detailed instructions and creating coherent scenes with good composition.">Imagen (Coherent)</option>
-                        </optgroup>
-                    </select>
+
+                <div class="editor-content">
+                    <!-- Compose Tab -->
+                    <div class="tab-pane active" id="compose-tab">
+                        <div class="editor-toolbar">
+                            <div class="toolbar-group">
+                                <button id="enhance-btn" class="btn btn-primary">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                    Enhance Prompt
+                                </button>
+                                <button id="clear-prompt-btn" class="btn btn-outline">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    Clear
+                                </button>
+                            </div>
+                            <div class="toolbar-group">
+                                <div class="model-selector">
+                                    <label for="prompt-type-select">Type:</label>
+                                    <select id="prompt-type-select">
+                                        <option value="Image">Image</option>
+                                        <option value="3D">3D Model</option>
+                                        <option value="VEO">Video (VEO)</option>
+                                        <option value="WAN2">Animation (WAN2)</option>
+                                        <option value="LTX2">Video (LTX-2)</option>
+                                    </select>
+                                </div>
+                                <div class="model-selector">
+                                    <label for="model-select">Model:</label>
+                                    <select id="model-select">
+                                        <option value="default">Default</option>
+                                        <optgroup label="Photorealistic">
+                                            <option value="flux">Flux</option>
+                                            <option value="pixart">PixArt</option>
+                                            <option value="dalle3">DALL-E 3</option>
+                                        </optgroup>
+                                        <optgroup label="Versatile">
+                                            <option value="qwen">Qwen</option>
+                                            <option value="midjourney">Midjourney</option>
+                                            <option value="sdxl">SDXL</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="editor-area">
+                            <div class="prompt-input-section">
+                                <div class="input-header">
+                                    <label for="prompt-input">Prompt</label>
+                                    <div class="input-meta">
+                                        <span id="char-count">0</span>
+                                        <span id="word-count">0 words</span>
+                                    </div>
+                                </div>
+                                <div class="textarea-container">
+                                    <textarea id="prompt-input" placeholder="Enter your prompt idea here..."></textarea>
+                                    <div class="input-actions">
+                                        <button id="paste-btn" class="btn btn-ghost btn-sm" title="Paste">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/>
+                                                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                                            </svg>
+                                        </button>
+                                        <button id="expand-btn" class="btn btn-ghost btn-sm" title="Expand">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="enhancement-panel">
+                                <div class="panel-header">
+                                    <h3>Enhancement Settings</h3>
+                                    <button id="toggle-settings" class="btn btn-ghost btn-sm">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="panel-content" id="settings-panel">
+                                    <div class="settings-grid">
+                                        <div class="setting-group">
+                                            <label>Style</label>
+                                            <select id="style-select">
+                                                <option value="">Auto</option>
+                                                <option value="photorealistic">Photorealistic</option>
+                                                <option value="artistic">Artistic</option>
+                                                <option value="minimalist">Minimalist</option>
+                                            </select>
+                                        </div>
+                                        <div class="setting-group">
+                                            <label>Lighting</label>
+                                            <select id="lighting-select">
+                                                <option value="">Auto</option>
+                                                <option value="natural">Natural</option>
+                                                <option value="studio">Studio</option>
+                                                <option value="dramatic">Dramatic</option>
+                                            </select>
+                                        </div>
+                                        <div class="setting-group">
+                                            <label>Cinematography</label>
+                                            <select id="cinematography-select">
+                                                <option value="">Auto</option>
+                                                <option value="wide shot">Wide Shot</option>
+                                                <option value="close-up">Close-up</option>
+                                                <option value="portrait">Portrait</option>
+                                            </select>
+                                        </div>
+                                        <div class="setting-group">
+                                            <label>Motion</label>
+                                            <select id="motion-select">
+                                                <option value="Static">Static</option>
+                                                <option value="subtle">Subtle</option>
+                                                <option value="dynamic">Dynamic</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Templates Tab -->
+                    <div class="tab-pane" id="templates-tab">
+                        <div class="templates-library">
+                            <div class="templates-header">
+                                <h3>Prompt Templates</h3>
+                                <div class="template-search">
+                                    <input type="text" placeholder="Search templates..." id="template-search">
+                                </div>
+                            </div>
+                            <div class="template-categories">
+                                <button class="category-btn active" data-category="all">All</button>
+                                <button class="category-btn" data-category="image">Image</button>
+                                <button class="category-btn" data-category="video">Video</button>
+                                <button class="category-btn" data-category="3d">3D</button>
+                            </div>
+                            <div class="templates-grid" id="templates-grid">
+                                <!-- Templates will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- History Tab -->
+                    <div class="tab-pane" id="history-tab">
+                        <div class="history-panel">
+                            <div class="history-header">
+                                <h3>Prompt History</h3>
+                                <button id="clear-history-btn" class="btn btn-outline btn-sm">Clear All</button>
+                            </div>
+                            <div class="history-list" id="history-list">
+                                <!-- History items will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Compare Tab -->
+                    <div class="tab-pane" id="compare-tab">
+                        <div class="compare-panel">
+                            <div class="compare-header">
+                                <h3>Compare Prompts</h3>
+                                <button id="swap-compare-btn" class="btn btn-outline btn-sm">Swap</button>
+                            </div>
+                            <div class="compare-container">
+                                <div class="compare-column">
+                                    <h4>Original</h4>
+                                    <div class="compare-text" id="original-text"></div>
+                                </div>
+                                <div class="compare-divider"></div>
+                                <div class="compare-column">
+                                    <h4>Enhanced</h4>
+                                    <div class="compare-text" id="enhanced-text"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            </div>
                 <!-- 3D Model Type Selector (shown when promptType=3D) -->
                 <div class="selector" id="model-type-selector-container" style="display: none;">
                     <label for="model-type-select">3D Model Type:</label>
@@ -254,24 +490,6 @@
                         <button id="apply-style" class="btn btn-primary">Apply Style</button>
                         <button id="remove-styles" class="btn btn-warning" style="display: none;">Remove Styles</button>
                         <button id="clear-style" class="btn btn-outline">Clear Selection</button>
-                    </div>
-                </div>
-
-                <!-- Original Templates Section (hidden by default) -->
-                <div class="templates-section" style="display: none;">
-                    <label for="template-select">Quick Templates:</label>
-                    <div class="template-controls">
-                        <select id="template-select">
-                            <option value="">Choose a template...</option>
-                            <!-- Template options remain the same -->
-                        </select>
-                    </div>
-                </div>
-                <div class="textarea-container">
-                    <textarea id="prompt-input" placeholder="e.g., a cat riding a skateboard"></textarea>
-                    <button id="clear-button" class="clear-btn" title="Clear text">&times;</button>
-                    <div class="char-counter">
-                        <span id="char-count">0</span>
                     </div>
                 </div>
 
@@ -816,6 +1034,20 @@
                     <option value="expressive">Expressive (Full Body)</option>
                     <option value="dynamic">Dynamic (High Energy)</option>
                 </select>
+            </div>
+
+            <!-- Enhancement Mode Selector -->
+            <div class="enhancement-mode-selector">
+                <label for="enhancement-mode">Enhancement Mode:</label>
+                <select id="enhancement-mode" name="enhancement_mode">
+                    <option value="general">General Enhancement</option>
+                    <option value="commercial">📸 Commercial Photography</option>
+                    <option value="cinematic">🎬 Cinematic Production</option>
+                    <option value="character">🎭 Character Design</option>
+                </select>
+                <div class="mode-description" id="mode-description">
+                    Standard prompt enhancement optimized for your selected model and settings.
+                </div>
             </div>
 
             <div class="selector">

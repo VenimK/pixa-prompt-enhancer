@@ -7,6 +7,628 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('dark-mode');
     }
 
+    // --- Specialized Enhancement Modes ---
+    let currentEnhancementMode = 'general';
+    
+    function initializeEnhancementModes() {
+        const modeSelector = document.getElementById('enhancement-mode');
+        const modeDescription = document.getElementById('mode-description');
+        
+        if (modeSelector) {
+            modeSelector.addEventListener('change', (e) => {
+                currentEnhancementMode = e.target.value;
+                updateModeDescription(modeDescription, currentEnhancementMode);
+                showToast(`Switched to ${getModeDisplayName(currentEnhancementMode)} mode`, 'info');
+            });
+        }
+        
+        // Initialize with default description
+        updateModeDescription(modeDescription, currentEnhancementMode);
+    }
+    
+    function updateModeDescription(descriptionElement, mode) {
+        if (!descriptionElement) return;
+        
+        const descriptions = {
+            'general': 'Standard prompt enhancement optimized for your selected model and settings.',
+            'commercial': 'Professional commercial photography style with clean aesthetics, perfect lighting, and brand-ready presentation.',
+            'cinematic': 'Epic cinematic production with professional cinematography, dramatic lighting, and film industry standards.',
+            'character': 'Professional character design with consistent aesthetics, expressive features, and animation-ready quality.'
+        };
+        
+        descriptionElement.textContent = descriptions[mode] || descriptions['general'];
+    }
+    
+    function getModeDisplayName(mode) {
+        const names = {
+            'general': 'General Enhancement',
+            'commercial': 'Commercial Photography',
+            'cinematic': 'Cinematic Production',
+            'character': 'Character Design'
+        };
+        return names[mode] || 'General Enhancement';
+    }
+    
+    function applySpecializedEnhancement(basePrompt, imageDescription, audioCharacteristics) {
+        // Apply specialized enhancement based on selected mode
+        switch (currentEnhancementMode) {
+            case 'commercial':
+                return enhancePromptCommercial(basePrompt, imageDescription, audioCharacteristics);
+            case 'cinematic':
+                return enhancePromptCinematic(basePrompt, imageDescription, audioCharacteristics);
+            case 'character':
+                return enhancePromptCharacterDesign(basePrompt, imageDescription, audioCharacteristics);
+            default:
+                return null; // Use standard enhancement
+        }
+    }
+    
+    async function enhancePromptCommercial(prompt, imageDesc, audioChar) {
+        const requestData = {
+            prompt: prompt,
+            enhancement_mode: 'commercial',
+            image_description: imageDesc || '',
+            audio_characteristics: audioChar || null,
+            prompt_type: els.promptType?.value || 'Image',
+            model: els.modelSelect?.value || 'default'
+        };
+        
+        const response = await fetch('/enhance-specialized', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestData)
+        });
+        
+        if (!response.ok) throw new Error('Commercial enhancement failed');
+        const result = await response.json();
+        return result.enhanced_prompt;
+    }
+    
+    async function enhancePromptCinematic(prompt, imageDesc, audioChar) {
+        const requestData = {
+            prompt: prompt,
+            enhancement_mode: 'cinematic',
+            image_description: imageDesc || '',
+            audio_characteristics: audioChar || null,
+            prompt_type: els.promptType?.value || 'VEO',
+            model: els.modelSelect?.value || 'default'
+        };
+        
+        const response = await fetch('/enhance-specialized', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestData)
+        });
+        
+        if (!response.ok) throw new Error('Cinematic enhancement failed');
+        const result = await response.json();
+        return result.enhanced_prompt;
+    }
+    
+    async function enhancePromptCharacterDesign(prompt, imageDesc, audioChar) {
+        const requestData = {
+            prompt: prompt,
+            enhancement_mode: 'character',
+            image_description: imageDesc || '',
+            audio_characteristics: audioChar || null,
+            prompt_type: els.promptType?.value || 'WAN2',
+            model: els.modelSelect?.value || 'default'
+        };
+        
+        const response = await fetch('/enhance-specialized', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestData)
+        });
+        
+        if (!response.ok) throw new Error('Character design enhancement failed');
+        const result = await response.json();
+        return result.enhanced_prompt;
+    }
+
+    // --- Professional Editor Tab System ---
+    function initializeProfessionalEditor() {
+        initializeEditorTabs();
+        initializeRealtimeSuggestions();
+        initializeEnhancementModes();
+    }
+
+    function wireProfessionalEditorControls() {
+        // Template search and filtering
+        const templateSearch = document.getElementById('template-search');
+        if (templateSearch) {
+            templateSearch.addEventListener('input', loadTemplates);
+        }
+
+        const categoryBtns = document.querySelectorAll('.category-btn');
+        categoryBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                loadTemplates();
+            });
+        });
+
+        // History controls
+        const clearHistoryBtn = document.getElementById('clear-history-btn');
+        if (clearHistoryBtn) {
+            clearHistoryBtn.addEventListener('click', clearHistory);
+        }
+
+        // Compare controls
+        const swapCompareBtn = document.getElementById('swap-compare-btn');
+        if (swapCompareBtn) {
+            swapCompareBtn.addEventListener('click', swapCompare);
+        }
+
+        // Save/Load buttons
+        const saveBtn = document.getElementById('save-prompt-btn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', saveCurrentPrompt);
+        }
+
+        const loadBtn = document.getElementById('load-prompt-btn');
+        if (loadBtn) {
+            loadBtn.addEventListener('click', loadPromptFromFile);
+        }
+
+        // New prompt button
+        const newBtn = document.getElementById('new-prompt-btn');
+        if (newBtn) {
+            newBtn.addEventListener('click', () => {
+                if (els.prompt) {
+                    els.prompt.value = '';
+                    updateCharCount();
+                }
+                showToast('New prompt started!', 'success');
+            });
+        }
+    }
+
+    function initializeEditorTabs() {
+        const editorTabs = document.querySelectorAll('.editor-tab');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        console.log('Editor tabs init:', { tabsFound: editorTabs.length, panesFound: tabPanes.length });
+
+        editorTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+
+                // Remove active class from all tabs and panes
+                editorTabs.forEach(t => t.classList.remove('active'));
+                tabPanes.forEach(p => p.classList.remove('active'));
+
+                // Add active class to clicked tab and corresponding pane
+                tab.classList.add('active');
+                const targetPane = document.getElementById(`${targetTab}-tab`);
+                if (targetPane) {
+                    targetPane.classList.add('active');
+                }
+
+                // Load tab content if needed
+                if (targetTab === 'templates') {
+                    loadTemplates();
+                } else if (targetTab === 'history') {
+                    renderHistoryItems();
+                } else if (targetTab === 'compare') {
+                    loadCompare();
+                }
+            });
+        });
+    }
+
+    // --- Template System ---
+    let promptTemplates = [
+        {
+            id: 'photorealistic-portrait',
+            title: 'Photorealistic Portrait',
+            category: 'image',
+            description: 'A highly detailed, photorealistic portrait with natural lighting and skin textures.',
+            template: 'A photorealistic portrait of [subject], highly detailed, professional studio lighting, 8K resolution, sharp focus, natural skin texture, cinematic composition'
+        },
+        {
+            id: 'cinematic-landscape',
+            title: 'Cinematic Landscape',
+            category: 'image',
+            description: 'Epic cinematic landscape with dramatic lighting and atmospheric effects.',
+            template: 'Cinematic landscape of [scene], dramatic lighting, golden hour, atmospheric perspective, detailed textures, professional cinematography, 8K, masterpiece'
+        },
+        {
+            id: 'character-animation',
+            title: 'Character Animation',
+            category: 'video',
+            description: 'Smooth character animation with natural movements and expressions.',
+            template: 'Animation of [character] [action], smooth motion, natural facial expressions, fluid movements, 24fps, high quality animation, detailed character design'
+        },
+        {
+            id: '3d-product',
+            title: '3D Product Render',
+            category: '3d',
+            description: 'Professional 3D product visualization with realistic materials and lighting.',
+            template: '3D render of [product], photorealistic materials, studio lighting, clean background, high detail, professional product photography, octane render'
+        }
+    ];
+
+    function loadTemplates() {
+        const templatesGrid = document.getElementById('templates-grid');
+        if (!templatesGrid) return;
+
+        const searchTerm = document.getElementById('template-search')?.value.toLowerCase() || '';
+        const activeCategory = document.querySelector('.category-btn.active')?.dataset.category || 'all';
+
+        const filteredTemplates = promptTemplates.filter(template => {
+            const matchesSearch = template.title.toLowerCase().includes(searchTerm) ||
+                                template.description.toLowerCase().includes(searchTerm);
+            const matchesCategory = activeCategory === 'all' || template.category === activeCategory;
+            return matchesSearch && matchesCategory;
+        });
+
+        templatesGrid.innerHTML = '';
+
+        filteredTemplates.forEach(template => {
+            const templateCard = document.createElement('div');
+            templateCard.className = 'template-card';
+            templateCard.innerHTML = `
+                <h4>${template.title}</h4>
+                <p>${template.description}</p>
+            `;
+
+            templateCard.addEventListener('click', () => {
+                if (els.prompt) {
+                    els.prompt.value = template.template;
+                    updateCharCount();
+                    showToast('Template loaded successfully!', 'success');
+                    // Switch back to compose tab
+                    document.querySelector('[data-tab="compose"]').click();
+                }
+            });
+
+            templatesGrid.appendChild(templateCard);
+        });
+    }
+
+    // --- Compare System ---
+    function loadCompare() {
+        const originalText = document.getElementById('original-text');
+        const enhancedText = document.getElementById('enhanced-text');
+
+        if (originalText && enhancedText) {
+            // Load from current session or stored values
+            const currentPrompt = els.prompt?.value || '';
+            const currentResult = els.resultText?.innerText || '';
+
+            originalText.textContent = currentPrompt;
+            enhancedText.textContent = currentResult;
+        }
+    }
+
+    function swapCompare() {
+        const originalText = document.getElementById('original-text');
+        const enhancedText = document.getElementById('enhanced-text');
+
+        if (originalText && enhancedText) {
+            const temp = originalText.textContent;
+            originalText.textContent = enhancedText.textContent;
+            enhancedText.textContent = temp;
+        }
+    }
+
+    // --- Save/Load Prompts ---
+    function saveCurrentPrompt() {
+        const promptData = {
+            prompt: els.prompt?.value || '',
+            promptType: els.promptType?.value || '',
+            style: els.style?.value || '',
+            cinematography: els.cinematography?.value || '',
+            lighting: els.lighting?.value || '',
+            model: els.modelSelect?.value || '',
+            timestamp: new Date().toISOString()
+        };
+
+        const blob = new Blob([JSON.stringify(promptData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `prompt_${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Prompt saved!', 'success');
+    }
+
+    function loadPromptFromFile() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (els.prompt) els.prompt.value = data.prompt || '';
+                        if (els.promptType) els.promptType.value = data.promptType || '';
+                        if (els.style) els.style.value = data.style || '';
+                        if (els.cinematography) els.cinematography.value = data.cinematography || '';
+                        if (els.lighting) els.lighting.value = data.lighting || '';
+                        if (els.modelSelect) els.modelSelect.value = data.model || '';
+                        updateCharCount();
+                            showToast('Prompt loaded!', 'success');
+                        // Switch to compose tab
+                        document.querySelector('[data-tab="compose"]').click();
+                    } catch (error) {
+                        showToast('Invalid prompt file format', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        };
+        input.click();
+    }
+
+    // --- Real-time Prompt Suggestions ---
+    let suggestionTimeout = null;
+    let lastPromptText = '';
+    
+    function initializeRealtimeSuggestions() {
+        const promptTextarea = document.getElementById('prompt-input');
+        if (!promptTextarea) return;
+        
+        promptTextarea.addEventListener('input', (e) => {
+            clearTimeout(suggestionTimeout);
+            const currentText = e.target.value;
+            
+            // Only suggest if text changed and has meaningful content
+            if (currentText !== lastPromptText && currentText.length > 10) {
+                suggestionTimeout = setTimeout(() => {
+                    generateRealtimeSuggestions(currentText);
+                }, 1000); // 1 second delay
+            }
+            
+            lastPromptText = currentText;
+        });
+    }
+    
+    async function generateRealtimeSuggestions(promptText) {
+        const suggestionsContainer = document.getElementById('realtime-suggestions');
+        if (!suggestionsContainer) return;
+        
+        try {
+            // Show loading state
+            suggestionsContainer.innerHTML = '<div class="suggestion-loading">Analyzing prompt...</div>';
+            suggestionsContainer.style.display = 'block';
+            
+            // Generate suggestions using Gemini
+            const suggestions = await getPromptSuggestions(promptText);
+            
+            if (suggestions && suggestions.length > 0) {
+                renderSuggestions(suggestions, suggestionsContainer);
+            } else {
+                suggestionsContainer.innerHTML = '<div class="no-suggestions">No suggestions available</div>';
+            }
+            
+        } catch (error) {
+            console.error('Error generating suggestions:', error);
+            suggestionsContainer.innerHTML = '<div class="suggestion-error">Unable to generate suggestions</div>';
+        }
+    }
+    
+    async function getPromptSuggestions(promptText) {
+        // Use Gemini to analyze the prompt and provide suggestions
+        const analysisPrompt = `Analyze this AI image/video generation prompt and provide 2-3 specific, actionable suggestions for improvement. Focus on:
+        1. Technical improvements (lighting, composition, camera angles)
+        2. Descriptive enhancements (more vivid language, specific details)
+        3. Artistic considerations (style consistency, mood enhancement)
+        
+        Prompt to analyze: "${promptText}"
+        
+        Respond with a JSON array of suggestion objects, each with "category", "title", and "description" fields.`;
+        
+        try {
+            const response = await fetch('/enhance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    prompt: analysisPrompt,
+                    prompt_type: 'Image',
+                    style: (els.style && els.style.value) ? els.style.value : 'None',
+                    cinematography: (els.cinematography && els.cinematography.value) ? els.cinematography.value : 'None',
+                    lighting: (els.lighting && els.lighting.value) ? els.lighting.value : 'None',
+                    image_description: null,
+                    motion_effect: null,
+                    text_emphasis: null,
+                    model: (els.modelSelect && els.modelSelect.value) ? els.modelSelect.value : 'default',
+                    model_type: (els.modelTypeSelect && els.modelTypeSelect.value) ? els.modelTypeSelect.value : null,
+                    wrap_mode: null,
+                    audio_generation: null,
+                    resolution: null,
+                    audio_description: null,
+                    movement_level: null,
+                    lipsync_intensity: null,
+                    audio_reactivity: null,
+                    genre_movement: null,
+                    movement_speed: null,
+                    pause_points: null,
+                    transition_smoothness: null,
+                    character_coordination: null,
+                    object_interaction: null
+                })
+            });
+            
+            if (!response.ok) {
+                const errText = await response.text().catch(() => '');
+                throw new Error(`Failed to get suggestions (HTTP ${response.status})${errText ? `: ${errText}` : ''}`);
+            }
+            
+            const result = await response.json();
+            const enhancedText = result.enhanced_prompt;
+            
+            // Parse the JSON response from Gemini
+            try {
+                const suggestions = JSON.parse(enhancedText);
+                return Array.isArray(suggestions) ? suggestions : [];
+            } catch (parseError) {
+                // Fallback: extract suggestions from text response
+                return extractSuggestionsFromText(enhancedText);
+            }
+            
+        } catch (error) {
+            console.error('Error fetching suggestions:', error);
+            return [];
+        }
+    }
+    
+    function extractSuggestionsFromText(text) {
+        // Fallback parser for text-based suggestions
+        const suggestions = [];
+        const lines = text.split('\n').filter(line => line.trim().length > 0);
+        
+        for (const line of lines) {
+            if (line.includes('1.') || line.includes('2.') || line.includes('3.')) {
+                const cleanLine = line.replace(/^\d+\.\s*/, '').trim();
+                if (cleanLine.length > 10) {
+                    suggestions.push({
+                        category: 'general',
+                        title: cleanLine.substring(0, 50) + (cleanLine.length > 50 ? '...' : ''),
+                        description: cleanLine
+                    });
+                }
+            }
+        }
+        
+        return suggestions.slice(0, 3); // Limit to 3 suggestions
+    }
+    
+    function renderSuggestions(suggestions, container) {
+        container.innerHTML = '';
+        
+        suggestions.forEach((suggestion, index) => {
+            const suggestionDiv = document.createElement('div');
+            suggestionDiv.className = 'suggestion-item';
+            
+            const categoryClass = getCategoryClass(suggestion.category);
+            const categoryIcon = getCategoryIcon(suggestion.category);
+            
+            suggestionDiv.innerHTML = `
+                <div class="suggestion-header">
+                    <span class="suggestion-icon">${categoryIcon}</span>
+                    <span class="suggestion-category ${categoryClass}">${suggestion.category || 'general'}</span>
+                </div>
+                <div class="suggestion-title">${suggestion.title || 'Suggestion'}</div>
+                <div class="suggestion-description">${suggestion.description || ''}</div>
+                <button class="apply-suggestion-btn" data-index="${index}">Apply</button>
+            `;
+            
+            // Add click handler for apply button
+            const applyBtn = suggestionDiv.querySelector('.apply-suggestion-btn');
+            applyBtn.addEventListener('click', () => {
+                applySuggestion(suggestion);
+                container.style.display = 'none';
+            });
+            
+            container.appendChild(suggestionDiv);
+        });
+    }
+    
+    function getCategoryClass(category) {
+        const classes = {
+            'technical': 'category-technical',
+            'descriptive': 'category-descriptive',
+            'artistic': 'category-artistic',
+            'general': 'category-general'
+        };
+        return classes[category] || 'category-general';
+    }
+    
+    function getCategoryIcon(category) {
+        const icons = {
+            'technical': '⚙️',
+            'descriptive': '📝',
+            'artistic': '🎨',
+            'general': '💡'
+        };
+        return icons[category] || '💡';
+    }
+    
+    function applySuggestion(suggestion) {
+        const promptTextarea = document.getElementById('prompt-input');
+        if (!promptTextarea) return;
+        
+        const currentPrompt = promptTextarea.value;
+        
+        // Simple implementation: append the suggestion description
+        // In a more advanced version, this could be smarter about insertion
+
+        const enhancedPrompt = (currentPrompt ? currentPrompt + ' ' : '') + (suggestion.description || '');
+        promptTextarea.value = enhancedPrompt;
+
+        // Update character count + allow other listeners to react
+        updateCharCount();
+        promptTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+        showToast('Suggestion applied!', 'success');
+    }
+
+    function initializeRealtimeSuggestions() {
+        const promptTextarea = document.getElementById('prompt-input');
+        if (!promptTextarea) return;
+
+        promptTextarea.addEventListener('input', (e) => {
+            clearTimeout(suggestionTimeout);
+            const currentText = e.target.value;
+
+            // Only suggest if text changed and has meaningful content
+            if (currentText !== lastPromptText && currentText.length > 10) {
+                suggestionTimeout = setTimeout(() => {
+                    generateRealtimeSuggestions(currentText);
+                }, 1000); // 1 second delay
+            }
+
+            lastPromptText = currentText;
+        });
+    }
+
+    function integrateHistoryWithEnhance() {
+        // Watch for result text changes and save to history
+        let lastResultText = '';
+        const checkForNewResult = () => {
+            if (els.resultText && els.resultText.innerText &&
+                els.resultText.innerText !== lastResultText &&
+                els.resultText.innerText.trim() !== '') {
+
+                const originalPrompt = els.prompt ? els.prompt.value : '';
+                const enhancedPrompt = els.resultText.innerText;
+                const promptType = els.promptType ? els.promptType.value : '';
+                const model = els.modelSelect ? els.modelSelect.value : '';
+
+                if (originalPrompt && enhancedPrompt) {
+                    addToHistory({
+                        prompt: originalPrompt,
+                        enhancedPrompt,
+                        promptType,
+                        model,
+                        style: els.style ? els.style.value : '',
+                        cinematography: els.cinematography ? els.cinematography.value : '',
+                        lighting: els.lighting ? els.lighting.value : '',
+                        motionEffect: els.motionEffect ? els.motionEffect.value : ''
+                    });
+
+                    // Update compare tab with new results
+                    loadCompare();
+
+                    lastResultText = enhancedPrompt;
+                }
+            }
+        };
+
+        // Check for new results every second
+        setInterval(checkForNewResult, 1000);
+    }
+
     // Wrapping preset logic is defined later, after 'els' is declared
 
     // --- Two-slot image selection state ---
@@ -115,6 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
             els.audioUpload.value = '';
         }
         renderAudioPreview();
+        hideAudioAnalysisResults();
     }
 
     async function analyzeAudioFile(audioFile) {
@@ -128,7 +751,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             if (!response.ok) {
-                throw new Error('Audio analysis failed');
+                const errText = await response.text().catch(() => '');
+                throw new Error(`Audio analysis failed (HTTP ${response.status})${errText ? `: ${errText}` : ''}`);
             }
             
             const result = await response.json();
@@ -137,13 +761,93 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             audioAnalysisResult = result;
-            console.log('Audio analysis result:', result);
+            if (result.audio_description) {
+                showToast('Audio analyzed and ready to use', 'success');
+                displayAudioAnalysisResults(result);
+            } else {
+                showToast('Audio analyzed, but no description returned', 'warning');
+            }
             return result;
             
         } catch (error) {
             console.error('Error analyzing audio:', error);
-            showToast('Error analyzing audio file', 'error');
+            audioAnalysisResult = null;
+            showToast(error && error.message ? error.message : 'Error analyzing audio file', 'error');
             return null;
+        }
+    }
+
+    function displayAudioAnalysisResults(result) {
+        const container = document.getElementById('audio-analysis-results');
+        if (!container) return;
+
+        const chars = result.characteristics || {};
+        
+        // Update type
+        const typeEl = document.getElementById('audio-type');
+        if (typeEl) {
+            const type = chars.audio_type || 'unknown';
+            typeEl.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+        }
+        
+        // Update tempo
+        const tempoEl = document.getElementById('audio-tempo');
+        if (tempoEl) {
+            const tempo = chars.tempo || 'medium';
+            tempoEl.textContent = tempo.charAt(0).toUpperCase() + tempo.slice(1);
+        }
+        
+        // Update BPM
+        const bpmEl = document.getElementById('audio-bpm');
+        if (bpmEl) {
+            bpmEl.textContent = chars.tempo_bpm ? `${Math.round(chars.tempo_bpm)}` : '—';
+        }
+        
+        // Update mood with color class
+        const moodEl = document.getElementById('audio-mood');
+        if (moodEl) {
+            const mood = chars.mood || 'neutral';
+            moodEl.textContent = mood.charAt(0).toUpperCase() + mood.slice(1);
+            moodEl.className = `analysis-value mood-${mood}`;
+        }
+        
+        // Update energy with color class
+        const energyEl = document.getElementById('audio-energy');
+        if (energyEl) {
+            const energy = chars.energy_level || 'medium';
+            energyEl.textContent = energy.charAt(0).toUpperCase() + energy.slice(1);
+            energyEl.className = `analysis-value energy-${energy}`;
+        }
+        
+        // Update vocals (backend returns has_vocals, fallback to vocals)
+        const vocalsEl = document.getElementById('audio-vocals');
+        if (vocalsEl) {
+            const hasVocals = chars.has_vocals === true || chars.vocals === true;
+            vocalsEl.textContent = hasVocals ? 'Yes' : 'No';
+            vocalsEl.className = `analysis-value vocals-${hasVocals ? 'yes' : 'no'}`;
+        }
+        
+        // Update danceability bar
+        const danceBar = document.getElementById('audio-danceability-bar');
+        if (danceBar) {
+            const danceability = (chars.danceability || 0.5) * 100;
+            danceBar.style.width = `${danceability}%`;
+        }
+        
+        // Update description
+        const descEl = document.getElementById('audio-description-text');
+        if (descEl) {
+            descEl.textContent = chars.description || result.audio_description || '';
+        }
+        
+        // Show the container
+        container.style.display = 'block';
+    }
+
+    function hideAudioAnalysisResults() {
+        const container = document.getElementById('audio-analysis-results');
+        if (container) {
+            container.style.display = 'none';
         }
     }
 
@@ -759,28 +1463,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Audio upload handling
     if (els.audioUpload) {
+        console.log('Audio upload element found, attaching change listener');
+        // Stop click from bubbling to parent drop zone
+        els.audioUpload.addEventListener('click', (e) => e.stopPropagation());
         els.audioUpload.addEventListener('change', async () => {
+            console.log('Audio upload change event fired');
             const files = els.audioUpload.files;
+            console.log('Audio files selected:', files ? files.length : 0);
             if (!files || files.length === 0) return;
             
             const file = files[0];
+            console.log('Audio file:', file.name, file.type, file.size);
             const error = validateAudioFile(file);
             if (error) {
+                console.log('Audio validation error:', error);
                 showToast(error, 'error');
                 els.audioUpload.value = '';
                 return;
             }
             
             selectedAudioFile = file;
+            console.log('selectedAudioFile set to:', selectedAudioFile.name);
             renderAudioPreview();
             showToast('Audio file loaded, analyzing...', 'info');
             
             // Analyze the audio file
+            console.log('Calling analyzeAudioFile...');
             await analyzeAudioFile(file);
+            console.log('analyzeAudioFile completed, result:', audioAnalysisResult ? 'success' : 'null');
             if (audioAnalysisResult) {
                 showToast('Audio file analyzed successfully', 'success');
             }
         });
+    } else {
+        console.warn('els.audioUpload not found!');
     }
 
     // Audio remove button
@@ -831,7 +1547,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        els.audioDropZone.addEventListener('click', () => {
+        els.audioDropZone.addEventListener('click', (e) => {
+            // Don't trigger if clicking directly on the input (avoid double-trigger)
+            if (e.target === els.audioUpload) return;
             if (els.audioUpload) {
                 els.audioUpload.click();
             }
@@ -879,10 +1597,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         ['dragenter', 'dragover'].forEach(evt => {
-            els.dropZone.addEventListener(evt, () => els.dropZone.classList.add('is-dragover'));
+            els.dropZone.addEventListener(evt, () => {
+                els.dropZone.classList.add('is-dragover');
+            });
         });
         ['dragleave', 'drop'].forEach(evt => {
-            els.dropZone.addEventListener(evt, () => els.dropZone.classList.remove('is-dragover'));
+            els.dropZone.addEventListener(evt, () => {
+                els.dropZone.classList.remove('is-dragover');
+            });
         });
         els.dropZone.addEventListener('drop', (e) => {
             const dt = e.dataTransfer;
@@ -2540,6 +3262,27 @@ POST-PROCESSING:
                     console.warn('Auto-analysis before enhance failed:', e);
                 }
             }
+
+            // For LTX2, ensure audio has been analyzed so audio_description is included
+            if (promptType === 'LTX2') {
+                console.log('LTX2 audio state:', {
+                    hasSelectedAudioFile: !!selectedAudioFile,
+                    hasAudioAnalysisResult: !!audioAnalysisResult
+                });
+            }
+
+            if (promptType === 'LTX2' && !selectedAudioFile) {
+                showToast('No audio selected. Upload an audio file to enable audio-synced enhancement.', 'info');
+            }
+
+            if (promptType === 'LTX2' && selectedAudioFile && !audioAnalysisResult) {
+                try {
+                    showToast('Analyzing audio before enhance...', 'info');
+                    await analyzeAudioFile(selectedAudioFile);
+                } catch (e) {
+                    console.warn('Auto audio analysis before enhance failed:', e);
+                }
+            }
             const imageDescription = getImageContextForEnhance();
             const motionEffect = els.motionEffect.value;
             const textToEmphasis = els.textEmphasis.value;
@@ -2615,7 +3358,8 @@ POST-PROCESSING:
                     text_emphasis: textEmphasisDetails,
                     model: selectedModel,
                     wrap_mode: wrapMode,
-                    model_type: (els.modelTypeSelect ? els.modelTypeSelect.value : null)
+                    model_type: (els.modelTypeSelect ? els.modelTypeSelect.value : null),
+                    audio_description: promptType === 'LTX2' && audioAnalysisResult ? audioAnalysisResult.audio_description : null
                 });
 
                 console.log('Model type selector element:', els.modelTypeSelect);
@@ -4294,11 +5038,11 @@ STYLE: Commercial product photography with emphasis on the vehicle wrap design a
         });
 
         function highlight() {
-            els.dropZone.classList.add('drag-over');
+            els.dropZone.classList.add('is-dragover');
         }
 
         function unhighlight() {
-            els.dropZone.classList.remove('drag-over');
+            els.dropZone.classList.remove('is-dragover');
         }
 
         els.dropZone.addEventListener('drop', handleDrop, false);
@@ -4329,6 +5073,11 @@ STYLE: Commercial product photography with emphasis on the vehicle wrap design a
 
     // Initialize the application
     applySavedTheme();
+
+    // Professional editor init (tabs/templates/history/compare + suggestions + enhancement modes)
+    initializeProfessionalEditor();
+    wireProfessionalEditorControls();
+    integrateHistoryWithEnhance();
     
     // Initialize history panel
     initHistoryPanel();
