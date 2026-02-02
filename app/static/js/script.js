@@ -4847,7 +4847,7 @@ STYLE: Commercial product photography with emphasis on the vehicle wrap design a
             
             // Create or update the model limit info element
             let modelLimitInfo = document.querySelector('.model-limit-info');
-            if (!modelLimitInfo) {
+            if (!modelLimitInfo && els.charCounter && els.charCounter.parentNode) {
                 modelLimitInfo = document.createElement('div');
                 modelLimitInfo.className = 'model-limit-info';
                 modelLimitInfo.innerHTML = `
@@ -4855,13 +4855,13 @@ STYLE: Commercial product photography with emphasis on the vehicle wrap design a
                     <span class="limit-warning">Approaching limit!</span>
                 `;
                 els.charCounter.parentNode.appendChild(modelLimitInfo);
-            } else {
+            } else if (modelLimitInfo) {
                 modelLimitInfo.querySelector('.limit-label').innerHTML = 
                     `Character limit: <strong>${charLimit}</strong>`;
             }
             
             // Add visual feedback when approaching limit
-            if (els.charCounter) {
+            if (els.charCounter && modelLimitInfo) {
                 els.charCounter.classList.remove('near-limit', 'at-limit');
                 modelLimitInfo.classList.remove('warning');
                 
