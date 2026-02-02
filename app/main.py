@@ -398,6 +398,26 @@ def generate_enhanced_ltx2_prompt(audio_characteristics: dict, base_prompt: str)
     elif tempo == 'fast':
         prompt_parts.append(f"with energetic movements responding to the driving {tempo_bpm:.1f} BPM tempo")
         prompt_parts.append("quick visual elements synchronized to rapid rhythm")
+        # Add danceability information for fast tempo
+        danceability = audio_characteristics.get('danceability', 0.5)
+        if danceability > 0.8:
+            prompt_parts.append(f"with highly danceable movements matching the {danceability:.0%} danceability score")
+        elif danceability > 0.6:
+            prompt_parts.append("with rhythmic danceable movements")
+    
+    # Add vocal confidence and style details
+    if audio_characteristics.get('has_vocals'):
+        vocal_confidence = audio_characteristics.get('vocal_confidence', 0)
+        if vocal_confidence > 0.8:
+            prompt_parts.append("with prominent, confident vocal performance")
+        elif vocal_confidence > 0.6:
+            prompt_parts.append("with clear vocal performance")
+        
+        vocal_style = audio_characteristics.get('vocal_style', 'unknown')
+        if vocal_style == 'singing':
+            prompt_parts.append("featuring expressive singing with precise lip-sync")
+        elif vocal_style == 'spoken':
+            prompt_parts.append("with clear spoken delivery and articulate lip movements")
     
     # 4. Emotional and Dynamic Elements
     mood = audio_characteristics.get('mood', 'neutral')
@@ -924,208 +944,6 @@ def _assess_audio_quality(y, sr, rms):
         quality_score -= 0.1  # Inconsistent levels penalty
         
     return max(quality_score, 0.0)
-
-
-def generate_enhanced_ltx2_prompt(audio_characteristics: dict, base_prompt: str) -> str:
-    """Generate enhanced LTX-2 prompt using advanced audio analysis."""
-    
-    # Check for preservation constraints - if user wants strict preservation, be conservative
-    base_lower = base_prompt.lower()
-    preservation_keywords = [
-        "strictly preserve", "preserve exactly", "keep exactly", "no changes", 
-        "don't change", "maintain exactly", "preserve the", "keep the", 
-        "same character", "same outfit", "same background", "no extra"
-    ]
-    
-    has_preservation_constraint = any(keyword in base_lower for keyword in preservation_keywords)
-    
-    # If user wants strict preservation, only add minimal audio-driven enhancements
-    if has_preservation_constraint:
-        prompt_parts = [base_prompt.strip()]
-        
-        # Only add very conservative enhancements that don't violate preservation
-        if audio_characteristics.get('has_vocals'):
-            vocal_confidence = audio_characteristics.get('vocal_confidence', 0)
-            if vocal_confidence > 0.7:
-                prompt_parts.append("with precise lip-sync to the vocal performance")
-        
-        # Add subtle movement only if base prompt doesn't forbid it
-        if "gentle swaying" in base_lower or "subtle movement" in base_lower:
-            if audio_characteristics.get('beat_strength') == 'strong':
-                prompt_parts.append("with subtle rhythmic movement synchronized to the music")
-        
-        return " ".join(prompt_parts)
-    
-    # Normal enhancement mode - proceed with detailed analysis
-    prompt_parts = [base_prompt.strip()]
-    
-    # 1. Performance Style Enhancements
-    if audio_characteristics.get('vocal_style') == 'spoken':
-        prompt_parts.append("delivering spoken dialogue with precise lip-sync and clear diction")
-        if audio_characteristics.get('vocal_confidence', 0) > 0.8:
-            prompt_parts.append("with articulate vocal performance and natural speech patterns")
-    elif audio_characteristics.get('vocal_style') == 'singing':
-        prompt_parts.append(f"singing with {audio_characteristics.get('vocal_range', 'medium')} vocal range")
-        if audio_characteristics.get('vocal_range') == 'high':
-            prompt_parts.append("featuring high-reaching gestures during peak vocal notes")
-    elif audio_characteristics.get('vocal_style') == 'melodic_speech':
-        prompt_parts.append("delivering melodic speech with rhythmic cadence")
-    
-    # 2. Rhythm and Timing Integration
-    if audio_characteristics.get('beat_strength') == 'strong':
-        prompt_parts.append("with subtle body movements synchronized to strong rhythmic beats")
-        if audio_characteristics.get('time_signature') != '4/4':
-            prompt_parts.append(f"movements following {audio_characteristics['time_signature']} time signature")
-    
-    if audio_characteristics.get('syncopation') == 'high':
-        prompt_parts.append("incorporating off-beat movements and syncopated gestures")
-    elif audio_characteristics.get('syncopation') == 'medium':
-        prompt_parts.append("with subtle rhythmic variations in movement")
-    
-    # 3. Tempo-Based Visual Elements
-    tempo = audio_characteristics.get('tempo', 'medium')
-    tempo_bpm = audio_characteristics.get('tempo_bpm', 120)
-    
-    if tempo == 'slow':
-        prompt_parts.append(f"with gentle, measured movements timed to the slow {tempo_bpm:.1f} BPM tempo")
-        if audio_characteristics.get('danceability', 0) > 0.7:
-            prompt_parts.append("creating a calming, meditative visual rhythm despite the danceable beat")
-    elif tempo == 'fast':
-        prompt_parts.append(f"with energetic movements responding to the driving {tempo_bpm:.1f} BPM tempo")
-        prompt_parts.append("quick visual elements synchronized to rapid rhythm")
-    
-    # 4. Emotional and Dynamic Elements
-    mood = audio_characteristics.get('mood', 'neutral')
-    emotional_arc = audio_characteristics.get('emotional_arc', 'stable')
-    
-    mood_enhancements = {
-        'calm': "creating a serene, peaceful atmosphere with soft, gentle expressions",
-        'contemplative': "with thoughtful, introspective facial expressions and measured movements",
-        'energetic': "with dynamic, high-energy movements and vibrant expressions",
-        'emotional': "with expressive facial changes and emotional body language",
-        'futuristic': "with modern, innovative visual styling and contemporary movements"
-    }
-    
-    if mood in mood_enhancements:
-        prompt_parts.append(mood_enhancements[mood])
-    
-    # 5. Emotional Arc Integration
-    if emotional_arc == 'building':
-        prompt_parts.append("with intensity and expressiveness gradually building throughout the performance")
-    elif emotional_arc == 'declining':
-        prompt_parts.append("with movements and expressions gradually softening and calming")
-    
-    # 6. Genre-Specific Visual Direction
-    genre = audio_characteristics.get('genre', 'unknown')
-    
-    genre_directions = {
-        'pop': "with contemporary, polished performance style and modern visual aesthetics",
-        'ballad': "with intimate, emotional delivery and heartfelt expressions",
-        'electronic': "with futuristic visual effects synchronized to electronic elements",
-        'ambient': "with atmospheric, ethereal visual quality and dreamlike movements",
-        'spoken_word': "with theatrical, articulate performance and dramatic timing",
-        'instrumental': "with movements responding to instrumental textures and musical phrases",
-        'rock': "with energetic, powerful movements and strong rhythmic gestures",
-        'folk': "with natural, grounded movements and organic, authentic performance style",
-        'singer_songwriter': "with intimate, personal performance and heartfelt expressions",
-        'metal': "with intense, aggressive movements and powerful headbanging gestures",
-        'hip_hop': "with confident street-style movements and rhythmic body language",
-        'rnb': "with smooth, soulful movements and groovy, flowing gestures",
-        'indie': "with alternative, expressive movements and artistic body language",
-        'jazz': "with sophisticated, improvisational movements and cool, flowing gestures",
-        'classical': "with elegant, refined movements and graceful, formal posture",
-        'latin': "with passionate, rhythmic dance movements and vibrant, energetic gestures",
-        'african': "with earthy, grounded movements and powerful rhythmic expressions",
-        'asian': "with precise, deliberate movements and graceful, controlled gestures"
-    }
-    
-    if genre in genre_directions:
-        prompt_parts.append(genre_directions[genre])
-    
-    # 7. Performance Type Integration
-    performance_type = audio_characteristics.get('performance_type', 'studio_recording')
-    
-    if performance_type == 'live_performance':
-        prompt_parts.append("with natural, authentic performance quality and spontaneous movements")
-    elif performance_type == 'studio_recording':
-        prompt_parts.append("with polished, precise performance and refined movements")
-    
-    # 8. Dynamic Range Visual Effects
-    dynamic_range = audio_characteristics.get('dynamic_range', 'medium')
-    
-    if dynamic_range == 'wide':
-        prompt_parts.append("with dramatic contrasts between quiet, subtle moments and powerful, expressive peaks")
-    elif dynamic_range == 'narrow':
-        prompt_parts.append("with consistent, steady performance quality and even visual intensity")
-    
-    # 9. Spectral Characteristics to Visual Elements
-    spectral = audio_characteristics.get('spectral_characteristics', {})
-    
-    if spectral.get('warmth', False):
-        prompt_parts.append("with warm, soft lighting and gentle visual atmosphere")
-    elif spectral.get('brightness', 0) > 2500:
-        prompt_parts.append("with bright, vibrant visual elements and crisp lighting")
-    
-    # 10. Danceability and Movement
-    danceability = audio_characteristics.get('danceability', 0.5)
-    
-    if danceability > 0.8:
-        prompt_parts.append("with highly danceable rhythmic movements and natural groove")
-    elif danceability > 0.6:
-        prompt_parts.append("with subtle rhythmic movements and natural flow")
-    
-    # 11. Energy Level Integration
-    energy_level = audio_characteristics.get('energy_level', 'medium')
-    
-    energy_enhancements = {
-        'very_low': "with minimal, subtle movements and gentle expressions",
-        'low': "with restrained, calm movements and soft delivery",
-        'medium': "with balanced, natural movements and moderate expressiveness",
-        'high': "with energetic, confident movements and strong expressions",
-        'very_high': "with dynamic, powerful movements and intense expressiveness"
-    }
-    
-    if energy_level in energy_enhancements:
-        prompt_parts.append(energy_enhancements[energy_level])
-    
-    # 12. Advanced Lip-Sync Instructions
-    if audio_characteristics.get('has_vocals'):
-        vocal_confidence = audio_characteristics.get('vocal_confidence', 0)
-        vocal_count = audio_characteristics.get('vocal_count', 'unknown')
-        vocal_separation = audio_characteristics.get('vocal_separation', 'unknown')
-        
-        if vocal_confidence > 0.8:
-            prompt_parts.append("featuring precise, detailed lip-sync to every vocal nuance and syllable")
-        elif vocal_confidence > 0.6:
-            prompt_parts.append("with accurate lip-sync synchronized to vocal delivery")
-        
-        # Add vocal count specific instructions
-        if vocal_count == "solo":
-            prompt_parts.append("with focused single vocal performance and clear articulation")
-        elif vocal_count == "duo":
-            prompt_parts.append("with coordinated dual vocal performance and harmonized delivery")
-        elif vocal_count == "small_group":
-            prompt_parts.append("with small group vocal dynamics and collaborative performance")
-        elif vocal_count == "group":
-            prompt_parts.append("with ensemble vocal performance and group coordination")
-        elif vocal_count == "choir":
-            prompt_parts.append("with choral vocal arrangement and harmonized ensemble performance")
-        
-        # Add vocal separation instructions
-        if vocal_separation == "lead_with_backup":
-            prompt_parts.append("featuring prominent lead vocals with supporting harmonies")
-        elif vocal_separation == "harmonized_vocals":
-            prompt_parts.append("with blended harmonized vocal textures and balanced voices")
-        elif vocal_separation == "multiple_voices":
-            prompt_parts.append("with layered vocal performances and rich harmonic textures")
-        
-        # Add vocal style specific instructions
-        if audio_characteristics.get('vocal_style') == 'spoken':
-            prompt_parts.append("with natural mouth movements matching speech patterns and articulation")
-        elif audio_characteristics.get('vocal_style') == 'singing':
-            prompt_parts.append("with expressive mouth movements matching melodic phrases and vocal dynamics")
-    
-    return " ".join(prompt_parts)
 
 
 def limit_prompt_length(enhanced_prompt: str, model_type: str) -> str:
