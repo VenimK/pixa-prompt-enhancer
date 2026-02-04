@@ -81,13 +81,33 @@ async def shutdown_event():
     log_debug("FastAPI shutdown event triggered")
 
 
-# Enable CORS
+# Enable CORS with environment-based configuration
+def get_cors_config():
+    """Get CORS configuration based on environment."""
+    environment = os.environ.get("ENVIRONMENT", "development").lower()
+    
+    if environment == "production":
+        # Production: restrictive CORS
+        allowed_origins = os.environ.get("CORS_ORIGINS", "https://yourdomain.com").split(",")
+        return {
+            "allow_origins": allowed_origins,
+            "allow_credentials": True,
+            "allow_methods": ["GET", "POST"],
+            "allow_headers": ["Content-Type", "Authorization"],
+        }
+    else:
+        # Development/staging: permissive CORS for testing
+        return {
+            "allow_origins": ["*"],
+            "allow_credentials": True,
+            "allow_methods": ["*"],
+            "allow_headers": ["*"],
+        }
+
+cors_config = get_cors_config()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development only, restrict in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    **cors_config
 )
 
 # --- Setup ---
@@ -541,6 +561,14 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
     """Handle specialized enhancement modes (commercial, cinematic, character design)."""
     
     try:
+        # Validate input
+        is_valid, error_message = validate_specialized_request(request)
+        if not is_valid:
+            log_debug(f"Validation failed in enhance-specialized: {error_message}")
+            return EnhanceResponse(
+                enhanced_prompt=f"Validation error: {error_message}"
+            )
+        
         log_debug(f"Specialized enhancement request: mode={request.enhancement_mode}, prompt_type={request.prompt_type}")
         
         # Apply specialized enhancement based on mode
@@ -773,6 +801,7 @@ def check_content_quality(prompt: str) -> dict:
     """Check for content quality issues and potential biases."""
     issues = []
     warnings = []
+    suggestions = []
     
     try:
         # Length checks
@@ -815,11 +844,11 @@ def check_content_quality(prompt: str) -> dict:
             if len(found_terms) > 1:
                 warnings.append(message)
         
-        return {"issues": issues, "warnings": warnings}
+        return {"issues": issues, "warnings": warnings, "suggestions": suggestions}
         
     except Exception as e:
         log_debug(f"Content quality check failed: {e}")
-        return {"issues": [], "warnings": ["Content quality analysis failed"]}
+        return {"issues": [], "warnings": ["Content quality analysis failed"], "suggestions": []}
 
 
 # Helper functions for enhanced audio analysis
@@ -1041,6 +1070,103 @@ def limit_prompt_length(enhanced_prompt: str, model_type: str) -> str:
     return truncated_prompt
 
 
+# --- Input Validation Utilities ---
+def validate_enhance_request(request: EnhanceRequest) -> tuple[bool, str]:
+    """Validate enhance request parameters."""
+    
+    # Check prompt length
+    if not request.prompt or len(request.prompt.strip()) == 0:
+        return False, "Prompt cannot be empty"
+    
+    if len(request.prompt) > 10000:  # Reasonable upper limit
+        return False, "Prompt too long (max 10000 characters)"
+    
+    # Validate prompt type
+    valid_prompt_types = ["VEO", "WAN2", "Image", "3D", "LTX2"]
+    if request.prompt_type not in valid_prompt_types:
+        return False, f"Invalid prompt type. Must be one of: {', '.join(valid_prompt_types)}"
+    
+    # Validate model if provided
+    if request.model:
+        valid_models = ["default", "qwen", "flux", "pixart", "dalle3", "midjourney", "sdxl", "nunchaku", "kandinsky", "imagen"]
+        if request.model not in valid_models:
+            return False, f"Invalid model. Must be one of: {', '.join(valid_models)}"
+    
+    # Validate 3D model type if provided
+    if request.model_type:
+        valid_model_types = ["character", "object", "vehicle", "environment", "props"]
+        if request.model_type not in valid_model_types:
+            return False, f"Invalid 3D model type. Must be one of: {', '.join(valid_model_types)}"
+    
+    return True, ""
+
+def validate_specialized_request(request: SpecializedEnhanceRequest) -> tuple[bool, str]:
+    """Validate specialized enhance request parameters."""
+    
+    # Check prompt length
+    if not request.prompt or len(request.prompt.strip()) == 0:
+        return False, "Prompt cannot be empty"
+    
+    if len(request.prompt) > 10000:
+        return False, "Prompt too long (max 10000 characters)"
+    
+    # Validate enhancement mode
+    valid_modes = ["commercial", "cinematic", "character"]
+    if request.enhancement_mode not in valid_modes:
+        return False, f"Invalid enhancement mode. Must be one of: {', '.join(valid_modes)}"
+    
+    # Validate prompt type if provided
+    if request.prompt_type:
+        valid_prompt_types = ["VEO", "WAN2", "Image", "3D", "LTX2"]
+        if request.prompt_type not in valid_prompt_types:
+            return False, f"Invalid prompt type. Must be one of: {', '.join(valid_prompt_types)}"
+    
+    return True, ""
+
+def validate_audio_file(audio_file: UploadFile) -> tuple[bool, str]:
+    """Validate uploaded audio file."""
+    
+    # Check file size (max 50MB)
+    if hasattr(audio_file, 'size') and audio_file.size > 50 * 1024 * 1024:
+        return False, "Audio file too large (max 50MB)"
+    
+    # Check file type
+    allowed_types = ["audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/flac", "audio/ogg"]
+    if audio_file.content_type not in allowed_types:
+        return False, f"Invalid audio file type. Allowed types: {', '.join(allowed_types)}"
+    
+    # Check filename extension
+    allowed_extensions = [".mp3", ".wav", ".flac", ".ogg", ".m4a"]
+    if not any(audio_file.filename.lower().endswith(ext) for ext in allowed_extensions):
+        return False, f"Invalid audio file extension. Allowed: {', '.join(allowed_extensions)}"
+    
+    return True, ""
+
+def validate_image_files(images: list[UploadFile]) -> tuple[bool, str]:
+    """Validate uploaded image files."""
+    
+    # Check number of files (max 5)
+    if len(images) > 5:
+        return False, "Too many image files (max 5)"
+    
+    # Check each file
+    for img in images:
+        # Check file size (max 10MB per image)
+        if hasattr(img, 'size') and img.size > 10 * 1024 * 1024:
+            return False, f"Image file {img.filename} too large (max 10MB)"
+        
+        # Check file type
+        allowed_types = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp"]
+        if img.content_type not in allowed_types:
+            return False, f"Invalid image file type for {img.filename}. Allowed: {', '.join(allowed_types)}"
+        
+        # Check filename extension
+        allowed_extensions = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"]
+        if not any(img.filename.lower().endswith(ext) for ext in allowed_extensions):
+            return False, f"Invalid image file extension for {img.filename}. Allowed: {', '.join(allowed_extensions)}"
+    
+    return True, ""
+
 # --- Endpoints ---
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -1085,6 +1211,16 @@ async def style_test_page(request: Request):
 @app.post("/analyze-image", response_model=AnalyzeResponseMulti)
 async def analyze_image_endpoint(images: list[UploadFile] = File(...)):
     try:
+        # Validate input
+        is_valid, error_message = validate_image_files(images)
+        if not is_valid:
+            log_debug(f"Validation failed in analyze-image: {error_message}")
+            return AnalyzeResponseMulti(
+                combined_description=f"Validation error: {error_message}",
+                image_a_description=None,
+                image_b_description=None,
+            )
+        
         # Normalize images list (support single file as well)
         if not images:
             return AnalyzeResponseMulti(
@@ -2001,9 +2137,11 @@ def analyze_audio_characteristics(filename: str, file_size: int) -> dict:
 async def analyze_audio_endpoint(audio_file: UploadFile = File(...)):
     """Analyze uploaded audio file for rhythm, tempo, and characteristics."""
     try:
-        # Validate audio file
-        if not audio_file.content_type.startswith('audio/'):
-            return {"error": "Invalid file type. Please upload an audio file."}
+        # Validate input
+        is_valid, error_message = validate_audio_file(audio_file)
+        if not is_valid:
+            log_debug(f"Validation failed in analyze-audio: {error_message}")
+            return {"error": f"Validation error: {error_message}"}
         
         # Save audio file temporarily
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -2056,9 +2194,11 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
 
     try:
         # Validate input
-        if not request.prompt and request.prompt_type != "WAN2":
+        is_valid, error_message = validate_enhance_request(request)
+        if not is_valid:
+            log_debug(f"Validation failed in enhance: {error_message}")
             return EnhanceResponse(
-                enhanced_prompt="Error: Please provide a prompt to enhance."
+                enhanced_prompt=f"Validation error: {error_message}"
             )
 
         # Check for API key
