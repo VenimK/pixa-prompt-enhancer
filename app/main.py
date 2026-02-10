@@ -296,7 +296,7 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
 def analyze_artistic_style(image_path: str) -> dict:
     """Analyze artistic style from an image using advanced AI analysis."""
     
-    style_prompt = """Analyze this image and determine its artistic style. Provide a detailed analysis including:
+    style_prompt = """Analyze this image and determine its artistic style and content type. Provide a detailed analysis including:
 
 1. Primary artistic style (e.g., photorealistic, impressionist, abstract, cartoon, anime, etc.)
 2. Secondary style characteristics
@@ -304,6 +304,12 @@ def analyze_artistic_style(image_path: str) -> dict:
 4. Technical characteristics (brushwork, lighting, composition)
 5. Historical/artistic influences
 6. Recommended prompt keywords for similar images
+7. CONTENT ANALYSIS:
+   - Main subject type (person/character, object/scene, mixed)
+   - Primary focus (character portrait, object photography, landscape, etc.)
+   - Number of people visible (0, 1, 2+)
+   - Prominent objects or elements
+   - Setting/context (studio, outdoor, tabletop, etc.)
 
 Respond with a JSON object containing:
 {
@@ -314,6 +320,13 @@ Respond with a JSON object containing:
   "technical_characteristics": "string",
   "artistic_influences": "string",
   "recommended_keywords": ["array"],
+  "content_analysis": {
+    "main_subject_type": "character|object|scene|mixed",
+    "primary_focus": "string",
+    "people_count": 0,
+    "prominent_objects": ["array"],
+    "setting": "string"
+  },
   "confidence_score": 0.0-1.0
 }"""
     
@@ -334,6 +347,13 @@ Respond with a JSON object containing:
                 "technical_characteristics": "standard",
                 "artistic_influences": "contemporary",
                 "recommended_keywords": ["detailed", "professional"],
+                "content_analysis": {
+                    "main_subject_type": "object",
+                    "primary_focus": "unknown",
+                    "people_count": 0,
+                    "prominent_objects": [],
+                    "setting": "unknown"
+                },
                 "confidence_score": 0.5
             }
             
@@ -347,8 +367,64 @@ Respond with a JSON object containing:
             "technical_characteristics": "professional photography",
             "artistic_influences": "contemporary",
             "recommended_keywords": ["photorealistic", "detailed", "professional"],
+            "content_analysis": {
+                "main_subject_type": "object",
+                "primary_focus": "unknown",
+                "people_count": 0,
+                "prominent_objects": [],
+                "setting": "unknown"
+            },
             "confidence_score": 0.7
         }
+
+
+def determine_enhancement_mode(image_analysis: dict, prompt: str) -> str:
+    """Automatically determine the best enhancement mode based on image analysis and prompt."""
+    
+    # Default to character enhancement
+    default_mode = "character"
+    
+    try:
+        # Check content analysis from image
+        content_analysis = image_analysis.get("content_analysis", {})
+        main_subject_type = content_analysis.get("main_subject_type", "object").lower()
+        people_count = content_analysis.get("people_count", 0)
+        prominent_objects = content_analysis.get("prominent_objects", [])
+        
+        # Analyze prompt for object/character indicators
+        prompt_lower = prompt.lower()
+        
+        # Character indicators
+        character_keywords = ["person", "people", "character", "man", "woman", "child", "singing", "talking", "lip-sync", "face", "portrait"]
+        character_score = sum(1 for kw in character_keywords if kw in prompt_lower)
+        
+        # Object indicators
+        object_keywords = ["object", "model", "spaceship", "car", "ship", "engine", "explosion", "cardboard", "table", "plate", "bowl"]
+        object_score = sum(1 for kw in object_keywords if kw in prompt_lower)
+        
+        # Scene indicators
+        scene_keywords = ["landscape", "scene", "environment", "background", "setting", "location"]
+        scene_score = sum(1 for kw in scene_keywords if kw in prompt_lower)
+        
+        # Decision logic
+        if main_subject_type == "object" and people_count == 0:
+            if object_score > character_score:
+                return "object"  # New object-focused mode
+        elif main_subject_type == "character" or people_count > 0:
+            if character_score > object_score:
+                return "character"
+        elif main_subject_type == "scene":
+            if scene_score > character_score and scene_score > object_score:
+                return "cinematic"  # Scene-focused
+        
+        # Check for specific object types in prominent objects
+        if any("model" in obj.lower() or "spaceship" in obj.lower() or "car" in obj.lower() for obj in prominent_objects):
+            return "object"
+            
+    except Exception as e:
+        log_debug(f"Error determining enhancement mode: {e}")
+    
+    return default_mode
 
 
 def generate_enhanced_ltx2_prompt(audio_characteristics: dict, base_prompt: str) -> str:
@@ -517,6 +593,40 @@ Generate an enhanced cinematic prompt:"""
     return limit_prompt_length(enhanced, "veo")
 
 
+def enhance_prompt_object_design(base_prompt: str, image_description: str = "", audio_characteristics: dict = None) -> str:
+    """Enhance prompt for object/scene photography and effects."""
+    
+    object_prompt = f"""Transform this prompt into a professional object and scene enhancement style:
+
+{base_prompt}
+
+**Object/Scene Enhancement Requirements:**
+- Focus on object details, textures, and materials
+- Professional product/prop photography quality
+- Cinematic lighting and composition for objects
+- Practical effects and realistic physics
+- Clear action sequences and visual storytelling
+- Market-ready visual presentation
+
+**Technical Elements:**
+- Studio lighting setup or environmental lighting
+- Camera movement and framing recommendations
+- Focus on object interaction and physics
+- Realistic material properties and textures
+- Professional post-processing and color grading
+
+**Audio Integration:**
+{audio_characteristics.get('description', 'No audio context provided') if audio_characteristics else 'No audio context provided'}
+
+**Additional Context:**
+{image_description}
+
+Generate an enhanced object/scene focused prompt:"""
+
+    enhanced = run_gemini(object_prompt)
+    return limit_prompt_length(enhanced, "veo")
+
+
 def enhance_prompt_character_design(base_prompt: str, image_description: str = "", audio_characteristics: dict = None) -> str:
     """Enhance prompt for character design and animation."""
     
@@ -549,11 +659,12 @@ Generate an enhanced character design prompt:"""
 
 class SpecializedEnhanceRequest(BaseModel):
     prompt: str
-    enhancement_mode: str  # 'commercial', 'cinematic', 'character'
+    enhancement_mode: str  # 'commercial', 'cinematic', 'character', 'object', 'auto'
     image_description: str | None = None
     audio_characteristics: dict | None = None
     prompt_type: str | None = None
     model: str | None = None
+    image_analysis: dict | None = None  # For auto-detection
 
 
 @app.post("/enhance-specialized", response_model=EnhanceResponse)
@@ -571,21 +682,33 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
         
         log_debug(f"Specialized enhancement request: mode={request.enhancement_mode}, prompt_type={request.prompt_type}")
         
+        # Auto-detect mode if requested
+        enhancement_mode = request.enhancement_mode
+        if enhancement_mode == 'auto' and request.image_analysis:
+            enhancement_mode = determine_enhancement_mode(request.image_analysis, request.prompt)
+            log_debug(f"Auto-detected enhancement mode: {enhancement_mode}")
+        
         # Apply specialized enhancement based on mode
-        if request.enhancement_mode == 'commercial':
+        if enhancement_mode == 'commercial':
             enhanced_prompt = enhance_prompt_commercial(
                 request.prompt,
                 request.image_description or "",
                 request.audio_characteristics
             )
-        elif request.enhancement_mode == 'cinematic':
+        elif enhancement_mode == 'cinematic':
             enhanced_prompt = enhance_prompt_cinematic(
                 request.prompt,
                 request.image_description or "",
                 request.audio_characteristics
             )
-        elif request.enhancement_mode == 'character':
+        elif enhancement_mode == 'character':
             enhanced_prompt = enhance_prompt_character_design(
+                request.prompt,
+                request.image_description or "",
+                request.audio_characteristics
+            )
+        elif enhancement_mode == 'object':
+            enhanced_prompt = enhance_prompt_object_design(
                 request.prompt,
                 request.image_description or "",
                 request.audio_characteristics
@@ -1111,7 +1234,7 @@ def validate_specialized_request(request: SpecializedEnhanceRequest) -> tuple[bo
         return False, "Prompt too long (max 10000 characters)"
     
     # Validate enhancement mode
-    valid_modes = ["commercial", "cinematic", "character"]
+    valid_modes = ["commercial", "cinematic", "character", "object", "auto"]
     if request.enhancement_mode not in valid_modes:
         return False, f"Invalid enhancement mode. Must be one of: {', '.join(valid_modes)}"
     

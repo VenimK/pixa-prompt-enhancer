@@ -21,3 +21,4 @@ debug.log
 app/static/data/fooocus_styles.csv.bak
 app/static/data/fooocus_styles.csv.bak2
 app/static/data/new_styles.csv
+app/.DS_Store
