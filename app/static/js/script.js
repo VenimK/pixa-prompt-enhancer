@@ -31,9 +31,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const descriptions = {
             'general': 'Standard prompt enhancement optimized for your selected model and settings.',
-            'commercial': 'Professional commercial photography style with clean aesthetics, perfect lighting, and brand-ready presentation.',
-            'cinematic': 'Epic cinematic production with professional cinematography, dramatic lighting, and film industry standards.',
-            'character': 'Professional character design with consistent aesthetics, expressive features, and animation-ready quality.'
+            'commercial': 'Professional product and commercial photography enhancement with brand-focused styling.',
+            'cinematic': 'Film industry quality enhancement with cinematic lighting, composition, and storytelling.',
+            'character': 'Character-focused enhancement with personality, emotion, and detailed features.',
+            'object': 'Object and scene enhancement with practical effects, materials, and action sequences.',
+            'ace-step': 'Professional cinematic prompt engineering for ACE-Step 1.5 in ComfyUI with camera language, lighting, and texture details.',
+            'auto': 'Automatically determine the best enhancement mode based on your content and requirements.'
         };
         
         descriptionElement.textContent = descriptions[mode] || descriptions['general'];
@@ -44,87 +47,16 @@ document.addEventListener('DOMContentLoaded', () => {
             'general': 'General Enhancement',
             'commercial': 'Commercial Photography',
             'cinematic': 'Cinematic Production',
-            'character': 'Character Design'
+            'character': 'Character Design',
+            'object': 'Object/Scene Effects',
+            'ace-step': 'ACE-Step Music Prompt',
+            'auto': 'Auto-Detect'
         };
         return names[mode] || 'General Enhancement';
     }
-    
-    function applySpecializedEnhancement(basePrompt, imageDescription, audioCharacteristics) {
-        // Apply specialized enhancement based on selected mode
-        switch (currentEnhancementMode) {
-            case 'commercial':
-                return enhancePromptCommercial(basePrompt, imageDescription, audioCharacteristics);
-            case 'cinematic':
-                return enhancePromptCinematic(basePrompt, imageDescription, audioCharacteristics);
-            case 'character':
-                return enhancePromptCharacterDesign(basePrompt, imageDescription, audioCharacteristics);
-            default:
-                return null; // Use standard enhancement
-        }
-    }
-    
-    async function enhancePromptCommercial(prompt, imageDesc, audioChar) {
-        const requestData = {
-            prompt: prompt,
-            enhancement_mode: 'commercial',
-            image_description: imageDesc || '',
-            audio_characteristics: audioChar || null,
-            prompt_type: els.promptType?.value || 'Image',
-            model: els.modelSelect?.value || 'default'
-        };
-        
-        const response = await fetch('/enhance-specialized', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestData)
-        });
-        
-        if (!response.ok) throw new Error('Commercial enhancement failed');
-        const result = await response.json();
-        return result.enhanced_prompt;
-    }
-    
-    async function enhancePromptCinematic(prompt, imageDesc, audioChar) {
-        const requestData = {
-            prompt: prompt,
-            enhancement_mode: 'cinematic',
-            image_description: imageDesc || '',
-            audio_characteristics: audioChar || null,
-            prompt_type: els.promptType?.value || 'VEO',
-            model: els.modelSelect?.value || 'default'
-        };
-        
-        const response = await fetch('/enhance-specialized', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestData)
-        });
-        
-        if (!response.ok) throw new Error('Cinematic enhancement failed');
-        const result = await response.json();
-        return result.enhanced_prompt;
-    }
-    
-    async function enhancePromptCharacterDesign(prompt, imageDesc, audioChar) {
-        const requestData = {
-            prompt: prompt,
-            enhancement_mode: 'character',
-            image_description: imageDesc || '',
-            audio_characteristics: audioChar || null,
-            prompt_type: els.promptType?.value || 'WAN2',
-            model: els.modelSelect?.value || 'default'
-        };
-        
-        const response = await fetch('/enhance-specialized', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestData)
-        });
-        
-        if (!response.ok) throw new Error('Character design enhancement failed');
-        const result = await response.json();
-        return result.enhanced_prompt;
-    }
+
+    // Initialize enhancement modes on load
+    initializeEnhancementModes();
 
     // --- Professional Editor Tab System ---
     function initializeProfessionalEditor() {
@@ -1223,6 +1155,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ltx2ResolutionContainer: document.getElementById('ltx2-resolution-container'),
         ltx2MovementContainer: document.getElementById('ltx2-movement-container'),
         audioUploadCard: document.getElementById('audio-upload-card'),
+        
         audioDropZone: document.getElementById('audio-drop-zone'),
         audioUpload: document.getElementById('audio-upload'),
         audioPreview: document.getElementById('audio-preview'),
@@ -3143,6 +3076,8 @@ POST-PROCESSING:
                             a: (data.image_a_description || ''),
                             b: (data.image_b_description || '')
                         };
+                        // Store for specialized enhancement auto-detect
+                        window.currentImageAnalysis = data;
                         const isError = typeof combined === 'string' && combined.startsWith('Error');
                         if (isError) {
                             els.imageDescription.innerHTML = `<div class="error-message">${combined}</div>`;
@@ -3238,6 +3173,14 @@ POST-PROCESSING:
             xhr.open('POST', '/analyze-image', true);
             console.log('Sending XHR request to /analyze-image...');
             xhr.send(formData);
+        });
+    }
+
+    // Wire toolbar enhance button to main enhance button
+    const toolbarEnhanceBtn = document.getElementById('enhance-btn');
+    if (toolbarEnhanceBtn && els.enhance) {
+        toolbarEnhanceBtn.addEventListener('click', () => {
+            els.enhance.click();
         });
     }
 
@@ -3369,7 +3312,51 @@ POST-PROCESSING:
 
                 const modelType = (els.modelTypeSelect ? els.modelTypeSelect.value : null);
 
-                const response = await fetch('/enhance', {
+                // Route specialized enhancement modes to /enhance-specialized
+                let response;
+                if (currentEnhancementMode && currentEnhancementMode !== 'general' && currentEnhancementMode !== 'auto') {
+                    console.log(`Using specialized enhancement: ${currentEnhancementMode}`);
+                    response = await fetch('/enhance-specialized', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            prompt: formattedPrompt,
+                            enhancement_mode: currentEnhancementMode,
+                            image_description: imageDescription,
+                            audio_characteristics: audioAnalysisResult ? audioAnalysisResult.characteristics : null,
+                            prompt_type: promptType,
+                            model: selectedModel,
+                            image_analysis: window.currentImageAnalysis || null,
+                            style: style,
+                            lighting: lighting,
+                            cinematography: cinematography
+                        }),
+                    });
+                } else if (currentEnhancementMode === 'auto' && window.currentImageAnalysis) {
+                    console.log('Using auto-detect specialized enhancement');
+                    response = await fetch('/enhance-specialized', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            prompt: formattedPrompt,
+                            enhancement_mode: 'auto',
+                            image_description: imageDescription,
+                            audio_characteristics: audioAnalysisResult ? audioAnalysisResult.characteristics : null,
+                            prompt_type: promptType,
+                            model: selectedModel,
+                            image_analysis: window.currentImageAnalysis || null,
+                            style: style,
+                            lighting: lighting,
+                            cinematography: cinematography
+                        }),
+                    });
+                } else {
+                    console.log('Using standard /enhance endpoint');
+                    response = await fetch('/enhance', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -3389,11 +3376,22 @@ POST-PROCESSING:
                         audio_generation: promptType === 'LTX2' ? (document.getElementById('audio-generation-select')?.value || 'enabled') : null,
                         resolution: promptType === 'LTX2' ? (document.getElementById('resolution-select')?.value || '4K') : null,
                         movement_level: promptType === 'LTX2' ? (document.getElementById('movement-level-select')?.value || 'natural') : null,
-                        audio_description: promptType === 'LTX2' && audioAnalysisResult ? audioAnalysisResult.audio_description : null
+                        audio_description: promptType === 'LTX2' && audioAnalysisResult ? audioAnalysisResult.audio_description : null,
+                        audio_characteristics: promptType === 'LTX2' && audioAnalysisResult ? audioAnalysisResult.characteristics : null
                     }),
                 });
+                }
 
                 console.log('API call completed. Status:', response.status, 'ok:', response.ok);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMsg = errorData.error || `Server error: ${response.status}`;
+                    showToast(errorMsg, 'error');
+                    els.resultText.innerText = '';
+                    els.enhance.disabled = false;
+                    return;
+                }
 
                 const responseText = await response.text();
                 let data;
@@ -3416,6 +3414,8 @@ POST-PROCESSING:
                     console.log('Setting result text...');
                     els.resultText.innerText = data.enhanced_prompt;
                     console.log('Result text set to:', els.resultText.innerText);
+                    
+                    
                     console.log('Result container elements:');
                     console.log('- result:', els.result);
                     console.log('- resultText:', els.resultText);

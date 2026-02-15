@@ -3,6 +3,7 @@ uvicorn[standard]
 google-genai
 Pillow
 python-multipart
+python-dotenv
 Jinja2
 librosa
 numpy

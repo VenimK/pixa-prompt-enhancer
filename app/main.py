@@ -99,7 +99,7 @@ def get_cors_config():
         # Development/staging: permissive CORS for testing
         return {
             "allow_origins": ["*"],
-            "allow_credentials": True,
+            "allow_credentials": False,
             "allow_methods": ["*"],
             "allow_headers": ["*"],
         }
@@ -135,6 +135,7 @@ class EnhanceRequest(BaseModel):
     audio_generation: str | None = None  # LTX-2 audio generation: 'enabled' or 'disabled'
     resolution: str | None = None  # LTX-2 resolution: '4K', '1080p', '720p'
     audio_description: str | None = None  # Description of uploaded audio file
+    audio_characteristics: dict | None = None  # Structured audio analysis data from /analyze-audio
     movement_level: str | None = None  # LTX-2 movement level: 'static', 'minimal', 'natural', 'expressive', 'dynamic'
     # Audio Integration
     lipsync_intensity: str | None = None  # 'subtle', 'natural', 'exaggerated'
@@ -168,6 +169,8 @@ class AnalyzeResponseMulti(BaseModel):
 # Initialize based on which package is available
 genai_client = None
 genai_model = None
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+log_debug(f"Gemini model: {GEMINI_MODEL}")
 
 if "GOOGLE_API_KEY" in os.environ:
     if USE_NEW_GENAI and genai_new:
@@ -175,8 +178,8 @@ if "GOOGLE_API_KEY" in os.environ:
         log_debug("Using google.genai (new package)")
     elif genai_old:
         genai_old.configure(api_key=os.environ["GOOGLE_API_KEY"])
-        genai_model = genai_old.GenerativeModel("gemini-2.5-flash")
-        log_debug("Using google.generativeai (old package)")
+        genai_model = genai_old.GenerativeModel(GEMINI_MODEL)
+        log_debug(f"Using google.generativeai (old package) with model: {GEMINI_MODEL}")
 
 
 def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str] | None = None):
@@ -184,7 +187,7 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
         return "Error: Google API key is not set. Please set the GOOGLE_API_KEY environment variable."
 
     try:
-        model_name = "gemini-2.5-flash"
+        model_name = GEMINI_MODEL
 
         # Use NEW google.genai package
         if USE_NEW_GENAI and genai_client:
@@ -288,9 +291,6 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
         error_details = traceback.format_exc()
         print(f"Detailed error: {error_details}")
         return f"An unexpected error occurred: {e}. Please try again later."
-
-
-    return max(quality_score, 0.0)
 
 
 def analyze_artistic_style(image_path: str) -> dict:
@@ -527,11 +527,26 @@ def generate_enhanced_ltx2_prompt(audio_characteristics: dict, base_prompt: str)
         'futuristic': "with modern, innovative visual styling and contemporary movements"
     }
     
+    if mood in mood_enhancements:
+        prompt_parts.append(mood_enhancements[mood])
+    
     return " ".join(prompt_parts)
 
 
-def enhance_prompt_commercial(base_prompt: str, image_description: str = "", audio_characteristics: dict = None) -> str:
+def enhance_prompt_commercial(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None) -> str:
     """Enhance prompt for commercial photography/product shots."""
+    
+    audio_context = ""
+    if audio_characteristics:
+        audio_context = f"\n**Audio Context:**\n"
+        if audio_characteristics.get('mood'):
+            audio_context += f"- Mood/tone: {audio_characteristics['mood']}\n"
+        if audio_characteristics.get('energy_level'):
+            audio_context += f"- Energy: {audio_characteristics['energy_level']}\n"
+        if audio_characteristics.get('tempo'):
+            audio_context += f"- Tempo: {audio_characteristics['tempo']}\n"
+        if audio_characteristics.get('description'):
+            audio_context += f"- Description: {audio_characteristics['description']}\n"
     
     commercial_prompt = f"""Transform this prompt into a professional commercial photography style:
 
@@ -550,17 +565,18 @@ def enhance_prompt_commercial(base_prompt: str, image_description: str = "", aud
 - Professional camera equipment
 - Commercial post-processing
 - Brand-appropriate styling
-
+{audio_context}
 **Additional Context:**
 {image_description}
 
-Generate an enhanced prompt optimized for commercial use:"""
+Generate an enhanced prompt optimized for commercial use.
+{f'IMPORTANT: Keep the output under {1500 if (prompt_type or "").upper() == "LTX2" else 800 if (prompt_type or "").upper() == "WAN2" else 2000} characters. Write as a single flowing paragraph, no markdown headers or numbered lists.' if prompt_type and prompt_type.upper() in ('LTX2', 'WAN2', 'VEO') else ''}"""
 
     enhanced = run_gemini(commercial_prompt)
-    return limit_prompt_length(enhanced, "image")
+    return limit_prompt_length(enhanced, prompt_type or "image")
 
 
-def enhance_prompt_cinematic(base_prompt: str, image_description: str = "", audio_characteristics: dict = None) -> str:
+def enhance_prompt_cinematic(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None) -> str:
     """Enhance prompt for cinematic film/video production."""
     
     cinematic_prompt = f"""Transform this prompt into a cinematic film production style:
@@ -587,18 +603,86 @@ def enhance_prompt_cinematic(base_prompt: str, image_description: str = "", audi
 **Additional Context:**
 {image_description}
 
-Generate an enhanced cinematic prompt:"""
+Generate an enhanced cinematic prompt.
+{f'IMPORTANT: Keep the output under {1500 if (prompt_type or "").upper() == "LTX2" else 800 if (prompt_type or "").upper() == "WAN2" else 2000} characters. Write as a single flowing paragraph, no markdown headers or numbered lists.' if prompt_type and prompt_type.upper() in ('LTX2', 'WAN2', 'VEO') else ''}"""
 
     enhanced = run_gemini(cinematic_prompt)
-    return limit_prompt_length(enhanced, "veo")
+    return limit_prompt_length(enhanced, prompt_type or "veo")
 
 
-def enhance_prompt_object_design(base_prompt: str, image_description: str = "", audio_characteristics: dict = None) -> str:
+def enhance_prompt_ace_step(prompt: str, image_description: str = None, audio_characteristics: dict = None) -> str:
+    """Generate ACE-Step 1.5 compatible prompts using professional cinematic prompt engineering."""
+    
+    try:
+        # Build the professional system prompt
+        system_prompt = """You are an expert cinematic prompt engineer.
+
+Your task is to enhance a user prompt for ACE 1.5-Step model in ComfyUI.
+
+Inputs:
+1. Image analysis (provided)
+2. Optional audio analysis (if present)
+3. User manual prompt
+
+Instructions:
+- Extract visual structure from the image.
+- Extract emotional tone from audio (if present).
+- Preserve the user's core idea.
+- Add cinematic camera language.
+- Add lighting realism.
+- Add lens & depth cues.
+- Add physical texture descriptors.
+- Avoid abstract adjectives.
+- Avoid vague artistic language.
+- Avoid unnecessary style stacking.
+- Keep prompt optimized for diffusion-based models.
+
+Output:
+Return ONLY the final enhanced prompt.
+No explanation."""
+
+        # Build context with available inputs
+        context_parts = []
+        
+        if image_description:
+            context_parts.append(f"Image Analysis: {image_description}")
+        
+        if audio_characteristics:
+            audio_desc = f"Audio Analysis: "
+            if audio_characteristics.get('mood'):
+                audio_desc += f"Emotional tone: {audio_characteristics['mood']}. "
+            if audio_characteristics.get('tempo'):
+                audio_desc += f"Rhythm/pace: {audio_characteristics['tempo']}. "
+            if audio_characteristics.get('energy_level'):
+                audio_desc += f"Energy level: {audio_characteristics['energy_level']}. "
+            context_parts.append(audio_desc)
+        
+        context_parts.append(f"User Manual Prompt: {prompt}")
+        
+        full_prompt = f"{system_prompt}\n\n" + "\n\n".join(context_parts) + "\n\nEnhanced Prompt:"
+        
+        # Generate enhanced prompt using Gemini
+        enhanced = run_gemini(full_prompt)
+        
+        # Clean up, format, and apply length limit
+        enhanced_prompt = enhanced.strip()
+        enhanced_prompt = limit_prompt_length(enhanced_prompt, "image")
+        
+        log_debug(f"ACE-Step 1.5 cinematic prompt generated: {enhanced_prompt}")
+        return enhanced_prompt
+        
+    except Exception as e:
+        log_debug(f"ACE-Step 1.5 prompt generation failed: {e}")
+        # Fallback to basic enhancement
+        return f"Cinematic scene with {prompt}, professional lighting, detailed textures, realistic camera work"
+
+
+def enhance_prompt_object_design(prompt: str, image_description: str = None, audio_characteristics: dict = None, prompt_type: str = None) -> str:
     """Enhance prompt for object/scene photography and effects."""
     
     object_prompt = f"""Transform this prompt into a professional object and scene enhancement style:
 
-{base_prompt}
+{prompt}
 
 **Object/Scene Enhancement Requirements:**
 - Focus on object details, textures, and materials
@@ -621,13 +705,14 @@ def enhance_prompt_object_design(base_prompt: str, image_description: str = "", 
 **Additional Context:**
 {image_description}
 
-Generate an enhanced object/scene focused prompt:"""
+Generate an enhanced object/scene focused prompt.
+{f'IMPORTANT: Keep the output under {1500 if (prompt_type or "").upper() == "LTX2" else 800 if (prompt_type or "").upper() == "WAN2" else 2000} characters. Write as a single flowing paragraph, no markdown headers or numbered lists.' if prompt_type and prompt_type.upper() in ('LTX2', 'WAN2', 'VEO') else ''}"""
 
     enhanced = run_gemini(object_prompt)
-    return limit_prompt_length(enhanced, "veo")
+    return limit_prompt_length(enhanced, prompt_type or "veo")
 
 
-def enhance_prompt_character_design(base_prompt: str, image_description: str = "", audio_characteristics: dict = None) -> str:
+def enhance_prompt_character_design(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None) -> str:
     """Enhance prompt for character design and animation."""
     
     character_prompt = f"""Transform this prompt into a professional character design style:
@@ -651,20 +736,24 @@ def enhance_prompt_character_design(base_prompt: str, image_description: str = "
 **Additional Context:**
 {image_description}
 
-Generate an enhanced character design prompt:"""
+Generate an enhanced character design prompt.
+{f'IMPORTANT: Keep the output under {1500 if (prompt_type or "").upper() == "LTX2" else 800 if (prompt_type or "").upper() == "WAN2" else 2000} characters. Write as a single flowing paragraph, no markdown headers or numbered lists.' if prompt_type and prompt_type.upper() in ('LTX2', 'WAN2', 'VEO') else ''}"""
 
     enhanced = run_gemini(character_prompt)
-    return limit_prompt_length(enhanced, "wan2")
+    return limit_prompt_length(enhanced, prompt_type or "wan2")
 
 
 class SpecializedEnhanceRequest(BaseModel):
     prompt: str
-    enhancement_mode: str  # 'commercial', 'cinematic', 'character', 'object', 'auto'
+    enhancement_mode: str  # 'commercial', 'cinematic', 'character', 'object', 'ace-step', 'auto'
     image_description: str | None = None
     audio_characteristics: dict | None = None
     prompt_type: str | None = None
     model: str | None = None
     image_analysis: dict | None = None  # For auto-detection
+    style: str | None = None
+    lighting: str | None = None
+    cinematography: str | None = None
 
 
 @app.post("/enhance-specialized", response_model=EnhanceResponse)
@@ -676,11 +765,28 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
         is_valid, error_message = validate_specialized_request(request)
         if not is_valid:
             log_debug(f"Validation failed in enhance-specialized: {error_message}")
-            return EnhanceResponse(
-                enhanced_prompt=f"Validation error: {error_message}"
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=400,
+                content={"error": error_message, "enhanced_prompt": ""}
             )
         
         log_debug(f"Specialized enhancement request: mode={request.enhancement_mode}, prompt_type={request.prompt_type}")
+        
+        # Build style context from user's dropdown selections
+        style_parts = []
+        if request.style and request.style.strip().lower() not in ("", "none", "auto", "automatic"):
+            style_parts.append(f"in {request.style} style")
+        if request.lighting and request.lighting.strip().lower() not in ("", "none", "auto", "automatic"):
+            style_parts.append(f"with {request.lighting} lighting")
+        if request.cinematography and request.cinematography.strip().lower() not in ("", "none", "auto", "automatic"):
+            style_parts.append(f"using {request.cinematography} framing")
+        style_context = " ".join(style_parts)
+        
+        # Build enriched prompt that includes style context
+        enriched_prompt = request.prompt
+        if style_context:
+            enriched_prompt = f"{request.prompt} ({style_context})"
         
         # Auto-detect mode if requested
         enhancement_mode = request.enhancement_mode
@@ -691,24 +797,34 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
         # Apply specialized enhancement based on mode
         if enhancement_mode == 'commercial':
             enhanced_prompt = enhance_prompt_commercial(
-                request.prompt,
+                enriched_prompt,
                 request.image_description or "",
-                request.audio_characteristics
+                request.audio_characteristics,
+                prompt_type=request.prompt_type
             )
         elif enhancement_mode == 'cinematic':
             enhanced_prompt = enhance_prompt_cinematic(
-                request.prompt,
+                enriched_prompt,
                 request.image_description or "",
-                request.audio_characteristics
+                request.audio_characteristics,
+                prompt_type=request.prompt_type
             )
         elif enhancement_mode == 'character':
             enhanced_prompt = enhance_prompt_character_design(
-                request.prompt,
+                enriched_prompt,
                 request.image_description or "",
-                request.audio_characteristics
+                request.audio_characteristics,
+                prompt_type=request.prompt_type
             )
         elif enhancement_mode == 'object':
             enhanced_prompt = enhance_prompt_object_design(
+                enriched_prompt,
+                request.image_description or "",
+                request.audio_characteristics,
+                prompt_type=request.prompt_type
+            )
+        elif enhancement_mode == 'ace-step':
+            enhanced_prompt = enhance_prompt_ace_step(
                 request.prompt,
                 request.image_description or "",
                 request.audio_characteristics
@@ -731,247 +847,6 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
         )
 
 
-def validate_prompt_quality(prompt: str, prompt_type: str = "image") -> dict:
-    """Comprehensive prompt quality validation and analysis."""
-    
-    validation_results = {
-        "overall_score": 0.0,
-        "issues": [],
-        "warnings": [],
-        "suggestions": [],
-        "strengths": [],
-        "coherence_score": 0.0,
-        "technical_accuracy": 0.0,
-        "completeness_score": 0.0
-    }
-    
-    try:
-        # 1. Basic validation checks
-        if len(prompt.strip()) == 0:
-            validation_results["issues"].append("Prompt is empty")
-            return validation_results
-        
-        if len(prompt) < 10:
-            validation_results["issues"].append("Prompt is too short (minimum 10 characters recommended)")
-        
-        if len(prompt) > 2000:
-            validation_results["warnings"].append("Prompt is very long and may be truncated by some models")
-        
-        # 2. Coherence checking
-        coherence_score = analyze_prompt_coherence(prompt)
-        validation_results["coherence_score"] = coherence_score
-        
-        if coherence_score < 0.5:
-            validation_results["issues"].append("Prompt may have logical inconsistencies")
-            validation_results["suggestions"].append("Consider restructuring for better logical flow")
-        elif coherence_score > 0.8:
-            validation_results["strengths"].append("Good logical coherence and structure")
-        
-        # 3. Technical accuracy validation
-        technical_score = validate_technical_accuracy(prompt, prompt_type)
-        validation_results["technical_accuracy"] = technical_score
-        
-        if technical_score < 0.6:
-            validation_results["warnings"].append("Some technical specifications may be inaccurate")
-        
-        # 4. Completeness analysis
-        completeness_score = analyze_prompt_completeness(prompt, prompt_type)
-        validation_results["completeness_score"] = completeness_score
-        
-        if completeness_score < 0.7:
-            validation_results["suggestions"].append("Consider adding more descriptive details (lighting, composition, style)")
-        else:
-            validation_results["strengths"].append("Well-detailed and complete prompt")
-        
-        # 5. Content quality checks
-        content_issues = check_content_quality(prompt)
-        validation_results["issues"].extend(content_issues.get("issues", []))
-        validation_results["warnings"].extend(content_issues.get("warnings", []))
-        
-        # 6. Calculate overall score
-        validation_results["overall_score"] = (
-            coherence_score * 0.3 +
-            technical_score * 0.25 +
-            completeness_score * 0.25 +
-            (1.0 - len(validation_results["issues"]) * 0.1) * 0.2
-        )
-        
-        # Clamp to 0-1 range
-        validation_results["overall_score"] = max(0.0, min(1.0, validation_results["overall_score"]))
-        
-        return validation_results
-        
-    except Exception as e:
-        log_debug(f"Error in prompt validation: {e}")
-        return {
-            "overall_score": 0.5,
-            "issues": ["Validation failed - please try again"],
-            "warnings": [],
-            "suggestions": ["Consider reviewing your prompt manually"],
-            "strengths": [],
-            "coherence_score": 0.5,
-            "technical_accuracy": 0.5,
-            "completeness_score": 0.5
-        }
-
-
-def analyze_prompt_coherence(prompt: str) -> float:
-    """Analyze logical coherence of the prompt."""
-    try:
-        coherence_prompt = f"""Analyze the logical coherence of this prompt on a scale of 0-1, where 1 is perfectly coherent and 0 is completely illogical. Consider:
-
-1. Logical consistency between elements
-2. Clear subject-verb relationships  
-3. Sensible spatial relationships
-4. Reasonable attribute combinations
-5. Clear intent and purpose
-
-Prompt: "{prompt}"
-
-Respond with only a number between 0 and 1."""
-
-        result = run_gemini(coherence_prompt)
-        
-        # Extract numeric score
-        import re
-        match = re.search(r'(\d*\.?\d+)', result)
-        if match:
-            score = float(match.group(1))
-            return max(0.0, min(1.0, score))
-        
-        return 0.7  # Default moderate score
-        
-    except Exception as e:
-        log_debug(f"Coherence analysis failed: {e}")
-        return 0.5
-
-
-def validate_technical_accuracy(prompt: str, prompt_type: str) -> float:
-    """Validate technical accuracy of specifications."""
-    try:
-        tech_prompt = f"""Validate the technical accuracy of this {prompt_type} prompt. Check for:
-
-1. Realistic camera settings and lens specifications
-2. Physically plausible lighting setups
-3. Accurate technical terminology
-4. Sensible composition rules
-5. Realistic material properties
-
-Rate technical accuracy from 0-1, where 1 is completely accurate and 0 has major technical errors.
-
-Prompt: "{prompt}"
-
-Respond with only a number between 0 and 1."""
-
-        result = run_gemini(tech_prompt)
-        
-        # Extract numeric score
-        import re
-        match = re.search(r'(\d*\.?\d+)', result)
-        if match:
-            score = float(match.group(1))
-            return max(0.0, min(1.0, score))
-        
-        return 0.8  # Default good score
-        
-    except Exception as e:
-        log_debug(f"Technical validation failed: {e}")
-        return 0.7
-
-
-def analyze_prompt_completeness(prompt: str, prompt_type: str) -> float:
-    """Analyze how complete and detailed the prompt is."""
-    try:
-        # Check for presence of key elements based on prompt type
-        elements_present = 0
-        total_elements = 0
-        
-        # Common elements for all prompts
-        common_elements = ["subject", "action/scene", "setting", "style"]
-        for element in common_elements:
-            total_elements += 1
-            # Simple keyword checking
-            if any(keyword in prompt.lower() for keyword in ["subject", "character", "scene", "setting", "style", "mood"]):
-                elements_present += 1
-                break
-        
-        # Type-specific elements
-        if prompt_type.lower() in ["image", "photo"]:
-            image_elements = ["lighting", "camera", "composition", "resolution", "quality"]
-            for element in image_elements:
-                total_elements += 1
-                if element in prompt.lower() or any(kw in prompt.lower() for kw in ["light", "shot", "angle", "focus", "detailed"]):
-                    elements_present += 1
-                    break
-        
-        elif prompt_type.lower() in ["veo", "video"]:
-            video_elements = ["movement", "timing", "duration", "framerate", "transition"]
-            for element in video_elements:
-                total_elements += 1
-                if element in prompt.lower() or any(kw in prompt.lower() for kw in ["motion", "dynamic", "flow", "sequence"]):
-                    elements_present += 1
-                    break
-        
-        completeness = elements_present / max(total_elements, 1)
-        return min(1.0, completeness)
-        
-    except Exception as e:
-        log_debug(f"Completeness analysis failed: {e}")
-        return 0.6
-
-
-def check_content_quality(prompt: str) -> dict:
-    """Check for content quality issues and potential biases."""
-    issues = []
-    warnings = []
-    suggestions = []
-    
-    try:
-        # Length checks
-        word_count = len(prompt.split())
-        if word_count < 5:
-            issues.append("Prompt is too brief - consider adding more descriptive details")
-        elif word_count > 150:
-            warnings.append("Prompt is very detailed - some models may truncate long prompts")
-        
-        # Check for common issues
-        prompt_lower = prompt.lower()
-        
-        # Repetitive language
-        words = prompt_lower.split()
-        if len(words) > 10:
-            word_freq = {}
-            for word in words:
-                if len(word) > 3:  # Skip short words
-                    word_freq[word] = word_freq.get(word, 0) + 1
-            
-            max_freq = max(word_freq.values()) if word_freq else 0
-            if max_freq > len(words) * 0.1:  # More than 10% repetition
-                warnings.append("Consider varying your vocabulary to avoid repetitive language")
-        
-        # Ambiguous terms
-        ambiguous_terms = ["nice", "good", "beautiful", "amazing", "perfect"]
-        ambiguous_count = sum(1 for term in ambiguous_terms if term in prompt_lower)
-        if ambiguous_count > 2:
-            suggestions.append("Consider replacing generic terms with more specific descriptions")
-        
-        # Check for contradictory terms
-        contradictions = [
-            (["bright", "dark"], "Conflicting lighting terms detected"),
-            (["fast", "slow"], "Conflicting motion terms detected"),
-            (["simple", "complex"], "Conflicting complexity terms detected")
-        ]
-        
-        for term_pairs, message in contradictions:
-            found_terms = [term for term in term_pairs if term in prompt_lower]
-            if len(found_terms) > 1:
-                warnings.append(message)
-        
-        return {"issues": issues, "warnings": warnings, "suggestions": suggestions}
-        
-    except Exception as e:
-        log_debug(f"Content quality check failed: {e}")
-        return {"issues": [], "warnings": ["Content quality analysis failed"], "suggestions": []}
 
 
 # Helper functions for enhanced audio analysis
@@ -1063,7 +938,7 @@ def _calculate_musical_complexity(y, sr, spectral_centroids, spectral_rolloff):
         if len(beats) > 1:
             beat_intervals = np.diff(beats)
             tempo_variation = np.std(beat_intervals) / np.mean(beat_intervals)
-    except:
+    except Exception:
         tempo_variation = 0.0
     
     complexity_score = (
@@ -1181,11 +1056,11 @@ def limit_prompt_length(enhanced_prompt: str, model_type: str) -> str:
                 f"  - Truncation method: Hard truncation (at position {max_length - 3})"
             )
 
-    # Add a note if we truncated
+    # Add a note if we truncated (only if it still fits within the limit)
     if truncated:
-        truncated_prompt += (
-            "\n\n[Note: Prompt was truncated to fit model's character limit]"
-        )
+        note = "\n\n[Note: Prompt was truncated to fit model's character limit]"
+        if len(truncated_prompt) + len(note) <= max_length:
+            truncated_prompt += note
         log_debug(
             f"  - Result: {len(enhanced_prompt)} chars → {len(truncated_prompt)} chars (removed {len(enhanced_prompt) - len(truncated_prompt)} chars)"
         )
@@ -1234,7 +1109,7 @@ def validate_specialized_request(request: SpecializedEnhanceRequest) -> tuple[bo
         return False, "Prompt too long (max 10000 characters)"
     
     # Validate enhancement mode
-    valid_modes = ["commercial", "cinematic", "character", "object", "auto"]
+    valid_modes = ["general", "commercial", "cinematic", "character", "object", "ace-step", "auto"]
     if request.enhancement_mode not in valid_modes:
         return False, f"Invalid enhancement mode. Must be one of: {', '.join(valid_modes)}"
     
@@ -1253,15 +1128,18 @@ def validate_audio_file(audio_file: UploadFile) -> tuple[bool, str]:
     if hasattr(audio_file, 'size') and audio_file.size > 50 * 1024 * 1024:
         return False, "Audio file too large (max 50MB)"
     
-    # Check file type
-    allowed_types = ["audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/flac", "audio/ogg"]
-    if audio_file.content_type not in allowed_types:
-        return False, f"Invalid audio file type. Allowed types: {', '.join(allowed_types)}"
-    
-    # Check filename extension
+    # Check filename extension first (more reliable than content_type)
     allowed_extensions = [".mp3", ".wav", ".flac", ".ogg", ".m4a"]
-    if not any(audio_file.filename.lower().endswith(ext) for ext in allowed_extensions):
+    has_valid_extension = any(audio_file.filename.lower().endswith(ext) for ext in allowed_extensions)
+    
+    if not has_valid_extension:
         return False, f"Invalid audio file extension. Allowed: {', '.join(allowed_extensions)}"
+    
+    # Check MIME type only if extension is valid but type looks suspicious
+    # Browsers sometimes send wrong content_type, so we accept if extension is valid
+    allowed_types = ["audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/flac", "audio/ogg", "audio/mp4", "audio/x-m4a", "audio/aac", "application/octet-stream"]
+    if audio_file.content_type and audio_file.content_type not in allowed_types and not has_valid_extension:
+        return False, f"Invalid audio file type. Allowed types: {', '.join(allowed_types)}"
     
     return True, ""
 
@@ -1471,8 +1349,10 @@ async def analyze_image_endpoint(images: list[UploadFile] = File(...)):
 
         error_details = traceback.format_exc()
         print(f"Error in analyze_image_endpoint: {error_details}")
-        return AnalyzeResponse(
-            description=f"An unexpected error occurred: {e}. Please try again later."
+        return AnalyzeResponseMulti(
+            combined_description=f"An unexpected error occurred: {e}. Please try again later.",
+            image_a_description=None,
+            image_b_description=None,
         )
 
 
@@ -1594,6 +1474,42 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
             characteristics["mood"] = "futuristic"
             characteristics["emotional_intensity"] = "very_low"
         
+        # 5b. Compute harmonic/percussive separation early (needed for vocal analysis)
+        harmonic, percussive = librosa.effects.hpss(y)
+        
+        # 5c. Compute spectral features once (used by multiple analyses below)
+        spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
+        spectral_rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr)[0]
+        
+        characteristics["spectral_characteristics"] = {
+            "brightness": float(np.mean(spectral_centroids)),
+            "warmth": float(np.mean(spectral_centroids) < 2000),
+            "spectral_variance": float(np.var(spectral_centroids))
+        }
+        
+        # 5d. Vocal Detection (must happen BEFORE has_vocals dependent code)
+        avg_spectral_centroid = float(np.mean(spectral_centroids))
+        spectral_variance = float(np.var(spectral_centroids))
+        
+        vocal_score = 0.0
+        
+        if avg_spectral_centroid > 2000:
+            vocal_score += 0.3
+        
+        if spectral_variance > 500000:
+            vocal_score += 0.2
+        
+        mfcc_std = np.std(mfccs, axis=1)
+        if float(np.mean(mfcc_std[1:4])) > 15:
+            vocal_score += 0.3
+        
+        zcr = librosa.feature.zero_crossing_rate(y)[0]
+        if float(np.mean(zcr)) > 0.05:
+            vocal_score += 0.2
+        
+        characteristics["vocal_confidence"] = min(float(vocal_score), 1.0)
+        characteristics["has_vocals"] = vocal_score > 0.5
+        
         # 6. Advanced Vocal Analysis using enhanced methods
         if characteristics["has_vocals"]:
             # Vocal count detection using density analysis
@@ -1648,44 +1564,6 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
             characteristics["dynamic_range"] = "medium"
         else:
             characteristics["dynamic_range"] = "wide"
-        
-        # 5. Enhanced Spectral Analysis
-        spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
-        spectral_rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr)[0]
-        mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
-        
-        characteristics["spectral_characteristics"] = {
-            "brightness": float(np.mean(spectral_centroids)),
-            "warmth": float(np.mean(spectral_centroids) < 2000),
-            "spectral_variance": float(np.var(spectral_centroids))
-        }
-        
-        # 6. Advanced Vocal Detection
-        avg_spectral_centroid = float(np.mean(spectral_centroids))
-        spectral_variance = float(np.var(spectral_centroids))
-        
-        vocal_score = 0.0
-        
-        # High spectral centroid suggests vocals
-        if avg_spectral_centroid > 2000:
-            vocal_score += 0.3
-        
-        # Variance in spectral content suggests complex audio (like vocals)
-        if spectral_variance > 500000:
-            vocal_score += 0.2
-        
-        # MFCC analysis for vocal patterns
-        mfcc_std = np.std(mfccs, axis=1)
-        if float(np.mean(mfcc_std[1:4])) > 15:
-            vocal_score += 0.3
-        
-        # Zero crossing rate (vocals typically have higher ZCR)
-        zcr = librosa.feature.zero_crossing_rate(y)[0]
-        if float(np.mean(zcr)) > 0.05:
-            vocal_score += 0.2
-        
-        characteristics["vocal_confidence"] = min(float(vocal_score), 1.0)
-        characteristics["has_vocals"] = vocal_score > 0.5
         
         # 7. Vocal Style Analysis
         if characteristics["has_vocals"]:
@@ -1745,9 +1623,6 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         if characteristics["has_vocals"]:
             log_debug("Starting vocal count detection...")
             try:
-                # Advanced vocal analysis using harmonic-percussive separation
-                harmonic, percussive = librosa.effects.hpss(y)
-                
                 # Compute spectral features for vocal detection
                 S = np.abs(librosa.stft(y))
                 S_harmonic = np.abs(librosa.stft(harmonic))
@@ -2008,7 +1883,6 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         
         # 11. Performance Type Detection
         # Reverb analysis for live vs studio
-        harmonic, percussive = librosa.effects.hpss(y)
         reverb_indicator = float(np.mean(harmonic) / np.mean(percussive))
         
         if reverb_indicator > 2.0:
@@ -2700,6 +2574,31 @@ Generate a brief animation prompt now."""
             # Character Interaction parameters
             character_coordination = getattr(request, 'character_coordination', 'independent') if hasattr(request, 'character_coordination') else 'independent'
             object_interaction = getattr(request, 'object_interaction', 'none') if hasattr(request, 'object_interaction') else 'none'
+            
+            # Use structured audio characteristics if available (avoids re-parsing text)
+            audio_chars_dict = getattr(request, 'audio_characteristics', None) or {}
+            if audio_chars_dict:
+                # Override text-parsed values with structured data
+                if not genre_movement and audio_chars_dict.get('genre'):
+                    genre_map = {'pop': 'pop', 'rock': 'rock', 'electronic': 'electronic', 'jazz': 'jazz', 
+                                 'classical': 'classical', 'folk': 'folk', 'ambient': 'electronic',
+                                 'spoken_word': 'storytelling', 'ballad': 'folk'}
+                    genre_movement = genre_map.get(audio_chars_dict['genre'], '')
+                if audio_reactivity == 'medium' and audio_chars_dict.get('energy_level'):
+                    energy_map = {'very_high': 'high', 'high': 'high', 'low': 'low', 'very_low': 'low'}
+                    audio_reactivity = energy_map.get(audio_chars_dict['energy_level'], 'medium')
+                if lipsync_intensity == 'natural' and audio_chars_dict.get('vocal_style'):
+                    if audio_chars_dict['vocal_style'] == 'spoken':
+                        lipsync_intensity = 'subtle'
+                    elif audio_chars_dict['vocal_style'] == 'singing' and audio_chars_dict.get('tempo') == 'fast':
+                        lipsync_intensity = 'exaggerated'
+                if movement_speed == 'normal' and audio_chars_dict.get('tempo'):
+                    tempo_map = {'slow': 'slow_motion', 'fast': 'fast'}
+                    if audio_chars_dict.get('vocal_style') == 'spoken' and audio_chars_dict['tempo'] == 'slow':
+                        movement_speed = 'normal'  # Speech stays natural
+                    else:
+                        movement_speed = tempo_map.get(audio_chars_dict['tempo'], 'normal')
+                log_debug(f"Using structured audio data: genre={genre_movement}, reactivity={audio_reactivity}, lipsync={lipsync_intensity}, speed={movement_speed}")
             
             # Add specific instructions for singing/dancing with uploaded audio
             performance_instruction = ""
