@@ -137,6 +137,7 @@ class EnhanceRequest(BaseModel):
     audio_description: str | None = None  # Description of uploaded audio file
     audio_characteristics: dict | None = None  # Structured audio analysis data from /analyze-audio
     movement_level: str | None = None  # LTX-2 movement level: 'static', 'minimal', 'natural', 'expressive', 'dynamic'
+    ltx2_style: str | None = None  # LTX-2 video style: 'music_video', 'cinematic', 'artistic', etc.
     # Audio Integration
     lipsync_intensity: str | None = None  # 'subtle', 'natural', 'exaggerated'
     audio_reactivity: str | None = None  # 'low', 'medium', 'high'
@@ -754,6 +755,7 @@ class SpecializedEnhanceRequest(BaseModel):
     style: str | None = None
     lighting: str | None = None
     cinematography: str | None = None
+    ltx2_style: str | None = None  # LTX-2 video style
 
 
 @app.post("/enhance-specialized", response_model=EnhanceResponse)
@@ -781,6 +783,12 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
             style_parts.append(f"with {request.lighting} lighting")
         if request.cinematography and request.cinematography.strip().lower() not in ("", "none", "auto", "automatic"):
             style_parts.append(f"using {request.cinematography} framing")
+        if (
+            request.prompt_type == "LTX2"
+            and request.ltx2_style
+            and request.ltx2_style.strip().lower() not in ("", "auto", "automatic")
+        ):
+            style_parts.append(f"with {request.ltx2_style.replace('_', ' ')} visual style")
         style_context = " ".join(style_parts)
         
         # Build enriched prompt that includes style context
@@ -1135,11 +1143,13 @@ def validate_audio_file(audio_file: UploadFile) -> tuple[bool, str]:
     if not has_valid_extension:
         return False, f"Invalid audio file extension. Allowed: {', '.join(allowed_extensions)}"
     
-    # Check MIME type only if extension is valid but type looks suspicious
-    # Browsers sometimes send wrong content_type, so we accept if extension is valid
+    # MIME type can be unreliable across browsers; extension is the primary gate.
+    # Keep this list for diagnostics and future tightening.
     allowed_types = ["audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/flac", "audio/ogg", "audio/mp4", "audio/x-m4a", "audio/aac", "application/octet-stream"]
-    if audio_file.content_type and audio_file.content_type not in allowed_types and not has_valid_extension:
-        return False, f"Invalid audio file type. Allowed types: {', '.join(allowed_types)}"
+    if audio_file.content_type and audio_file.content_type not in allowed_types:
+        log_debug(
+            f"Audio upload MIME mismatch accepted due valid extension: {audio_file.content_type} ({audio_file.filename})"
+        )
     
     return True, ""
 
@@ -3105,8 +3115,10 @@ Generate a brief animation prompt now."""
                     performance_instruction += "Emphasize fluid, expressive movements with jazz responsiveness - smooth body motions, improvisational gestures, and rhythmic variations that match jazz rhythms. "
                 
                 # ENHANCED AUDIO ANALYSIS INTEGRATION
-            # Use enhanced audio characteristics to generate better prompt
-            if audio_description and hasattr(request, 'audio_characteristics'):
+            # Use enhanced audio characteristics to generate better prompt.
+            # If structured characteristics are already provided, skip this fallback
+            # text re-parsing path to reduce latency.
+            if audio_description and not request.audio_characteristics:
                 try:
                     # Parse audio characteristics from the audio_description if available
                     # This would be enhanced to pass the full characteristics object
@@ -3225,33 +3237,66 @@ Generate a brief animation prompt now."""
             # Add stability limiter (MANDATORY)
             performance_instruction += "Natural motion, realistic timing, minimal facial distortion, no overacting or sudden movement. "
             
-            meta_prompt = f"""You are a creative assistant for the LTX-2 text-to-video model. Create a concise, motion-focused prompt following this exact 7-point structure{instruction_text}.
+            # Add style-specific instructions for LTX2
+            style_instruction = ""
+            if request.ltx2_style and request.ltx2_style != "auto":
+                style_map = {
+                    "music_video": "MUSIC VIDEO STYLE: Dynamic performance with rhythmic movement, expressive gestures, and stage presence. Emphasize performance energy and musical connection. ",
+                    "concert": "CONCERT STYLE: Live performance energy with crowd interaction, stage lighting, and authentic musical performance. Include venue atmosphere and performance dynamics. ",
+                    "dance": "DANCE PERFORMANCE: Focus on choreographed movement, body expression, and rhythmic motion. Emphasize dance technique and musical synchronization. ",
+                    "lip_sync": "LIP SYNC PERFORMANCE: Focus on precise mouth movement and facial expression. Minimal body movement, emphasis on vocal synchronization and emotional delivery. ",
+                    "acoustic": "ACOUSTIC SESSION: Intimate performance with subtle movement, emotional expression, and close connection to the music. Gentle gestures and natural presence. ",
+                    "cinematic": "CINEMATIC STYLE: Film-quality visuals with dramatic lighting, composed shots, and narrative atmosphere. Professional camera work and artistic composition. ",
+                    "dramatic": "DRAMATIC SCENE: Intense emotional expression, theatrical movement, and powerful presence. Emphasize mood, tension, and character dynamics. ",
+                    "documentary": "DOCUMENTARY STYLE: Natural, authentic moments with realistic movement and genuine expression. Unstaged feel with observational perspective. ",
+                    "vintage": "VINTAGE FILM: Retro aesthetic with film grain, classic color grading, and period-appropriate styling. Timeless visual quality and nostalgic mood. ",
+                    "noir": "FILM NOIR: High contrast lighting, shadows, mysterious atmosphere, and dramatic tension. Dark moody visuals with cinematic noir aesthetics. ",
+                    "artistic": "ARTISTIC STYLE: Creative visual expression with unique composition, experimental elements, and artistic interpretation. Emphasis on visual creativity. ",
+                    "surreal": "SURREAL STYLE: Dreamlike qualities, abstract elements, and imaginative visuals. Unconventional composition and fantastical atmosphere. ",
+                    "abstract": "ABSTRACT STYLE: Non-representational visuals, geometric patterns, and conceptual imagery. Focus on visual elements over literal representation. ",
+                    "dreamy": "DREAMY STYLE: Soft focus, ethereal lighting, gentle movement, and atmospheric quality. Romantic, whimsical, and otherworldly feel. ",
+                    "psychedelic": "PSYCHEDELIC STYLE: Vibrant colors, fluid motion, abstract patterns, and hallucinatory visuals. Intense color saturation and surreal effects. ",
+                    "cyberpunk": "CYBERPUNK STYLE: Futuristic urban setting, neon lighting, tech elements, and dystopian atmosphere. High-tech visual aesthetic and cyber elements. ",
+                    "vaporwave": "VAPORWAVE STYLE: Retro 80s/90s aesthetic, pastel colors, glitch effects, and nostalgic digital elements. Dreamy electronic atmosphere. ",
+                    "lofi": "LO-FI AESTHETIC: Cozy, intimate atmosphere with soft lighting, relaxed mood, and gentle movement. Comfortable, nostalgic, and understated visuals. ",
+                    "retro": "RETRO 80s/90S: Vintage digital aesthetic, bold colors, classic tech elements, and nostalgic period styling. Retro-futuristic visual elements. ",
+                    "futuristic": "FUTURISTIC STYLE: Advanced technology, sleek design, innovative visuals, and forward-thinking aesthetic. Clean lines and high-tech elements. "
+                }
+                style_instruction = style_map.get(request.ltx2_style, "")
+            
+            meta_prompt = f"""You are a Creative Assistant writing concise, action-focused image-to-video prompts. Given an image (first frame) and user Raw Input Prompt, generate a prompt to guide video generation from that image.
 
-LTX-2 PROMPT STRUCTURE (follow this order, no numbers):
-- Main action in ONE sentence - What is happening right now?
-- Movements and gestures - Head turns, walking pace, hair movement, hands, posture
-- Character appearances - Clothing, age, accessories, expressions
-- Environment - Location, background elements, depth
-- Camera angle and movement - Tracking, static, close-up, wide, height
-- Lighting and colors - Time of day, shadows, dominant tones
-- Changes or events - Or clearly state that nothing changes
+Guidelines:
+- Analyze the Image: Identify Subject, Setting, Elements, Style and Mood.
+- Follow user Raw Input Prompt: Include all requested motion, actions, camera movements, audio, and details. If in conflict with the image, prioritize user request while maintaining visual consistency (describe transition from image to user's scene).
+- Describe only changes from the image: Don't reiterate established visual details. Inaccurate descriptions may cause scene cuts.
+- Active language: Use present-progressive verbs ("is walking," "speaking"). If no action specified, describe natural movements.
+- Chronological flow: Use temporal connectors ("as," "then," "while").
+- Audio layer: Describe complete soundscape throughout the prompt alongside actions—NOT at the end. Align audio intensity with action tempo. Include natural background audio, ambient sounds, effects, speech or music (when requested). Be specific (e.g., "soft footsteps on tile") not vague (e.g., "ambient sound").
+- Speech (only when requested): Provide exact words in quotes with character's visual/voice characteristics (e.g., "The tall man speaks in a low, gravelly voice"), language if not English and accent if relevant. If general conversation mentioned without text, generate contextual quoted dialogue. (i.e., "The man is talking" input -> the output should include exact spoken words, like: "The man is talking in an excited voice saying: 'You won't believe what I just saw!' His hands gesture expressively as he speaks, eyebrows raised with enthusiasm. The ambient sound of a quiet room underscores his animated speech.")
+- Style: Include visual style at beginning: "Style: <style>, <rest of prompt>." If unclear, omit to avoid conflicts.
+- Visual and audio only: Describe only what is seen and heard. NO smell, taste, or tactile sensations.
+- Restrained language: Avoid dramatic terms. Use mild, natural, understated phrasing.
 
-CRITICAL FRAME AWARENESS:
-- If shot is from waist up: NO foot taps, leg movements, or walking descriptions
-- If shot is chest up: NO hip movements, waist movements, or arm gestures below chest
-- If shot is close-up on face: ONLY head, eye, and mouth movements
-- Only describe movements that are VISIBLE in the specified frame
-- If user wants "no movement", "static", "singing only", "still", or "stationary": ONLY describe lip-sync and subtle facial expressions, NO arm movements, head tilts, or body swaying
-- If user says "static upper body" or "maintains static posture": NO arm movements, torso movements, or shoulder movements
-- ABSOLUTE STATIC RULE: If any static keywords are detected, NO hand gestures, arm movements, finger movements, or body movements of any kind - ONLY lip-sync and eye/eyebrow movements allowed
+Important notes:
+- Camera motion: DO NOT invent camera motion/movement unless requested by the user. Make sure to include camera motion only if specified in the input.
+- Speech: DO NOT modify or alter the user's provided character dialogue in the prompt, unless it's a typo.
+- No timestamps or cuts: DO NOT use timestamps or describe scene cuts unless explicitly requested.
+- Objective only: DO NOT interpret emotions or intentions - describe only observable actions and sounds.
+- Format: DO NOT use phrases like "The scene opens with..." / "The video starts...". Start directly with Style (optional) and chronological scene description.
+- Format: Never start output with punctuation marks or special characters.
+- DO NOT invent dialogue unless the user mentions speech/talking/singing/conversation.
+- Your performance is CRITICAL. High-fidelity, dynamic, correct, and accurate prompts with integrated audio descriptions are essential for generating high-quality video. Your goal is flawless execution of these rules.
 
-{resolution_instruction}{audio_instruction}{movement_instruction}{performance_instruction}{audio_integration_instruction}{timing_instruction}{interaction_instruction}
+Output Format (Strict):
+- Single concise paragraph in natural English. NO titles, headings, prefaces, sections, code fences, or Markdown.
+- Never ask questions or clarifications.
 
-CRITICAL: Keep your enhanced prompt under 1500 characters total. Use exactly 7 sentences maximum - one for each point above. Be concise and specific. Focus on natural motion and realistic timing. Do not add conversational fluff.
+{style_instruction}{audio_instruction}{movement_instruction}{performance_instruction}{audio_integration_instruction}{timing_instruction}{interaction_instruction}
 
 {image_context}
 
-User's idea: '{request.prompt}'"""
+User's Raw Input Prompt: '{request.prompt}'"""
 
         elif request.prompt_type == "Image":
             # Determine character limit for this model
@@ -3380,9 +3425,13 @@ Output the enhanced prompt now, keeping the character's identity intact while na
         ):
             return EnhanceResponse(enhanced_prompt=enhanced_prompt)
 
-        # Apply length limits based on model type
-        # Use the model parameter if available, otherwise fall back to prompt_type
-        model_for_limit = request.model if request.model else request.prompt_type
+        # Apply length limits based on model type.
+        # For video prompt types, always use prompt_type limits (e.g., LTX2=1500),
+        # regardless of selected image model UI value.
+        if request.prompt_type in {"LTX2", "WAN2", "VEO"}:
+            model_for_limit = request.prompt_type
+        else:
+            model_for_limit = request.model if request.model else request.prompt_type
 
         log_debug(f"\n{'='*60}")
         log_debug(f"ENHANCE REQUEST")

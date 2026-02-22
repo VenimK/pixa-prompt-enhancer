@@ -1154,6 +1154,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ltx2ControlsContainer: document.getElementById('ltx2-controls-container'),
         ltx2ResolutionContainer: document.getElementById('ltx2-resolution-container'),
         ltx2MovementContainer: document.getElementById('ltx2-movement-container'),
+        ltx2StyleContainer: document.getElementById('ltx2-style-container'),
         audioUploadCard: document.getElementById('audio-upload-card'),
         
         audioDropZone: document.getElementById('audio-drop-zone'),
@@ -3314,7 +3315,7 @@ POST-PROCESSING:
 
                 // Route specialized enhancement modes to /enhance-specialized
                 let response;
-                if (currentEnhancementMode && currentEnhancementMode !== 'general' && currentEnhancementMode !== 'auto') {
+                if (promptType !== 'LTX2' && currentEnhancementMode && currentEnhancementMode !== 'general' && currentEnhancementMode !== 'auto') {
                     console.log(`Using specialized enhancement: ${currentEnhancementMode}`);
                     response = await fetch('/enhance-specialized', {
                         method: 'POST',
@@ -3331,10 +3332,11 @@ POST-PROCESSING:
                             image_analysis: window.currentImageAnalysis || null,
                             style: style,
                             lighting: lighting,
-                            cinematography: cinematography
+                            cinematography: cinematography,
+                            ltx2_style: promptType === 'LTX2' ? (document.getElementById('ltx2-style-select')?.value || 'auto') : null
                         }),
                     });
-                } else if (currentEnhancementMode === 'auto' && window.currentImageAnalysis) {
+                } else if (promptType !== 'LTX2' && currentEnhancementMode === 'auto' && window.currentImageAnalysis) {
                     console.log('Using auto-detect specialized enhancement');
                     response = await fetch('/enhance-specialized', {
                         method: 'POST',
@@ -3351,7 +3353,8 @@ POST-PROCESSING:
                             image_analysis: window.currentImageAnalysis || null,
                             style: style,
                             lighting: lighting,
-                            cinematography: cinematography
+                            cinematography: cinematography,
+                            ltx2_style: promptType === 'LTX2' ? (document.getElementById('ltx2-style-select')?.value || 'auto') : null
                         }),
                     });
                 } else {
@@ -3376,6 +3379,7 @@ POST-PROCESSING:
                         audio_generation: promptType === 'LTX2' ? (document.getElementById('audio-generation-select')?.value || 'enabled') : null,
                         resolution: promptType === 'LTX2' ? (document.getElementById('resolution-select')?.value || '4K') : null,
                         movement_level: promptType === 'LTX2' ? (document.getElementById('movement-level-select')?.value || 'natural') : null,
+                        ltx2_style: promptType === 'LTX2' ? (document.getElementById('ltx2-style-select')?.value || 'auto') : null,
                         audio_description: promptType === 'LTX2' && audioAnalysisResult ? audioAnalysisResult.audio_description : null,
                         audio_characteristics: promptType === 'LTX2' && audioAnalysisResult ? audioAnalysisResult.characteristics : null
                     }),
@@ -3490,11 +3494,13 @@ POST-PROCESSING:
                 if (els.ltx2ControlsContainer) els.ltx2ControlsContainer.style.display = 'flex';
                 if (els.ltx2ResolutionContainer) els.ltx2ResolutionContainer.style.display = 'flex';
                 if (els.ltx2MovementContainer) els.ltx2MovementContainer.style.display = 'flex';
+                if (els.ltx2StyleContainer) els.ltx2StyleContainer.style.display = 'flex';
                 if (els.audioUploadCard) els.audioUploadCard.style.display = 'block';
             } else {
                 if (els.ltx2ControlsContainer) els.ltx2ControlsContainer.style.display = 'none';
                 if (els.ltx2ResolutionContainer) els.ltx2ResolutionContainer.style.display = 'none';
                 if (els.ltx2MovementContainer) els.ltx2MovementContainer.style.display = 'none';
+                if (els.ltx2StyleContainer) els.ltx2StyleContainer.style.display = 'none';
                 if (els.audioUploadCard) els.audioUploadCard.style.display = 'none';
             }
             
