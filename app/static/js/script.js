@@ -1111,6 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         textControlsToggle: document.getElementById('text-controls-toggle'),
         modelSelect: document.getElementById('model-select'),
         modelTypeSelect: document.getElementById('model-type-select'),
+        geminiModelSelect: document.getElementById('gemini-model-select'),
         style: document.getElementById('style-select'),
         cinematography: document.getElementById('cinematography-select'),
         lighting: document.getElementById('lighting-select'),
@@ -3333,7 +3334,8 @@ POST-PROCESSING:
                             style: style,
                             lighting: lighting,
                             cinematography: cinematography,
-                            ltx2_style: promptType === 'LTX2' ? (document.getElementById('ltx2-style-select')?.value || 'auto') : null
+                            ltx2_style: promptType === 'LTX2' ? (document.getElementById('ltx2-style-select')?.value || 'auto') : null,
+                            gemini_model: els.geminiModelSelect ? els.geminiModelSelect.value : null
                         }),
                     });
                 } else if (promptType !== 'LTX2' && currentEnhancementMode === 'auto' && window.currentImageAnalysis) {
@@ -3354,7 +3356,8 @@ POST-PROCESSING:
                             style: style,
                             lighting: lighting,
                             cinematography: cinematography,
-                            ltx2_style: promptType === 'LTX2' ? (document.getElementById('ltx2-style-select')?.value || 'auto') : null
+                            ltx2_style: promptType === 'LTX2' ? (document.getElementById('ltx2-style-select')?.value || 'auto') : null,
+                            gemini_model: els.geminiModelSelect ? els.geminiModelSelect.value : null
                         }),
                     });
                 } else {
@@ -3381,7 +3384,8 @@ POST-PROCESSING:
                         movement_level: promptType === 'LTX2' ? (document.getElementById('movement-level-select')?.value || 'natural') : null,
                         ltx2_style: promptType === 'LTX2' ? (document.getElementById('ltx2-style-select')?.value || 'auto') : null,
                         audio_description: promptType === 'LTX2' && audioAnalysisResult ? audioAnalysisResult.audio_description : null,
-                        audio_characteristics: promptType === 'LTX2' && audioAnalysisResult ? audioAnalysisResult.characteristics : null
+                        audio_characteristics: promptType === 'LTX2' && audioAnalysisResult ? audioAnalysisResult.characteristics : null,
+                        gemini_model: els.geminiModelSelect ? els.geminiModelSelect.value : null
                     }),
                 });
                 }

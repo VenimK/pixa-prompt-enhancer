@@ -1,12 +1,16 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, UploadFile, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import asyncio
+import re
 import subprocess
 import shutil
 import os
+import time
 # Compatibility layer: try new google.genai first, fall back to old google.generativeai
 USE_NEW_GENAI = False
 try:
@@ -23,7 +27,6 @@ except ImportError:
 if not USE_NEW_GENAI and genai_old is None:
     raise ImportError("Neither google.genai nor google.generativeai is installed. Please install one of them.")
 import PIL.Image
-import time
 from datetime import datetime
 from dotenv import load_dotenv
 import atexit
@@ -35,8 +38,6 @@ import scipy
 
 # Load environment variables from .env file
 load_dotenv()
-
-app = FastAPI()
 
 # Debug log configuration
 DEBUG_LOG_PATH = "debug.log"
@@ -71,15 +72,36 @@ init_debug_log()
 atexit.register(shutdown_debug_log)
 
 
-@app.on_event("startup")
-async def startup_event():
-    log_debug("FastAPI startup event triggered")
+UPLOADS_DIR = "uploads"
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+UPLOADS_TTL_SECONDS = 3600  # delete upload files older than 1 hour
 
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    log_debug("FastAPI shutdown event triggered")
+async def _cleanup_uploads_loop():
+    """Background task: delete upload files older than UPLOADS_TTL_SECONDS."""
+    while True:
+        try:
+            now = time.time()
+            for fname in os.listdir(UPLOADS_DIR):
+                fpath = os.path.join(UPLOADS_DIR, fname)
+                if os.path.isfile(fpath) and (now - os.path.getmtime(fpath)) > UPLOADS_TTL_SECONDS:
+                    os.remove(fpath)
+                    log_debug(f"Cleaned up old upload: {fname}")
+        except Exception as e:
+            log_debug(f"Upload cleanup error: {e}")
+        await asyncio.sleep(600)  # run every 10 minutes
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    log_debug("FastAPI startup")
+    task = asyncio.create_task(_cleanup_uploads_loop())
+    yield
+    task.cancel()
+    log_debug("FastAPI shutdown")
+
+
+app = FastAPI(lifespan=lifespan)
 
 # Enable CORS with environment-based configuration
 def get_cors_config():
@@ -113,10 +135,6 @@ app.add_middleware(
 # --- Setup ---
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
-UPLOADS_DIR = "uploads"
-
-# Ensure uploads directory exists
-os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 
 # --- Pydantic Models ---
@@ -149,6 +167,7 @@ class EnhanceRequest(BaseModel):
     # Character Interaction
     character_coordination: str | None = None  # 'independent', 'synchronized', 'call_response'
     object_interaction: str | None = None  # 'none', 'subtle', 'prominent'
+    gemini_model: str | None = None  # override Gemini model for this request
 
 
 class EnhanceResponse(BaseModel):
@@ -183,12 +202,23 @@ if "GOOGLE_API_KEY" in os.environ:
         log_debug(f"Using google.generativeai (old package) with model: {GEMINI_MODEL}")
 
 
-def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str] | None = None):
+_ALLOWED_GEMINI_MODELS = {
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-3-flash-preview",
+    "gemini-3-pro-preview",
+}
+
+
+def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str] | None = None, model_override: str | None = None):
     if "GOOGLE_API_KEY" not in os.environ:
         return "Error: Google API key is not set. Please set the GOOGLE_API_KEY environment variable."
 
     try:
-        model_name = GEMINI_MODEL
+        model_name = model_override if model_override in _ALLOWED_GEMINI_MODELS else GEMINI_MODEL
 
         # Use NEW google.genai package
         if USE_NEW_GENAI and genai_client:
@@ -534,81 +564,159 @@ def generate_enhanced_ltx2_prompt(audio_characteristics: dict, base_prompt: str)
     return " ".join(prompt_parts)
 
 
-def enhance_prompt_commercial(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None) -> str:
-    """Enhance prompt for commercial photography/product shots."""
-    
-    audio_context = ""
-    if audio_characteristics:
-        audio_context = f"\n**Audio Context:**\n"
-        if audio_characteristics.get('mood'):
-            audio_context += f"- Mood/tone: {audio_characteristics['mood']}\n"
-        if audio_characteristics.get('energy_level'):
-            audio_context += f"- Energy: {audio_characteristics['energy_level']}\n"
-        if audio_characteristics.get('tempo'):
-            audio_context += f"- Tempo: {audio_characteristics['tempo']}\n"
-        if audio_characteristics.get('description'):
-            audio_context += f"- Description: {audio_characteristics['description']}\n"
-    
-    commercial_prompt = f"""Transform this prompt into a professional commercial photography style:
+_SPECIALIZED_MODE_CONFIG = {
+    "commercial": {
+        "intro": "Transform this prompt into a professional commercial photography style:",
+        "requirements_title": "Commercial Photography Requirements",
+        "requirements": [
+            "Clean, polished, professional aesthetic",
+            "Perfect lighting and composition",
+            "High-end product photography quality",
+            "Commercial brand standards",
+            "Market-ready presentation",
+            "Attention to detail and finish",
+        ],
+        "tech_title": "Technical Specifications",
+        "tech": [
+            "Studio lighting setup",
+            "Professional camera equipment",
+            "Commercial post-processing",
+            "Brand-appropriate styling",
+        ],
+        "closing": "Generate an enhanced prompt optimized for commercial use.",
+        "default_limit": "image",
+    },
+    "cinematic": {
+        "intro": "Transform this prompt into a cinematic film production style:",
+        "requirements_title": "Cinematic Requirements",
+        "requirements": [
+            "Epic, dramatic visual storytelling",
+            "Professional cinematography techniques",
+            "Cinematic lighting and composition",
+            "Film industry production values",
+            "Narrative depth and atmosphere",
+        ],
+        "tech_title": "Production Elements",
+        "tech": [
+            "Camera movement and framing",
+            "Professional lighting setups",
+            "Cinematic color grading",
+            "Dramatic atmosphere and mood",
+            "Production design elements",
+        ],
+        "closing": "Generate an enhanced cinematic prompt.",
+        "default_limit": "veo",
+    },
+    "object": {
+        "intro": "Transform this prompt into a professional object and scene enhancement style:",
+        "requirements_title": "Object/Scene Enhancement Requirements",
+        "requirements": [
+            "Focus on object details, textures, and materials",
+            "Professional product/prop photography quality",
+            "Cinematic lighting and composition for objects",
+            "Practical effects and realistic physics",
+            "Clear action sequences and visual storytelling",
+            "Market-ready visual presentation",
+        ],
+        "tech_title": "Technical Elements",
+        "tech": [
+            "Studio lighting setup or environmental lighting",
+            "Camera movement and framing recommendations",
+            "Focus on object interaction and physics",
+            "Realistic material properties and textures",
+            "Professional post-processing and color grading",
+        ],
+        "closing": "Generate an enhanced object/scene focused prompt.",
+        "default_limit": "veo",
+    },
+    "character": {
+        "intro": "Transform this prompt into a professional character design style:",
+        "requirements_title": "Character Design Requirements",
+        "requirements": [
+            "Consistent character aesthetics",
+            "Professional illustration/animation quality",
+            "Expressive character features",
+            "Design consistency across poses/expressions",
+            "Production-ready character design",
+        ],
+        "tech_title": "Design Elements",
+        "tech": [
+            "Character anatomy and proportions",
+            "Facial expressions and personality",
+            "Costume and accessory design",
+            "Color palette and style consistency",
+            "Animation-friendly design principles",
+        ],
+        "closing": "Generate an enhanced character design prompt.",
+        "default_limit": "wan2",
+    },
+}
+
+
+def _build_audio_context(audio_characteristics: dict | None) -> str:
+    """Build a compact audio context block from structured characteristics."""
+    if not audio_characteristics:
+        return "No audio context provided"
+    parts = []
+    if audio_characteristics.get('mood'):
+        parts.append(f"Mood/tone: {audio_characteristics['mood']}")
+    if audio_characteristics.get('energy_level'):
+        parts.append(f"Energy: {audio_characteristics['energy_level']}")
+    if audio_characteristics.get('tempo'):
+        parts.append(f"Tempo: {audio_characteristics['tempo']}")
+    if audio_characteristics.get('description'):
+        parts.append(f"Description: {audio_characteristics['description']}")
+    return "\n".join(parts) if parts else "No audio context provided"
+
+
+def _char_limit_instruction(prompt_type: str | None) -> str:
+    """Return a character-limit instruction line for video prompt types."""
+    pt = (prompt_type or "").upper()
+    if pt not in ("LTX2", "WAN2", "VEO"):
+        return ""
+    limit = 1500 if pt == "LTX2" else 800 if pt == "WAN2" else 2000
+    return f"IMPORTANT: Keep the output under {limit} characters. Write as a single flowing paragraph, no markdown headers or numbered lists."
+
+
+def enhance_prompt_specialized(mode: str, base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None) -> str:
+    """Generic specialized prompt enhancer driven by _SPECIALIZED_MODE_CONFIG."""
+    cfg = _SPECIALIZED_MODE_CONFIG[mode]
+    reqs = "\n".join(f"- {r}" for r in cfg["requirements"])
+    tech = "\n".join(f"- {t}" for t in cfg["tech"])
+    audio_ctx = _build_audio_context(audio_characteristics)
+    limit_line = _char_limit_instruction(prompt_type)
+
+    meta_prompt = f"""{cfg['intro']}
 
 {base_prompt}
 
-**Commercial Photography Requirements:**
-- Clean, polished, professional aesthetic
-- Perfect lighting and composition
-- High-end product photography quality
-- Commercial brand standards
-- Market-ready presentation
-- Attention to detail and finish
+**{cfg['requirements_title']}:**
+{reqs}
 
-**Technical Specifications:**
-- Studio lighting setup
-- Professional camera equipment
-- Commercial post-processing
-- Brand-appropriate styling
-{audio_context}
-**Additional Context:**
-{image_description}
-
-Generate an enhanced prompt optimized for commercial use.
-{f'IMPORTANT: Keep the output under {1500 if (prompt_type or "").upper() == "LTX2" else 800 if (prompt_type or "").upper() == "WAN2" else 2000} characters. Write as a single flowing paragraph, no markdown headers or numbered lists.' if prompt_type and prompt_type.upper() in ('LTX2', 'WAN2', 'VEO') else ''}"""
-
-    enhanced = run_gemini(commercial_prompt)
-    return limit_prompt_length(enhanced, prompt_type or "image")
-
-
-def enhance_prompt_cinematic(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None) -> str:
-    """Enhance prompt for cinematic film/video production."""
-    
-    cinematic_prompt = f"""Transform this prompt into a cinematic film production style:
-
-{base_prompt}
-
-**Cinematic Requirements:**
-- Epic, dramatic visual storytelling
-- Professional cinematography techniques
-- Cinematic lighting and composition
-- Film industry production values
-- Narrative depth and atmosphere
-
-**Production Elements:**
-- Camera movement and framing
-- Professional lighting setups
-- Cinematic color grading
-- Dramatic atmosphere and mood
-- Production design elements
+**{cfg['tech_title']}:**
+{tech}
 
 **Audio Integration:**
-{audio_characteristics.get('description', 'No audio context provided') if audio_characteristics else 'No audio context provided'}
+{audio_ctx}
 
 **Additional Context:**
 {image_description}
 
-Generate an enhanced cinematic prompt.
-{f'IMPORTANT: Keep the output under {1500 if (prompt_type or "").upper() == "LTX2" else 800 if (prompt_type or "").upper() == "WAN2" else 2000} characters. Write as a single flowing paragraph, no markdown headers or numbered lists.' if prompt_type and prompt_type.upper() in ('LTX2', 'WAN2', 'VEO') else ''}"""
+{cfg['closing']}
+{limit_line}"""
 
-    enhanced = run_gemini(cinematic_prompt)
-    return limit_prompt_length(enhanced, prompt_type or "veo")
+    enhanced = run_gemini(meta_prompt, model_override=gemini_model)
+    return limit_prompt_length(enhanced, prompt_type or cfg["default_limit"])
+
+
+def enhance_prompt_commercial(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None) -> str:
+    """Enhance prompt for commercial photography/product shots."""
+    return enhance_prompt_specialized("commercial", base_prompt, image_description, audio_characteristics, prompt_type, gemini_model)
+
+
+def enhance_prompt_cinematic(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None) -> str:
+    """Enhance prompt for cinematic film/video production."""
+    return enhance_prompt_specialized("cinematic", base_prompt, image_description, audio_characteristics, prompt_type, gemini_model)
 
 
 def enhance_prompt_ace_step(prompt: str, image_description: str = None, audio_characteristics: dict = None) -> str:
@@ -678,70 +786,14 @@ No explanation."""
         return f"Cinematic scene with {prompt}, professional lighting, detailed textures, realistic camera work"
 
 
-def enhance_prompt_object_design(prompt: str, image_description: str = None, audio_characteristics: dict = None, prompt_type: str = None) -> str:
+def enhance_prompt_object_design(prompt: str, image_description: str = None, audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None) -> str:
     """Enhance prompt for object/scene photography and effects."""
-    
-    object_prompt = f"""Transform this prompt into a professional object and scene enhancement style:
-
-{prompt}
-
-**Object/Scene Enhancement Requirements:**
-- Focus on object details, textures, and materials
-- Professional product/prop photography quality
-- Cinematic lighting and composition for objects
-- Practical effects and realistic physics
-- Clear action sequences and visual storytelling
-- Market-ready visual presentation
-
-**Technical Elements:**
-- Studio lighting setup or environmental lighting
-- Camera movement and framing recommendations
-- Focus on object interaction and physics
-- Realistic material properties and textures
-- Professional post-processing and color grading
-
-**Audio Integration:**
-{audio_characteristics.get('description', 'No audio context provided') if audio_characteristics else 'No audio context provided'}
-
-**Additional Context:**
-{image_description}
-
-Generate an enhanced object/scene focused prompt.
-{f'IMPORTANT: Keep the output under {1500 if (prompt_type or "").upper() == "LTX2" else 800 if (prompt_type or "").upper() == "WAN2" else 2000} characters. Write as a single flowing paragraph, no markdown headers or numbered lists.' if prompt_type and prompt_type.upper() in ('LTX2', 'WAN2', 'VEO') else ''}"""
-
-    enhanced = run_gemini(object_prompt)
-    return limit_prompt_length(enhanced, prompt_type or "veo")
+    return enhance_prompt_specialized("object", prompt, image_description or "", audio_characteristics, prompt_type, gemini_model)
 
 
-def enhance_prompt_character_design(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None) -> str:
+def enhance_prompt_character_design(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None) -> str:
     """Enhance prompt for character design and animation."""
-    
-    character_prompt = f"""Transform this prompt into a professional character design style:
-
-{base_prompt}
-
-**Character Design Requirements:**
-- Consistent character aesthetics
-- Professional illustration/animation quality
-- Expressive character features
-- Design consistency across poses/expressions
-- Production-ready character design
-
-**Design Elements:**
-- Character anatomy and proportions
-- Facial expressions and personality
-- Costume and accessory design
-- Color palette and style consistency
-- Animation-friendly design principles
-
-**Additional Context:**
-{image_description}
-
-Generate an enhanced character design prompt.
-{f'IMPORTANT: Keep the output under {1500 if (prompt_type or "").upper() == "LTX2" else 800 if (prompt_type or "").upper() == "WAN2" else 2000} characters. Write as a single flowing paragraph, no markdown headers or numbered lists.' if prompt_type and prompt_type.upper() in ('LTX2', 'WAN2', 'VEO') else ''}"""
-
-    enhanced = run_gemini(character_prompt)
-    return limit_prompt_length(enhanced, prompt_type or "wan2")
+    return enhance_prompt_specialized("character", base_prompt, image_description, audio_characteristics, prompt_type, gemini_model)
 
 
 class SpecializedEnhanceRequest(BaseModel):
@@ -756,6 +808,7 @@ class SpecializedEnhanceRequest(BaseModel):
     lighting: str | None = None
     cinematography: str | None = None
     ltx2_style: str | None = None  # LTX-2 video style
+    gemini_model: str | None = None  # override Gemini model for this request
 
 
 @app.post("/enhance-specialized", response_model=EnhanceResponse)
@@ -803,33 +856,38 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
             log_debug(f"Auto-detected enhancement mode: {enhancement_mode}")
         
         # Apply specialized enhancement based on mode
+        gm = request.gemini_model
         if enhancement_mode == 'commercial':
             enhanced_prompt = enhance_prompt_commercial(
                 enriched_prompt,
                 request.image_description or "",
                 request.audio_characteristics,
-                prompt_type=request.prompt_type
+                prompt_type=request.prompt_type,
+                gemini_model=gm
             )
         elif enhancement_mode == 'cinematic':
             enhanced_prompt = enhance_prompt_cinematic(
                 enriched_prompt,
                 request.image_description or "",
                 request.audio_characteristics,
-                prompt_type=request.prompt_type
+                prompt_type=request.prompt_type,
+                gemini_model=gm
             )
         elif enhancement_mode == 'character':
             enhanced_prompt = enhance_prompt_character_design(
                 enriched_prompt,
                 request.image_description or "",
                 request.audio_characteristics,
-                prompt_type=request.prompt_type
+                prompt_type=request.prompt_type,
+                gemini_model=gm
             )
         elif enhancement_mode == 'object':
             enhanced_prompt = enhance_prompt_object_design(
                 enriched_prompt,
                 request.image_description or "",
                 request.audio_characteristics,
-                prompt_type=request.prompt_type
+                prompt_type=request.prompt_type,
+                gemini_model=gm
             )
         elif enhancement_mode == 'ace-step':
             enhanced_prompt = enhance_prompt_ace_step(
@@ -839,7 +897,7 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
             )
         else:
             # Fallback to general enhancement
-            enhanced_prompt = run_gemini(f"Enhance this prompt for AI image generation: {request.prompt}")
+            enhanced_prompt = run_gemini(f"Enhance this prompt for AI image generation: {request.prompt}", model_override=gm)
             enhanced_prompt = limit_prompt_length(enhanced_prompt, request.prompt_type or "image")
         
         log_debug(f"Specialized enhancement completed: {len(enhanced_prompt)} chars")
@@ -1179,6 +1237,13 @@ def validate_image_files(images: list[UploadFile]) -> tuple[bool, str]:
     return True, ""
 
 # --- Endpoints ---
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for uptime monitoring and deploy verification."""
+    api_key_set = bool(os.environ.get("GOOGLE_API_KEY"))
+    return {"status": "ok", "api_key_set": api_key_set}
+
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     """Render the main page with the current version."""
@@ -2317,16 +2382,87 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
             instructions.append(f"with a {request.motion_effect.lower()} motion effect")
         instruction_text = " " + " and ".join(instructions) if instructions else ""
 
-        image_context = (
-            f" CRITICAL REFERENCE IMAGE GUIDANCE: The user has provided a reference image described as: '{request.image_description}'. "
-            f"Analyze this description carefully and identify key visual elements (subjects, objects, environment, lighting, colors) that should appear in the animation. "
-            f"Use these elements as the foundation for your prompt - the animation should clearly relate to what's described in the reference image. "
-            f"If the user's prompt mentions specific characters or objects from the reference, ensure they are prominently featured. "
-            f"Maintain visual consistency with the reference while adding the requested motion."
-            if request.image_description
-            else ""
-        )
         text_emphasis = f" {request.text_emphasis}" if request.text_emphasis else ""
+
+        # --- Add style-specific guidance for 3D/animated art styles ---
+        _3D_ANIMATED_STYLE_GUIDANCE = {
+            "pixar 3d": (
+                "Render this in Pixar CGI style: smooth rounded character models with expressive large eyes, "
+                "subsurface skin scattering, physically-based materials, rich ambient occlusion, cinematic depth of field, "
+                "warm color grading, and whimsical storytelling atmosphere. Reference: Toy Story, Up, Coco."
+            ),
+            "disney 3d": (
+                "Render in Disney CGI animation style: highly stylized proportions, big expressive eyes, "
+                "vibrant saturated colors, magical soft lighting, smooth hyper-clean surfaces, "
+                "fairy-tale atmosphere. Reference: Frozen, Tangled, Moana."
+            ),
+            "dreamworks 3d": (
+                "Render in DreamWorks CGI style: slightly edgier character design, bold silhouettes, "
+                "dynamic action-oriented poses, strong contrasting lighting, epic scale environments. "
+                "Reference: How to Train Your Dragon, Shrek, Puss in Boots."
+            ),
+            "studio ghibli": (
+                "Render in Studio Ghibli hand-painted 2D animation style: soft watercolor backgrounds, "
+                "expressive hand-drawn characters, lush organic environments, subtle cel-shading, "
+                "nostalgic warm lighting, intricate environmental detail. Reference: Spirited Away, Princess Mononoke."
+            ),
+            "claymation": (
+                "Render in claymation stop-motion style: visible fingerprints and clay texture on surfaces, "
+                "slightly irregular shapes, warm earthy color palette, shallow depth of field, "
+                "tactile handmade quality. Reference: Wallace & Gromit, Chicken Run."
+            ),
+            "stop motion": (
+                "Render in stop-motion puppet animation style: physical puppet textures, fabric and material "
+                "detail on costumes, slightly jerky natural movement implied, handcrafted set design, "
+                "practical lighting. Reference: Coraline, Kubo and the Two Strings."
+            ),
+            "low poly 3d": (
+                "Render in low-poly geometric 3D style: visible flat triangular/polygonal facets, "
+                "flat shading without texture gradients, bold pastel or vibrant color blocking, "
+                "clean minimalist composition, sharp geometric silhouettes."
+            ),
+            "isometric 3d": (
+                "Render in isometric 3D illustration style: perfect 45-degree isometric projection, "
+                "clean flat-shaded geometry, bright saturated colors, miniature diorama scale, "
+                "parallel projection with no perspective distortion."
+            ),
+            "anime": (
+                "Render in Japanese anime illustration style: clean bold outlines, cel-shaded flat color fills, "
+                "large emotive eyes, dramatic speed lines for action, vibrant saturated palette, "
+                "detailed hair rendering. Reference: modern anime film quality."
+            ),
+            "cartoon": (
+                "Render in stylized cartoon illustration style: bold outlines, flat or lightly shaded fills, "
+                "exaggerated proportions for comedic or expressive effect, bright primary colors, "
+                "clean vector-art quality."
+            ),
+        }
+        style_art_guidance = ""
+        if request.style:
+            style_art_guidance = _3D_ANIMATED_STYLE_GUIDANCE.get(request.style.strip().lower(), "")
+
+        # --- Build image_context, overriding to re-imagine mode for stylized art styles ---
+        if request.image_description:
+            if style_art_guidance:
+                image_context = (
+                    f" REFERENCE SUBJECT: The user has provided a reference image described as: '{request.image_description}'. "
+                    f"DO NOT describe this as a photograph. Instead, RE-IMAGINE this subject and scene entirely in the chosen art style. "
+                    f"Extract the key subjects, objects, setting, and mood, then re-describe everything using the visual language of that style. "
+                    f"The output prompt should sound like it was written for an AI art generator to create a stylized illustration, NOT a photo."
+                )
+            else:
+                image_context = (
+                    f" CRITICAL REFERENCE IMAGE GUIDANCE: The user has provided a reference image described as: '{request.image_description}'. "
+                    f"Analyze this description carefully and identify key visual elements (subjects, objects, environment, lighting, colors) that should appear in the image. "
+                    f"Use these elements as the foundation for your prompt. "
+                    f"If the user's prompt mentions specific characters or objects from the reference, ensure they are prominently featured. "
+                    f"Maintain visual consistency with the reference."
+                )
+        else:
+            image_context = ""
+
+        if style_art_guidance:
+            style_art_guidance = f" STYLE DIRECTION: {style_art_guidance}"
 
         # --- Add model-specific guidance if a specific model is selected ---
         model_guidance = ""
@@ -3114,126 +3250,6 @@ Generate a brief animation prompt now."""
                 elif "jazz" in audio_description.lower() or "blues" in audio_description.lower():
                     performance_instruction += "Emphasize fluid, expressive movements with jazz responsiveness - smooth body motions, improvisational gestures, and rhythmic variations that match jazz rhythms. "
                 
-                # ENHANCED AUDIO ANALYSIS INTEGRATION
-            # Use enhanced audio characteristics to generate better prompt.
-            # If structured characteristics are already provided, skip this fallback
-            # text re-parsing path to reduce latency.
-            if audio_description and not request.audio_characteristics:
-                try:
-                    # Parse audio characteristics from the audio_description if available
-                    # This would be enhanced to pass the full characteristics object
-                    if request.image_description:
-                        enhanced_base_prompt = f"{request.image_description} {request.prompt}"
-                    else:
-                        enhanced_base_prompt = f"The character {request.prompt}"
-                    
-                    # For now, extract key characteristics from audio_description
-                    audio_chars = {}
-                    
-                    # Extract enhanced characteristics from audio_description
-                    if "spoken dialogue" in audio_description.lower():
-                        audio_chars['vocal_style'] = 'spoken'
-                    elif "singing performance" in audio_description.lower():
-                        audio_chars['vocal_style'] = 'singing'
-                    elif "melodic speech" in audio_description.lower():
-                        audio_chars['vocal_style'] = 'melodic_speech'
-                    
-                    # Extract tempo
-                    import re
-                    tempo_match = re.search(r'(\d+\.?\d*)\s*BPM', audio_description)
-                    if tempo_match:
-                        audio_chars['tempo_bpm'] = float(tempo_match.group(1))
-                        if audio_chars['tempo_bpm'] < 90:
-                            audio_chars['tempo'] = 'slow'
-                        elif audio_chars['tempo_bpm'] < 120:
-                            audio_chars['tempo'] = 'medium'
-                        else:
-                            audio_chars['tempo'] = 'fast'
-                    
-                    # Extract mood
-                    if "peaceful" in audio_description.lower() or "serene" in audio_description.lower():
-                        audio_chars['mood'] = 'calm'
-                    elif "energetic" in audio_description.lower() or "high energy" in audio_description.lower():
-                        audio_chars['mood'] = 'energetic'
-                    elif "emotional" in audio_description.lower():
-                        audio_chars['mood'] = 'emotional'
-                    elif "contemplative" in audio_description.lower():
-                        audio_chars['mood'] = 'contemplative'
-                    
-                    # Extract danceability
-                    if "highly danceable" in audio_description.lower():
-                        audio_chars['danceability'] = 0.85
-                    elif "danceable" in audio_description.lower():
-                        audio_chars['danceability'] = 0.7
-                    else:
-                        audio_chars['danceability'] = 0.4
-                    
-                    # Extract beat strength
-                    if "strong rhythm" in audio_description.lower() or "strong beat" in audio_description.lower():
-                        audio_chars['beat_strength'] = 'strong'
-                    elif "weak rhythm" in audio_description.lower():
-                        audio_chars['beat_strength'] = 'weak'
-                    else:
-                        audio_chars['beat_strength'] = 'medium'
-                    
-                    # Extract vocal confidence
-                    if "prominent vocal" in audio_description.lower():
-                        audio_chars['vocal_confidence'] = 0.9
-                    elif "featuring vocal" in audio_description.lower():
-                        audio_chars['vocal_confidence'] = 0.7
-                    else:
-                        audio_chars['vocal_confidence'] = 0.5
-                    
-                    # Extract has_vocals
-                    audio_chars['has_vocals'] = any([
-                        "vocal" in audio_description.lower(),
-                        "singing" in audio_description.lower(),
-                        "speech" in audio_description.lower(),
-                        "dialogue" in audio_description.lower(),
-                        "spoken" in audio_description.lower()
-                    ])
-                    
-                    # Extract genre
-                    if "pop" in audio_description.lower():
-                        audio_chars['genre'] = 'pop'
-                    elif "electronic" in audio_description.lower():
-                        audio_chars['genre'] = 'electronic'
-                    elif "rock" in audio_description.lower():
-                        audio_chars['genre'] = 'rock'
-                    elif "jazz" in audio_description.lower():
-                        audio_chars['genre'] = 'jazz'
-                    elif "classical" in audio_description.lower():
-                        audio_chars['genre'] = 'classical'
-                    elif "ambient" in audio_description.lower():
-                        audio_chars['genre'] = 'ambient'
-                    elif "spoken_word" in audio_description.lower():
-                        audio_chars['genre'] = 'spoken_word'
-                    else:
-                        audio_chars['genre'] = 'unknown'
-                    
-                    # Extract energy level
-                    if "very high energy" in audio_description.lower():
-                        audio_chars['energy_level'] = 'very_high'
-                    elif "high energy" in audio_description.lower():
-                        audio_chars['energy_level'] = 'high'
-                    elif "low energy" in audio_description.lower():
-                        audio_chars['energy_level'] = 'low'
-                    elif "very low energy" in audio_description.lower():
-                        audio_chars['energy_level'] = 'very_low'
-                    else:
-                        audio_chars['energy_level'] = 'medium'
-                    
-                    # Generate enhanced prompt using the new function
-                    if audio_chars:
-                        enhanced_prompt = generate_enhanced_ltx2_prompt(audio_chars, enhanced_base_prompt)
-                        # Update the base prompt with enhanced audio-driven description
-                        request.prompt = enhanced_prompt
-                        log_debug(f"Enhanced prompt generated using audio analysis: {len(enhanced_prompt)} characters")
-                
-                except Exception as e:
-                    log_debug(f"Error generating enhanced audio prompt: {e}")
-                    # Continue with original prompt if enhancement fails
-            
             # Add stability limiter (MANDATORY)
             performance_instruction += "Natural motion, realistic timing, minimal facial distortion, no overacting or sudden movement. "
             
@@ -3411,13 +3427,13 @@ Output the enhanced prompt now, keeping the character's identity intact while na
 
             # Default case with enhanced guidance
             else:
-                meta_prompt = f"You are a creative assistant for a text-to-image model. Your goal is to expand the user's idea into a rich, descriptive prompt suitable for generating a static image{instruction_text}.{model_guidance} Focus on the visual details of the scene, subject, and atmosphere. Be specific about composition (rule of thirds, leading lines, framing), perspective (eye level, bird's eye, worm's eye), depth (foreground, middle ground, background elements), and the quality of light (direction, color, intensity, shadows).{image_context}{text_emphasis} IMPORTANT: Keep your enhanced prompt under {char_limit} characters total. Do not add conversational fluff. User's idea: '{request.prompt}'"
+                meta_prompt = f"You are a creative assistant for a text-to-image model. Your goal is to expand the user's idea into a rich, descriptive prompt suitable for generating a static image{instruction_text}.{model_guidance}{style_art_guidance} Focus on the visual details of the scene, subject, and atmosphere. Be specific about composition (rule of thirds, leading lines, framing), perspective (eye level, bird's eye, worm's eye), depth (foreground, middle ground, background elements), and the quality of light (direction, color, intensity, shadows).{image_context}{text_emphasis} IMPORTANT: Keep your enhanced prompt under {char_limit} characters total. Do not add conversational fluff. User's idea: '{request.prompt}'"
 
         else:
             # Fallback for safety
             meta_prompt = f"Enhance this prompt: {request.prompt}"
 
-        enhanced_prompt = run_gemini(meta_prompt)
+        enhanced_prompt = run_gemini(meta_prompt, model_override=request.gemini_model)
 
         # Check if the response contains an error message
         if enhanced_prompt.startswith("Error") or enhanced_prompt.startswith(

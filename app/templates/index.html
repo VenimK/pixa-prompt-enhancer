@@ -324,6 +324,18 @@
                                         </optgroup>
                                     </select>
                                 </div>
+                                <div class="model-selector">
+                                    <label for="gemini-model-select">AI Engine:</label>
+                                    <select id="gemini-model-select">
+                                        <option value="gemini-2.5-flash" selected>2.5 Flash (fast)</option>
+                                        <option value="gemini-2.5-flash-lite">2.5 Flash Lite</option>
+                                        <option value="gemini-2.0-flash">2.0 Flash</option>
+                                        <option value="gemini-2.0-flash-lite">2.0 Flash Lite</option>
+                                        <option value="gemini-2.5-pro">2.5 Pro (quality)</option>
+                                        <option value="gemini-3-flash-preview">3 Flash Preview</option>
+                                        <option value="gemini-3-pro-preview">3 Pro Preview</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
@@ -367,7 +379,7 @@
                                     <div class="settings-grid">
                                         <div class="setting-group">
                                             <label>Style</label>
-                                            <select id="style-select">
+                                            <select id="settings-style-select">
                                                 <option value="">Auto</option>
                                                 <option value="photorealistic">Photorealistic</option>
                                                 <option value="artistic">Artistic</option>
@@ -376,7 +388,7 @@
                                         </div>
                                         <div class="setting-group">
                                             <label>Lighting</label>
-                                            <select id="lighting-select">
+                                            <select id="settings-lighting-select">
                                                 <option value="">Auto</option>
                                                 <option value="natural">Natural</option>
                                                 <option value="studio">Studio</option>
@@ -385,7 +397,7 @@
                                         </div>
                                         <div class="setting-group">
                                             <label>Cinematography</label>
-                                            <select id="cinematography-select">
+                                            <select id="settings-cinematography-select">
                                                 <option value="">Auto</option>
                                                 <option value="wide shot">Wide Shot</option>
                                                 <option value="close-up">Close-up</option>
@@ -1071,7 +1083,6 @@
                 </select>
             </div>
 
-            <!-- Enhancement Mode Selector -->
             <div class="enhancement-mode-selector">
                 <label for="enhancement-mode">Enhancement Mode:</label>
                 <select id="enhancement-mode" name="enhancement_mode">
@@ -1113,6 +1124,18 @@
                         <option value="Abstract">Abstract</option>
                         <option value="Digital Art">Digital Art</option>
                     </optgroup>
+                    <optgroup label="3D &amp; Animated">
+                        <option value="Pixar 3D">Pixar 3D</option>
+                        <option value="Disney 3D">Disney 3D</option>
+                        <option value="DreamWorks 3D">DreamWorks 3D</option>
+                        <option value="Studio Ghibli">Studio Ghibli</option>
+                        <option value="Claymation">Claymation</option>
+                        <option value="Stop Motion">Stop Motion</option>
+                        <option value="Low Poly 3D">Low Poly 3D</option>
+                        <option value="Isometric 3D">Isometric 3D</option>
+                        <option value="Anime">Anime</option>
+                        <option value="Cartoon">Cartoon</option>
+                    </optgroup>
                     <optgroup label="Genre Styles">
                         <option value="Fantasy">Fantasy</option>
                         <option value="Sci-Fi">Sci-Fi</option>
@@ -1120,8 +1143,6 @@
                         <option value="Steampunk">Steampunk</option>
                         <option value="Horror">Horror</option>
                         <option value="Gothic">Gothic</option>
-                        <option value="Anime">Anime</option>
-                        <option value="Cartoon">Cartoon</option>
                         <option value="Comic Book">Comic Book</option>
                     </optgroup>
                     <optgroup label="Lighting & Mood">
