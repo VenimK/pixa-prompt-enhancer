@@ -2436,6 +2436,196 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
                 "exaggerated proportions for comedic or expressive effect, bright primary colors, "
                 "clean vector-art quality."
             ),
+            "3d pop-out pencil sketch": (
+                "Create a split-reality 3D pop-out illusion: the upper body and face burst out of the page in "
+                "full vivid color and photorealistic 3D detail, dramatically leaping forward beyond the paper plane "
+                "with strong drop shadows cast back onto the page surface. "
+                "The lower body and background dissolve seamlessly into a hand-drawn pencil sketch — "
+                "loose graphite pencil lines, cross-hatching for shading, rough textured paper grain visible, "
+                "unfinished sketch strokes fading out toward the edges. "
+                "The transition between the vivid 3D pop-out and the pencil sketch must be seamless and convincing — "
+                "the sketch lines should appear to organically become the 3D subject. "
+                "The paper itself is visible as the base, slightly crumpled or flat with realistic texture. "
+                "High contrast between the hyper-real colored upper portion and the monochrome graphite lower portion."
+            ),
+            # --- Photography Niches ---
+            "macro photography": (
+                "Extreme close-up macro photography: magnified beyond life-size, revealing intricate micro-textures, "
+                "shallow depth of field with creamy bokeh background, sharp crisp focus on a single detail, "
+                "natural or ring-flash lighting, high resolution fine detail."
+            ),
+            "street photography": (
+                "Candid street photography: raw authentic urban moment, natural available light, "
+                "35mm or 50mm lens perspective, slight grain for atmosphere, decisive moment composition, "
+                "black and white or desaturated color palette, gritty real-world energy."
+            ),
+            "astrophotography": (
+                "Professional astrophotography: deep-sky long exposure, Milky Way arc or star trails, "
+                "pinpoint star rendering, blue-black sky gradient, foreground silhouette for scale, "
+                "high ISO grain texture, wide-angle perspective capturing celestial scale."
+            ),
+            "underwater photography": (
+                "Underwater photography: caustic light rays filtering through water surface, "
+                "blue-green teal color cast, particles suspended in water, volumetric light shafts, "
+                "marine life or subject floating naturally, housing lens distortion, serene aquatic mood."
+            ),
+            "golden hour photography": (
+                "Golden hour photography: warm amber-orange sunlight at magic hour, long soft shadows, "
+                "lens flare and sun haze, rich warm color grading, silhouettes against glowing sky, "
+                "bokeh highlights in background, cinematic romantic atmosphere."
+            ),
+            "blue hour photography": (
+                "Blue hour photography: deep twilight cool blue ambient light, city lights beginning to glow, "
+                "balanced exposure between sky and artificial light, still serene atmosphere, "
+                "rich navy and indigo tones, long exposure smoothness."
+            ),
+            "tilt-shift photography": (
+                "Tilt-shift miniature photography effect: selective focus plane making real scenes look like tiny models, "
+                "extreme blur above and below the focus band, vivid saturated colors, "
+                "bird's eye or elevated view angle, toy-like miniature world illusion."
+            ),
+            "long exposure": (
+                "Long exposure photography: motion blur on moving elements (water, clouds, traffic), "
+                "sharp static elements, silky smooth water or light trails, star trails if nighttime, "
+                "tripod-stable composition, dreamy surreal quality from extended capture time."
+            ),
+            # --- Art Movements ---
+            "art nouveau": (
+                "Art Nouveau illustration style: ornate flowing organic curves inspired by natural forms, "
+                "botanical motifs, floral borders and decorative frames, sinuous line work, "
+                "muted earthy greens and golds, Alphonse Mucha or Gustav Klimt reference aesthetic, "
+                "elegant feminine figures with intricate decorative surroundings."
+            ),
+            "bauhaus": (
+                "Bauhaus design style: strict geometric forms, primary colors (red, yellow, blue) plus black and white, "
+                "functional minimalism, bold typography integration, flat graphic design aesthetic, "
+                "strong horizontal and vertical compositions, no decorative ornamentation."
+            ),
+            "ukiyo-e": (
+                "Japanese Ukiyo-e woodblock print style: flat areas of bold color, strong black outlines, "
+                "stylized waves and natural motifs, limited color palette with bold contrasts, "
+                "Hokusai or Hiroshige aesthetic, fine parallel hatching for shading, "
+                "elegant compositional balance."
+            ),
+            "watercolor": (
+                "Watercolor painting style: soft translucent washes of color, wet-on-wet blending at edges, "
+                "visible paper texture grain, unpredictable pigment blooms and bleeds, "
+                "white paper showing through highlights, loose expressive brushwork, "
+                "pastel and muted tonal range."
+            ),
+            "oil painting": (
+                "Classical oil painting style: rich impasto texture with visible thick brushstrokes, "
+                "deep saturated colors with luminous glazing, chiaroscuro light and shadow, "
+                "canvas texture visible, Old Masters aesthetic (Rembrandt, Vermeer, Caravaggio), "
+                "warm amber varnish tones."
+            ),
+            "ink wash": (
+                "East Asian ink wash painting (Sumi-e) style: monochromatic black ink gradients, "
+                "expressive minimalist brushstrokes, large negative white space, "
+                "wet brush bleeding into rice paper texture, Zen simplicity, "
+                "calligraphic fluid line quality."
+            ),
+            "pointillism": (
+                "Pointillist painting style: entire image composed of small distinct dots of pure color, "
+                "optical color mixing at viewing distance, vibrant divided color technique, "
+                "visible dot texture throughout, Georges Seurat or Paul Signac reference aesthetic, "
+                "shimmering luminous color effect."
+            ),
+            "art deco": (
+                "Art Deco design style: bold geometric symmetry, streamlined angular forms, "
+                "gold, black, and jewel-tone palette, stepped architectural motifs, "
+                "luxurious glamour of 1920s-1930s, sunburst and chevron patterns, "
+                "metallic sheen and elegant sophistication."
+            ),
+            # --- CGI & Render Engines ---
+            "unreal engine 5": (
+                "Unreal Engine 5 real-time render: Nanite hyper-detailed geometry, Lumen global illumination, "
+                "photorealistic materials with subsurface scattering, dynamic volumetric fog and clouds, "
+                "ray-traced reflections, cinematic post-processing with film grain and chromatic aberration, "
+                "game-engine hyperrealism."
+            ),
+            "octane render": (
+                "Octane Render GPU path-tracing: physically accurate unbiased rendering, "
+                "crisp volumetric light shafts, photon-mapped caustics, perfect material fidelity, "
+                "high dynamic range, ultra-sharp detail at every scale, "
+                "professional 3D visualization quality."
+            ),
+            "blender cycles": (
+                "Blender Cycles path-traced render: soft global illumination, realistic HDRI lighting, "
+                "principled BSDF materials with accurate roughness and metallic response, "
+                "smooth ambient occlusion, architectural visualization quality, "
+                "open-source 3D community aesthetic."
+            ),
+            "arnold render": (
+                "Arnold renderer production quality: Monte Carlo ray tracing, "
+                "industry-standard film VFX look, perfect subsurface scattering on skin, "
+                "physically accurate atmospheric scattering, deep shadow detail, "
+                "Hollywood feature film visual quality."
+            ),
+            "v-ray": (
+                "V-Ray architectural visualization render: photorealistic interior or exterior rendering, "
+                "accurate sun and sky system, polished glass and material reflections, "
+                "professional lighting setup, clean crisp shadows, high-end real estate or product visualization quality."
+            ),
+            "midjourney": (
+                "Midjourney AI art aesthetic: painterly photorealism blended with dreamlike quality, "
+                "beautiful cinematic lighting, hyper-detailed textures, slightly surreal atmosphere, "
+                "rich color grading, trending on art platforms, technically flawless composition."
+            ),
+            "flux aesthetic": (
+                "Flux model aesthetic: ultra-sharp hyperrealistic digital photography, "
+                "technically perfect exposure, microscopic texture detail, "
+                "clean clinical precision, natural undistorted perspective, "
+                "studio-grade color accuracy, photojournalistic authenticity."
+            ),
+            # --- Pop Culture & Aesthetic ---
+            "vaporwave": (
+                "Vaporwave aesthetic: 1980s-1990s nostalgia, purple and pink neon color palette, "
+                "retro computer grid landscapes, glitch artifacts, Roman busts and palm trees, "
+                "VHS scan lines, synthwave music visual style, dreamy lo-fi retrofuturistic atmosphere."
+            ),
+            "retrofuturism": (
+                "Retrofuturism aesthetic: 1950s-1960s vision of the future, chrome and streamlined rocket shapes, "
+                "space age optimism, atomic age design motifs, flying cars and dome cities, "
+                "Populuxe color palette (turquoise, coral, cream), World's Fair exposition aesthetic."
+            ),
+            "dark academia": (
+                "Dark Academia aesthetic: moody candlelit interiors, aged leather books and manuscripts, "
+                "classical architecture and ivy-covered stone walls, tweed and wool textures, "
+                "sepia and warm amber tones, scholarly literary atmosphere, "
+                "autumn leaves and Gothic collegiate setting."
+            ),
+            "cottagecore": (
+                "Cottagecore aesthetic: idyllic rural pastoral scene, wildflower meadows and herb gardens, "
+                "cozy thatched cottages, soft natural morning light, linen and lace textures, "
+                "foraging and handmade craft elements, muted sage green and cream palette, "
+                "nostalgic slow-living romanticism."
+            ),
+            "cyberpunk neon": (
+                "Cyberpunk neon aesthetic: rain-slicked neon-lit urban dystopia, holographic advertisements, "
+                "magenta and cyan neon reflections on wet pavement, dense vertical cityscape, "
+                "cybernetic implants and tech-wear fashion, deep shadow with intense neon contrast, "
+                "Blade Runner 2049 or Ghost in the Shell visual reference."
+            ),
+            "lo-fi aesthetic": (
+                "Lo-Fi aesthetic: soft warm study room atmosphere, analog grain and slight blur, "
+                "cozy indoor lighting with warm lamp glow, retro cassette and vinyl record elements, "
+                "muted earth-tone color palette, nostalgic 90s feel, "
+                "relaxed introspective mood, simple everyday objects."
+            ),
+            "solarpunk": (
+                "Solarpunk aesthetic: optimistic ecological utopia, solar panels integrated into lush green architecture, "
+                "community gardens on skyscraper terraces, warm golden sunlight, "
+                "diverse community celebration, natural materials blended with clean technology, "
+                "vibrant tropical plant life, hopeful sustainable future vision."
+            ),
+            "witchcore": (
+                "Witchcore aesthetic: dark enchanted forest or candlelit apothecary interior, "
+                "dried herbs and spell jars, moonlight filtering through ancient trees, "
+                "deep jewel tones of purple, forest green and midnight blue, "
+                "mystical occult symbolism, moss-covered stone, ethereal fog, "
+                "folk magic and botanical witchcraft atmosphere."
+            ),
         }
         style_art_guidance = ""
         if request.style:

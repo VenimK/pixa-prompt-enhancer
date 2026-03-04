@@ -366,55 +366,6 @@
                                 </div>
                             </div>
 
-                            <div class="enhancement-panel">
-                                <div class="panel-header">
-                                    <h3>Enhancement Settings</h3>
-                                    <button id="toggle-settings" class="btn btn-ghost btn-sm">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M19 9l-7 7-7-7"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div class="panel-content" id="settings-panel">
-                                    <div class="settings-grid">
-                                        <div class="setting-group">
-                                            <label>Style</label>
-                                            <select id="settings-style-select">
-                                                <option value="">Auto</option>
-                                                <option value="photorealistic">Photorealistic</option>
-                                                <option value="artistic">Artistic</option>
-                                                <option value="minimalist">Minimalist</option>
-                                            </select>
-                                        </div>
-                                        <div class="setting-group">
-                                            <label>Lighting</label>
-                                            <select id="settings-lighting-select">
-                                                <option value="">Auto</option>
-                                                <option value="natural">Natural</option>
-                                                <option value="studio">Studio</option>
-                                                <option value="dramatic">Dramatic</option>
-                                            </select>
-                                        </div>
-                                        <div class="setting-group">
-                                            <label>Cinematography</label>
-                                            <select id="settings-cinematography-select">
-                                                <option value="">Auto</option>
-                                                <option value="wide shot">Wide Shot</option>
-                                                <option value="close-up">Close-up</option>
-                                                <option value="portrait">Portrait</option>
-                                            </select>
-                                        </div>
-                                        <div class="setting-group">
-                                            <label>Motion</label>
-                                            <select id="motion-select">
-                                                <option value="Static">Static</option>
-                                                <option value="subtle">Subtle</option>
-                                                <option value="dynamic">Dynamic</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -474,6 +425,29 @@
                     </div>
                 </div>
             </div>
+
+                <!-- Art Style (Fooocus styles) Picker -->
+                <div class="card" style="margin-top: 16px;">
+                    <div class="card-header">
+                        <h3 class="card-title">Art Style (Fooocus)</h3>
+                        <div class="style-preview">No style selected</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="style-search">
+                            <input type="text" id="style-search-input" placeholder="🔍 Search styles..." autocomplete="off">
+                            <div class="style-search-results"></div>
+                        </div>
+                        <div class="style-categories">
+                            <!-- Categories will be populated by JavaScript -->
+                        </div>
+                        <div class="style-actions" style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button id="apply-style" class="btn btn-primary">Apply Style</button>
+                            <button id="remove-styles" class="btn btn-warning" style="display: none;">Remove Styles</button>
+                            <button id="clear-style" class="btn btn-outline">Clear Selection</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 3D Model Type Selector (shown when promptType=3D) -->
                 <div class="selector" id="model-type-selector-container" style="display: none;">
                     <label for="model-type-select">3D Model Type:</label>
@@ -485,25 +459,7 @@
                         <option value="props">Props (small accessories/items)</option>
                     </select>
                 </div>
-                <!-- Style Selector -->
-                <div class="style-selector">
-                    <div class="style-header">
-                        <h3>Art Style</h3>
-                        <div class="style-preview">No style selected</div>
-                    </div>
-                    <div class="style-search">
-                        <input type="text" id="style-search-input" placeholder="🔍 Search styles..." autocomplete="off">
-                        <div class="style-search-results"></div>
-                    </div>
-                    <div class="style-categories">
-                        <!-- Categories will be populated by JavaScript -->
-                    </div>
-                    <div class="style-actions">
-                        <button id="apply-style" class="btn btn-primary">Apply Style</button>
-                        <button id="remove-styles" class="btn btn-warning" style="display: none;">Remove Styles</button>
-                        <button id="clear-style" class="btn btn-outline">Clear Selection</button>
-                    </div>
-                </div>
+
 
                 <!-- Wrapping Preset (A → B) -->
                 <div class="card" id="wrapping-preset" style="margin-top: 16px;">
@@ -796,6 +752,7 @@
                         </div>
                     </div>
                 </div>
+        <div class="card" style="padding: 16px;">
         <div class="selectors-container">
             <div class="selector" id="text-emphasis-container">
                 <label for="text-emphasis-input">Text to Emphasize:</label>
@@ -1113,6 +1070,16 @@
                         <option value="Polaroid">Polaroid</option>
                         <option value="Retro">Retro</option>
                     </optgroup>
+                    <optgroup label="Photography Niches">
+                        <option value="Macro Photography">Macro Photography</option>
+                        <option value="Street Photography">Street Photography</option>
+                        <option value="Astrophotography">Astrophotography</option>
+                        <option value="Underwater Photography">Underwater Photography</option>
+                        <option value="Golden Hour Photography">Golden Hour Photography</option>
+                        <option value="Blue Hour Photography">Blue Hour Photography</option>
+                        <option value="Tilt-Shift Photography">Tilt-Shift Photography</option>
+                        <option value="Long Exposure">Long Exposure</option>
+                    </optgroup>
                     <optgroup label="Art Styles">
                         <option value="Fine Art">Fine Art</option>
                         <option value="Impressionist">Impressionist</option>
@@ -1124,7 +1091,37 @@
                         <option value="Abstract">Abstract</option>
                         <option value="Digital Art">Digital Art</option>
                     </optgroup>
+                    <optgroup label="Art Movements">
+                        <option value="Art Nouveau">Art Nouveau</option>
+                        <option value="Bauhaus">Bauhaus</option>
+                        <option value="Ukiyo-e">Ukiyo-e</option>
+                        <option value="Watercolor">Watercolor</option>
+                        <option value="Oil Painting">Oil Painting</option>
+                        <option value="Ink Wash">Ink Wash</option>
+                        <option value="Pointillism">Pointillism</option>
+                        <option value="Art Deco">Art Deco</option>
+                    </optgroup>
+                    <optgroup label="CGI &amp; Render Engines">
+                        <option value="Unreal Engine 5">Unreal Engine 5</option>
+                        <option value="Octane Render">Octane Render</option>
+                        <option value="Blender Cycles">Blender Cycles</option>
+                        <option value="Arnold Render">Arnold Render</option>
+                        <option value="V-Ray">V-Ray</option>
+                        <option value="Midjourney">Midjourney</option>
+                        <option value="Flux Aesthetic">Flux Aesthetic</option>
+                    </optgroup>
+                    <optgroup label="Pop Culture &amp; Aesthetic">
+                        <option value="Vaporwave">Vaporwave</option>
+                        <option value="Retrofuturism">Retrofuturism</option>
+                        <option value="Dark Academia">Dark Academia</option>
+                        <option value="Cottagecore">Cottagecore</option>
+                        <option value="Cyberpunk Neon">Cyberpunk Neon</option>
+                        <option value="Lo-Fi Aesthetic">Lo-Fi Aesthetic</option>
+                        <option value="Solarpunk">Solarpunk</option>
+                        <option value="Witchcore">Witchcore</option>
+                    </optgroup>
                     <optgroup label="3D &amp; Animated">
+                        <option value="3D Pop-Out Pencil Sketch">3D Pop-Out Pencil Sketch</option>
                         <option value="Pixar 3D">Pixar 3D</option>
                         <option value="Disney 3D">Disney 3D</option>
                         <option value="DreamWorks 3D">DreamWorks 3D</option>
@@ -1229,6 +1226,7 @@
                 </select>
             </div>
         </div>
+        </div>
         <button id="enhance-button">Enhance Prompt</button>
 
         <div id="result-container" style="display: none;">
@@ -1277,6 +1275,7 @@
                     </div>
                 </div>
             </div>
+        </div>
         </main>
         
         <aside class="sidebar">
