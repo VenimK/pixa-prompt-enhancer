@@ -10,22 +10,41 @@ import re
 import subprocess
 import shutil
 import os
+import sys
 import time
-# Compatibility layer: try new google.genai first, fall back to old google.generativeai
+# Enhanced compatibility layer for Python 3.14
 USE_NEW_GENAI = False
+genai_new = None
+genai_old = None
+
+# Try new google.genai package (preferred for Python 3.14+)
 try:
     import google.genai as genai_new
     USE_NEW_GENAI = True
 except ImportError:
-    genai_new = None
+    pass
 
+# Try google.generativeai (fallback for older versions)
 try:
     import google.generativeai as genai_old
 except ImportError:
-    genai_old = None
+    pass
 
-if not USE_NEW_GENAI and genai_old is None:
-    raise ImportError("Neither google.genai nor google.generativeai is installed. Please install one of them.")
+# Enhanced error handling for Python 3.14
+if not genai_new and not genai_old:
+    python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+    if python_version >= "3.14":
+        raise ImportError(
+            f"Python {python_version} detected. Please install google-genai:\n"
+            "pip install google-genai\n"
+            "If issues persist, try: pip install --upgrade google-genai"
+        )
+    else:
+        raise ImportError(
+            "Google GenAI package not found. Please install:\n"
+            "pip install google-genai\n"
+            "For older Python versions: pip install google-generativeai"
+        )
 import PIL.Image
 from datetime import datetime
 from dotenv import load_dotenv
@@ -230,6 +249,12 @@ log_debug(f"Gemini model: {GEMINI_MODEL}")
 if "GOOGLE_API_KEY" in os.environ:
     if USE_NEW_GENAI and genai_new:
         genai_client = genai_new.Client(api_key=os.environ["GOOGLE_API_KEY"])
+        # Create model using new API
+        try:
+            genai_model = genai_client.models.get(model=GEMINI_MODEL)
+        except Exception:
+            # Fallback to creating model reference
+            genai_model = genai_client
         log_debug("Using google.genai (new package)")
     elif genai_old:
         genai_old.configure(api_key=os.environ["GOOGLE_API_KEY"])
@@ -266,6 +291,7 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
                     return f"Error loading image(s): {img_error}. Please check the image file format and try again."
                 try:
                     start_time = time.time()
+                    # New API: use generate_content method
                     response = genai_client.models.generate_content(
                         model=model_name,
                         contents=[prompt, *images]
@@ -280,7 +306,7 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
                 try:
                     image = PIL.Image.open(image_path)
                 except Exception as img_error:
-                    return f"Error loading image: {img_error}. Please check the image file format and try again."
+                    return f"Error loading image: {img_error}. Please check the image format and try again."
                 try:
                     start_time = time.time()
                     response = genai_client.models.generate_content(
@@ -300,7 +326,7 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
                         model=model_name,
                         contents=prompt
                     )
-                    log_debug(f"Gemini API call (text) took {time.time() - start_time:.2f}s")
+                    log_debug(f"Gemini API call (text only) took {time.time() - start_time:.2f}s")
                     if hasattr(response, "text") and response.text:
                         return response.text
                     return "Error: Gemini API returned empty response. Please try again."

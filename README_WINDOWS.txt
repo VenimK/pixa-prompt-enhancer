@@ -53,7 +53,7 @@ If you prefer manual control:
 
 WHAT HAPPENS AUTOMATICALLY:
 ---------------------------
-- Downloads Python 3.11.7 embeddable package (~25MB)
+- Downloads Python 3.11+ (Python 3.14 supported) embeddable package (~25MB)
 - Extracts to portable_python/ folder
 - Configures Python for package installation
 - Installs pip package manager

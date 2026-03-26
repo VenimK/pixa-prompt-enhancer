@@ -1,0 +1,591 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2024-03-26T06:00:00Z",
+  "categories": {
+    "photography": {
+      "name": "Photography",
+      "description": "Professional photography templates for various subjects",
+      "icon": "camera",
+      "color": "#10b981"
+    },
+    "art": {
+      "name": "Art Styles",
+      "description": "Digital and traditional art style templates",
+      "icon": "palette",
+      "color": "#8b5cf6"
+    },
+    "professional": {
+      "name": "Professional",
+      "description": "Business and commercial templates",
+      "icon": "briefcase",
+      "color": "#3b82f6"
+    },
+    "technical": {
+      "name": "Technical",
+      "description": "Technical and specialized templates",
+      "icon": "cpu",
+      "color": "#f59e0b"
+    },
+    "creative": {
+      "name": "Creative",
+      "description": "Creative and artistic templates",
+      "icon": "sparkles",
+      "color": "#ec4899"
+    }
+  },
+  "templates": {
+    "photography": {
+      "portrait": {
+        "id": "portrait",
+        "name": "Portrait Photography",
+        "category": "photography",
+        "description": "Professional portrait photography with optimal lighting and composition",
+        "tags": ["portrait", "people", "photography", "professional"],
+        "prompt": "Professional portrait photography of {subject}, {lighting} lighting, {composition} composition, {mood} mood, {background} background, shot on {camera} with {lens} lens, {style} style",
+        "variables": [
+          {
+            "name": "subject",
+            "label": "Subject",
+            "type": "text",
+            "placeholder": "e.g., a business professional, a young woman, an elderly gentleman",
+            "required": true
+          },
+          {
+            "name": "lighting",
+            "label": "Lighting",
+            "type": "select",
+            "options": ["soft natural", "dramatic studio", "golden hour", "rembrandt", "butterfly"],
+            "default": "soft natural"
+          },
+          {
+            "name": "composition",
+            "label": "Composition",
+            "type": "select",
+            "options": ["headshot", "medium shot", "full body", "environmental portrait"],
+            "default": "medium shot"
+          },
+          {
+            "name": "mood",
+            "label": "Mood",
+            "type": "select",
+            "options": ["professional", "friendly", "serious", "casual", "elegant"],
+            "default": "professional"
+          },
+          {
+            "name": "background",
+            "label": "Background",
+            "type": "select",
+            "options": ["studio backdrop", "office environment", "outdoor blurred", "minimalist", "textured wall"],
+            "default": "studio backdrop"
+          },
+          {
+            "name": "camera",
+            "label": "Camera",
+            "type": "select",
+            "options": ["Canon EOS R5", "Sony A7R IV", "Nikon Z9", "Fujifilm GFX100S"],
+            "default": "Canon EOS R5"
+          },
+          {
+            "name": "lens",
+            "label": "Lens",
+            "type": "select",
+            "options": ["85mm f/1.4", "50mm f/1.2", "70-200mm f/2.8", "105mm f/2.8"],
+            "default": "85mm f/1.4"
+          },
+          {
+            "name": "style",
+            "label": "Style",
+            "type": "select",
+            "options": ["corporate headshot", "environmental portrait", "candid", "formal", "artistic"],
+            "default": "corporate headshot"
+          }
+        ],
+        "examples": [
+          "Professional portrait photography of a CEO, soft natural lighting, medium shot composition, professional mood, office environment background, shot on Canon EOS R5 with 85mm f/1.4 lens, corporate headshot style"
+        ]
+      },
+      "landscape": {
+        "id": "landscape",
+        "name": "Landscape Photography",
+        "category": "photography",
+        "description": "Stunning landscape photography with natural lighting and dramatic compositions",
+        "tags": ["landscape", "nature", "photography", "outdoor"],
+        "prompt": "Breathtaking landscape photography of {location}, {time_of_day} lighting, {weather} weather, {composition} composition, {atmosphere} atmosphere, shot on {camera} with {lens} lens, {style} style",
+        "variables": [
+          {
+            "name": "location",
+            "label": "Location",
+            "type": "text",
+            "placeholder": "e.g., mountain range, coastal cliffs, forest path, desert dunes",
+            "required": true
+          },
+          {
+            "name": "time_of_day",
+            "label": "Time of Day",
+            "type": "select",
+            "options": ["golden hour", "blue hour", "midday", "sunrise", "sunset", "night"],
+            "default": "golden hour"
+          },
+          {
+            "name": "weather",
+            "label": "Weather",
+            "type": "select",
+            "options": ["clear skies", "partly cloudy", "dramatic clouds", "foggy", "stormy"],
+            "default": "clear skies"
+          },
+          {
+            "name": "composition",
+            "label": "Composition",
+            "type": "select",
+            "options": ["wide angle", "panoramic", "telephoto detail", "leading lines", "foreground interest"],
+            "default": "wide angle"
+          },
+          {
+            "name": "atmosphere",
+            "label": "Atmosphere",
+            "type": "select",
+            "options": ["serene", "dramatic", "mystical", "vibrant", "moody"],
+            "default": "serene"
+          },
+          {
+            "name": "camera",
+            "label": "Camera",
+            "type": "select",
+            "options": ["Canon EOS R5", "Sony A7R IV", "Nikon Z9", "Fujifilm GFX100S"],
+            "default": "Canon EOS R5"
+          },
+          {
+            "name": "lens",
+            "label": "Lens",
+            "type": "select",
+            "options": ["16-35mm f/2.8", "24-70mm f/2.8", "70-200mm f/2.8", "100-400mm f/5.6"],
+            "default": "16-35mm f/2.8"
+          },
+          {
+            "name": "style",
+            "label": "Style",
+            "type": "select",
+            "options": ["national geographic", "fine art", "documentary", "dramatic", "minimalist"],
+            "default": "national geographic"
+          }
+        ],
+        "examples": [
+          "Breathtaking landscape photography of mountain range, golden hour lighting, clear skies weather, wide angle composition, serene atmosphere, shot on Canon EOS R5 with 16-35mm f/2.8 lens, national geographic style"
+        ]
+      },
+      "product": {
+        "id": "product",
+        "name": "Product Photography",
+        "category": "photography",
+        "description": "Clean, professional product photography for marketing and e-commerce",
+        "tags": ["product", "commercial", "photography", "marketing"],
+        "prompt": "Professional product photography of {product}, {lighting} lighting, {background} background, {composition} composition, {style} style, {purpose} purpose, shot on {camera} with {lens} lens",
+        "variables": [
+          {
+            "name": "product",
+            "label": "Product",
+            "type": "text",
+            "placeholder": "e.g., luxury watch, electronic device, cosmetic product, food item",
+            "required": true
+          },
+          {
+            "name": "lighting",
+            "label": "Lighting",
+            "type": "select",
+            "options": ["soft studio", "dramatic", "natural window", "ring light", "backlit"],
+            "default": "soft studio"
+          },
+          {
+            "name": "background",
+            "label": "Background",
+            "type": "select",
+            "options": ["white seamless", "black seamless", "gradient", "textured", "lifestyle"],
+            "default": "white seamless"
+          },
+          {
+            "name": "composition",
+            "label": "Composition",
+            "type": "select",
+            "options": ["studio shot", "45-degree angle", "flat lay", "hero shot", "detail shot"],
+            "default": "studio shot"
+          },
+          {
+            "name": "style",
+            "label": "Style",
+            "type": "select",
+            "options": ["commercial", "lifestyle", "minimalist", "dramatic", "artistic"],
+            "default": "commercial"
+          },
+          {
+            "name": "purpose",
+            "label": "Purpose",
+            "type": "select",
+            "options": ["e-commerce", "advertisement", "catalog", "social media", "brand"],
+            "default": "e-commerce"
+          },
+          {
+            "name": "camera",
+            "label": "Camera",
+            "type": "select",
+            "options": ["Canon EOS R5", "Sony A7R IV", "Nikon Z9", "Fujifilm GFX100S"],
+            "default": "Canon EOS R5"
+          },
+          {
+            "name": "lens",
+            "label": "Lens",
+            "type": "select",
+            "options": ["100mm macro", "50mm f/1.4", "24-70mm f/2.8", "85mm f/1.8"],
+            "default": "100mm macro"
+          }
+        ],
+        "examples": [
+          "Professional product photography of luxury watch, soft studio lighting, white seamless background, studio shot composition, commercial style, e-commerce purpose, shot on Canon EOS R5 with 100mm macro lens"
+        ]
+      }
+    },
+    "art": {
+      "digital_art": {
+        "id": "digital_art",
+        "name": "Digital Art",
+        "category": "art",
+        "description": "Digital artwork with various styles and techniques",
+        "tags": ["digital", "art", "illustration", "creative"],
+        "prompt": "Digital art of {subject} in {style} style, {medium} medium, {color_scheme} color scheme, {composition} composition, {mood} mood, {detail_level} detail level, {artist_influence} influence",
+        "variables": [
+          {
+            "name": "subject",
+            "label": "Subject",
+            "type": "text",
+            "placeholder": "e.g., fantasy character, futuristic city, abstract concept",
+            "required": true
+          },
+          {
+            "name": "style",
+            "label": "Art Style",
+            "type": "select",
+            "options": ["concept art", "illustration", "painterly", "graphic design", "anime", "realistic"],
+            "default": "concept art"
+          },
+          {
+            "name": "medium",
+            "label": "Medium",
+            "type": "select",
+            "options": ["digital painting", "3D render", "vector art", "photo manipulation", "mixed media"],
+            "default": "digital painting"
+          },
+          {
+            "name": "color_scheme",
+            "label": "Color Scheme",
+            "type": "select",
+            "options": ["vibrant", "monochromatic", "pastel", "neon", "earth tones", "complementary"],
+            "default": "vibrant"
+          },
+          {
+            "name": "composition",
+            "label": "Composition",
+            "type": "select",
+            "options": ["centered", "rule of thirds", "dynamic", "symmetrical", "asymmetrical"],
+            "default": "rule of thirds"
+          },
+          {
+            "name": "mood",
+            "label": "Mood",
+            "type": "select",
+            "options": ["energetic", "calm", "mysterious", "playful", "dramatic", "peaceful"],
+            "default": "energetic"
+          },
+          {
+            "name": "detail_level",
+            "label": "Detail Level",
+            "type": "select",
+            "options": ["minimalist", "simple", "detailed", "highly detailed", "intricate"],
+            "default": "detailed"
+          },
+          {
+            "name": "artist_influence",
+            "label": "Artist Influence",
+            "type": "text",
+            "placeholder": "e.g., Studio Ghibli, Moebius, H.R. Giger, Yoji Shinkawa",
+            "required": false
+          }
+        ],
+        "examples": [
+          "Digital art of fantasy character in concept art style, digital painting medium, vibrant color scheme, rule of thirds composition, energetic mood, detailed detail level, Studio Ghibli influence"
+        ]
+      },
+      "character_design": {
+        "id": "character_design",
+        "name": "Character Design",
+        "category": "art",
+        "description": "Character design for games, animation, and illustration",
+        "tags": ["character", "design", "concept", "game art"],
+        "prompt": "Character design of {character_type}, {art_style} style, {personality} personality, {clothing} clothing, {setting} setting, {color_palette} color palette, {pose} pose, {expression} expression",
+        "variables": [
+          {
+            "name": "character_type",
+            "label": "Character Type",
+            "type": "text",
+            "placeholder": "e.g., fantasy warrior, sci-fi explorer, magical creature, everyday person",
+            "required": true
+          },
+          {
+            "name": "art_style",
+            "label": "Art Style",
+            "type": "select",
+            "options": ["anime", "cartoon", "realistic", "stylized", "pixel art", "concept art"],
+            "default": "concept art"
+          },
+          {
+            "name": "personality",
+            "label": "Personality",
+            "type": "select",
+            "options": ["brave", "mysterious", "cheerful", "serious", "playful", "wise"],
+            "default": "brave"
+          },
+          {
+            "name": "clothing",
+            "label": "Clothing",
+            "type": "select",
+            "options": ["armor", "casual", "formal", "fantasy", "futuristic", "traditional"],
+            "default": "fantasy"
+          },
+          {
+            "name": "setting",
+            "label": "Setting",
+            "type": "select",
+            "options": ["fantasy world", "sci-fi future", "modern city", "historical", "post-apocalyptic"],
+            "default": "fantasy world"
+          },
+          {
+            "name": "color_palette",
+            "label": "Color Palette",
+            "type": "select",
+            "options": ["warm tones", "cool tones", "monochromatic", "vibrant", "pastel", "earth tones"],
+            "default": "vibrant"
+          },
+          {
+            "name": "pose",
+            "label": "Pose",
+            "type": "select",
+            "options": ["action pose", "standing", "sitting", "dynamic", "relaxed", "battle ready"],
+            "default": "action pose"
+          },
+          {
+            "name": "expression",
+            "label": "Expression",
+            "type": "select",
+            "options": ["determined", "smiling", "serious", "surprised", "thoughtful", "intense"],
+            "default": "determined"
+          }
+        ],
+        "examples": [
+          "Character design of fantasy warrior, concept art style, brave personality, armor clothing, fantasy world setting, vibrant color palette, action pose, determined expression"
+        ]
+      }
+    },
+    "professional": {
+      "marketing": {
+        "id": "marketing",
+        "name": "Marketing Materials",
+        "category": "professional",
+        "description": "Professional marketing and advertising visuals",
+        "tags": ["marketing", "advertising", "business", "commercial"],
+        "prompt": "Professional marketing visual for {product_service}, {industry} industry, {target_audience} audience, {brand_tone} tone, {visual_style} style, {color_scheme} color scheme, {composition} composition",
+        "variables": [
+          {
+            "name": "product_service",
+            "label": "Product/Service",
+            "type": "text",
+            "placeholder": "e.g., software application, consulting service, consumer product",
+            "required": true
+          },
+          {
+            "name": "industry",
+            "label": "Industry",
+            "type": "select",
+            "options": ["technology", "healthcare", "finance", "retail", "education", "entertainment"],
+            "default": "technology"
+          },
+          {
+            "name": "target_audience",
+            "label": "Target Audience",
+            "type": "select",
+            "options": ["young professionals", "families", "businesses", "students", "seniors"],
+            "default": "young professionals"
+          },
+          {
+            "name": "brand_tone",
+            "label": "Brand Tone",
+            "type": "select",
+            "options": ["professional", "friendly", "innovative", "luxury", "approachable", "cutting-edge"],
+            "default": "professional"
+          },
+          {
+            "name": "visual_style",
+            "label": "Visual Style",
+            "type": "select",
+            "options": ["corporate", "modern", "minimalist", "bold", "elegant", "tech-focused"],
+            "default": "modern"
+          },
+          {
+            "name": "color_scheme",
+            "label": "Color Scheme",
+            "type": "select",
+            "options": ["blue corporate", "green natural", "red energetic", "monochrome", "vibrant", "pastel professional"],
+            "default": "blue corporate"
+          },
+          {
+            "name": "composition",
+            "label": "Composition",
+            "type": "select",
+            "options": ["centered focus", "rule of thirds", "dynamic", "balanced", "hierarchical"],
+            "default": "centered focus"
+          }
+        ],
+        "examples": [
+          "Professional marketing visual for software application, technology industry, young professionals audience, professional tone, modern style, blue corporate color scheme, centered focus composition"
+        ]
+      },
+      "social_media": {
+        "id": "social_media",
+        "name": "Social Media Graphics",
+        "category": "professional",
+        "description": "Eye-catching social media graphics for various platforms",
+        "tags": ["social media", "graphics", "digital marketing", "engagement"],
+        "prompt": "Social media graphic for {platform}, {content_type} content, {brand_style} brand style, {visual_elements} elements, {color_scheme} color scheme, {text_overlay} text overlay, {engagement_goal} goal",
+        "variables": [
+          {
+            "name": "platform",
+            "label": "Platform",
+            "type": "select",
+            "options": ["Instagram", "Facebook", "Twitter", "LinkedIn", "TikTok", "Pinterest"],
+            "default": "Instagram"
+          },
+          {
+            "name": "content_type",
+            "label": "Content Type",
+            "type": "select",
+            "options": ["product announcement", "educational post", "behind the scenes", "user testimonial", "event promotion"],
+            "default": "product announcement"
+          },
+          {
+            "name": "brand_style",
+            "label": "Brand Style",
+            "type": "select",
+            "options": ["professional", "casual", "playful", "luxury", "techy", "artistic"],
+            "default": "professional"
+          },
+          {
+            "name": "visual_elements",
+            "label": "Visual Elements",
+            "type": "select",
+            "options": ["photography", "illustration", "typography", "infographic", "mixed media"],
+            "default": "photography"
+          },
+          {
+            "name": "color_scheme",
+            "label": "Color Scheme",
+            "type": "select",
+            "options": ["brand colors", "trending colors", "monochrome", "vibrant", "pastel", "seasonal"],
+            "default": "brand colors"
+          },
+          {
+            "name": "text_overlay",
+            "label": "Text Overlay",
+            "type": "select",
+            "options": ["bold headline", "minimal text", "detailed caption", "quote", "call to action"],
+            "default": "bold headline"
+          },
+          {
+            "name": "engagement_goal",
+            "label": "Engagement Goal",
+            "type": "select",
+            "options": ["likes", "shares", "comments", "clicks", "saves", "profile visits"],
+            "default": "engagement"
+          }
+        ],
+        "examples": [
+          "Social media graphic for Instagram, product announcement content, professional brand style, photography visual elements, brand colors color scheme, bold headline text overlay, engagement goal"
+        ]
+      }
+    },
+    "technical": {
+      "3d_rendering": {
+        "id": "3d_rendering",
+        "name": "3D Rendering",
+        "category": "technical",
+        "description": "Professional 3D renders for products, architecture, and visualization",
+        "tags": ["3d", "rendering", "visualization", "technical"],
+        "prompt": "3D render of {subject}, {render_style} style, {lighting_setup} lighting, {material} materials, {environment} environment, {camera_angle} camera angle, {resolution} resolution, {purpose} purpose",
+        "variables": [
+          {
+            "name": "subject",
+            "label": "Subject",
+            "type": "text",
+            "placeholder": "e.g., architectural building, product prototype, mechanical part",
+            "required": true
+          },
+          {
+            "name": "render_style",
+            "label": "Render Style",
+            "type": "select",
+            "options": ["photorealistic", "stylized", "technical", "artistic", "clay render", "wireframe"],
+            "default": "photorealistic"
+          },
+          {
+            "name": "lighting_setup",
+            "label": "Lighting Setup",
+            "type": "select",
+            "options": ["studio lighting", "natural lighting", "dramatic lighting", "HDRI lighting", "ambient occlusion"],
+            "default": "studio lighting"
+          },
+          {
+            "name": "material",
+            "label": "Materials",
+            "type": "select",
+            "options": ["realistic materials", "stylized materials", "metallic", "glass", "wood", "plastic"],
+            "default": "realistic materials"
+          },
+          {
+            "name": "environment",
+            "label": "Environment",
+            "type": "select",
+            "options": ["studio", "real world", "abstract", "interior", "exterior", "virtual"],
+            "default": "studio"
+          },
+          {
+            "name": "camera_angle",
+            "label": "Camera Angle",
+            "type": "select",
+            "options": ["eye level", "low angle", "high angle", "dutch angle", "close-up", "wide shot"],
+            "default": "eye level"
+          },
+          {
+            "name": "resolution",
+            "label": "Resolution",
+            "type": "select",
+            "options": ["HD", "Full HD", "4K", "8K", "print ready"],
+            "default": "4K"
+          },
+          {
+            "name": "purpose",
+            "label": "Purpose",
+            "type": "select",
+            "options": ["product visualization", "architectural visualization", "technical illustration", "marketing", "presentation"],
+            "default": "product visualization"
+          }
+        ],
+        "examples": [
+          "3D render of architectural building, photorealistic style, studio lighting, realistic materials, exterior environment, eye level camera angle, 4K resolution, architectural visualization purpose"
+        ]
+      }
+    }
+  },
+  "userTemplates": {},
+  "settings": {
+    "allowCustomTemplates": true,
+    "templateSharing": true,
+    "maxUserTemplates": 50,
+    "autoSave": true
+  }
+}

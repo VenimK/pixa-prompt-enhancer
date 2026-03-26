@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
-google-genai
+google-genai>=0.3.0
 Pillow
 python-multipart
 python-dotenv

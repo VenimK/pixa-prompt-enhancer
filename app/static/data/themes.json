@@ -1,0 +1,365 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2024-03-26T06:00:00Z",
+  "categories": {
+    "professional": {
+      "name": "Professional",
+      "description": "Clean, business-oriented themes for professional environments",
+      "icon": "briefcase"
+    },
+    "creative": {
+      "name": "Creative",
+      "description": "Vibrant, artistic themes for creative professionals",
+      "icon": "palette"
+    },
+    "nature": {
+      "name": "Nature",
+      "description": "Calming, nature-inspired color palettes",
+      "icon": "leaf"
+    },
+    "warm": {
+      "name": "Warm",
+      "description": "Cozy, warm-toned themes for comfort",
+      "icon": "sun"
+    },
+    "cool": {
+      "name": "Cool",
+      "description": "Refreshing, cool-toned themes",
+      "icon": "snowflake"
+    },
+    "minimal": {
+      "name": "Minimal",
+      "description": "Clean, minimalist themes for focus",
+      "icon": "circle"
+    },
+    "futuristic": {
+      "name": "Futuristic",
+      "description": "Modern, sci-fi inspired themes",
+      "icon": "rocket"
+    },
+    "vintage": {
+      "name": "Vintage",
+      "description": "Retro, nostalgic themes",
+      "icon": "clock"
+    },
+    "custom": {
+      "name": "Custom",
+      "description": "User-created custom themes",
+      "icon": "user"
+    }
+  },
+  "themes": {
+    "professional-blue": {
+      "id": "professional-blue",
+      "name": "Professional Blue",
+      "category": "professional",
+      "description": "Classic blue theme perfect for business and professional use",
+      "preview": {
+        "primary": "#4f46e5",
+        "background": "#f9fafb",
+        "surface": "#ffffff"
+      },
+      "colors": {
+        "primary": "#4f46e5",
+        "primaryHover": "#4338ca",
+        "primaryLight": "#818cf8",
+        "success": "#10b981",
+        "warning": "#f59e0b",
+        "error": "#ef4444",
+        "background": "#f9fafb",
+        "surface": "#ffffff",
+        "text": "#111827",
+        "textSecondary": "#374151",
+        "border": "#e5e7eb"
+      },
+      "fonts": {
+        "primary": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto",
+        "mono": "\"Fira Code\", \"Monaco\", \"Cascadia Code\", monospace"
+      },
+      "spacing": {
+        "compact": 0.8,
+        "normal": 1,
+        "spacious": 1.2
+      },
+      "features": ["darkMode", "customizable"],
+      "popularity": 95
+    },
+    "creative-purple": {
+      "id": "creative-purple",
+      "name": "Creative Purple",
+      "category": "creative",
+      "description": "Vibrant purple theme for creative professionals and artists",
+      "preview": {
+        "primary": "#7c3aed",
+        "background": "#faf5ff",
+        "surface": "#ffffff"
+      },
+      "colors": {
+        "primary": "#7c3aed",
+        "primaryHover": "#6d28d9",
+        "primaryLight": "#a78bfa",
+        "success": "#10b981",
+        "warning": "#f59e0b",
+        "error": "#ef4444",
+        "background": "#faf5ff",
+        "surface": "#ffffff",
+        "text": "#1f2937",
+        "textSecondary": "#4b5563",
+        "border": "#e9d5ff"
+      },
+      "fonts": {
+        "primary": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto",
+        "mono": "\"Fira Code\", \"Monaco\", \"Cascadia Code\", monospace"
+      },
+      "spacing": {
+        "compact": 0.8,
+        "normal": 1,
+        "spacious": 1.2
+      },
+      "features": ["darkMode", "customizable"],
+      "popularity": 85
+    },
+    "nature-green": {
+      "id": "nature-green",
+      "name": "Nature Green",
+      "category": "nature",
+      "description": "Calming green theme inspired by nature",
+      "preview": {
+        "primary": "#059669",
+        "background": "#f0fdf4",
+        "surface": "#ffffff"
+      },
+      "colors": {
+        "primary": "#059669",
+        "primaryHover": "#047857",
+        "primaryLight": "#34d399",
+        "success": "#10b981",
+        "warning": "#f59e0b",
+        "error": "#ef4444",
+        "background": "#f0fdf4",
+        "surface": "#ffffff",
+        "text": "#064e3b",
+        "textSecondary": "#047857",
+        "border": "#bbf7d0"
+      },
+      "fonts": {
+        "primary": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto",
+        "mono": "\"Fira Code\", \"Monaco\", \"Cascadia Code\", monospace"
+      },
+      "spacing": {
+        "compact": 0.8,
+        "normal": 1,
+        "spacious": 1.2
+      },
+      "features": ["darkMode", "customizable"],
+      "popularity": 80
+    },
+    "sunset-orange": {
+      "id": "sunset-orange",
+      "name": "Sunset Orange",
+      "category": "warm",
+      "description": "Warm orange theme reminiscent of sunset colors",
+      "preview": {
+        "primary": "#ea580c",
+        "background": "#fff7ed",
+        "surface": "#ffffff"
+      },
+      "colors": {
+        "primary": "#ea580c",
+        "primaryHover": "#c2410c",
+        "primaryLight": "#fb923c",
+        "success": "#10b981",
+        "warning": "#f59e0b",
+        "error": "#ef4444",
+        "background": "#fff7ed",
+        "surface": "#ffffff",
+        "text": "#1c1917",
+        "textSecondary": "#78350f",
+        "border": "#fed7aa"
+      },
+      "fonts": {
+        "primary": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto",
+        "mono": "\"Fira Code\", \"Monaco\", \"Cascadia Code\", monospace"
+      },
+      "spacing": {
+        "compact": 0.8,
+        "normal": 1,
+        "spacious": 1.2
+      },
+      "features": ["darkMode", "customizable"],
+      "popularity": 75
+    },
+    "ocean-blue": {
+      "id": "ocean-blue",
+      "name": "Ocean Blue",
+      "category": "cool",
+      "description": "Deep ocean blue theme for a refreshing experience",
+      "preview": {
+        "primary": "#0e7490",
+        "background": "#f0f9ff",
+        "surface": "#ffffff"
+      },
+      "colors": {
+        "primary": "#0e7490",
+        "primaryHover": "#0c4a6e",
+        "primaryLight": "#22d3ee",
+        "success": "#10b981",
+        "warning": "#f59e0b",
+        "error": "#ef4444",
+        "background": "#f0f9ff",
+        "surface": "#ffffff",
+        "text": "#0c4a6e",
+        "textSecondary": "#075985",
+        "border": "#bae6fd"
+      },
+      "fonts": {
+        "primary": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto",
+        "mono": "\"Fira Code\", \"Monaco\", \"Cascadia Code\", monospace"
+      },
+      "spacing": {
+        "compact": 0.8,
+        "normal": 1,
+        "spacious": 1.2
+      },
+      "features": ["darkMode", "customizable"],
+      "popularity": 70
+    },
+    "monochrome": {
+      "id": "monochrome",
+      "name": "Monochrome",
+      "category": "minimal",
+      "description": "Clean black and white theme for minimal distraction",
+      "preview": {
+        "primary": "#374151",
+        "background": "#ffffff",
+        "surface": "#f9fafb"
+      },
+      "colors": {
+        "primary": "#374151",
+        "primaryHover": "#1f2937",
+        "primaryLight": "#6b7280",
+        "success": "#059669",
+        "warning": "#d97706",
+        "error": "#dc2626",
+        "background": "#ffffff",
+        "surface": "#f9fafb",
+        "text": "#111827",
+        "textSecondary": "#374151",
+        "border": "#d1d5db"
+      },
+      "fonts": {
+        "primary": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto",
+        "mono": "\"Fira Code\", \"Monaco\", \"Cascadia Code\", monospace"
+      },
+      "spacing": {
+        "compact": 0.8,
+        "normal": 1,
+        "spacious": 1.2
+      },
+      "features": ["darkMode", "customizable"],
+      "popularity": 90
+    },
+    "cyberpunk": {
+      "id": "cyberpunk",
+      "name": "Cyberpunk",
+      "category": "futuristic",
+      "description": "Neon-lit cyberpunk theme with pink and cyan accents",
+      "preview": {
+        "primary": "#ec4899",
+        "background": "#0f0f23",
+        "surface": "#1a1a2e"
+      },
+      "colors": {
+        "primary": "#ec4899",
+        "primaryHover": "#db2777",
+        "primaryLight": "#f472b6",
+        "accent": "#06b6d4",
+        "success": "#10b981",
+        "warning": "#f59e0b",
+        "error": "#ef4444",
+        "background": "#0f0f23",
+        "surface": "#1a1a2e",
+        "text": "#e0e0e0",
+        "textSecondary": "#a0a0a0",
+        "border": "#2a2a4e"
+      },
+      "fonts": {
+        "primary": "\"Orbitron\", \"Inter\", -apple-system, BlinkMacSystemFont",
+        "mono": "\"Fira Code\", \"Monaco\", \"Cascadia Code\", monospace"
+      },
+      "spacing": {
+        "compact": 0.8,
+        "normal": 1,
+        "spacious": 1.2
+      },
+      "features": ["darkMode", "customizable", "neonEffects"],
+      "popularity": 60
+    },
+    "retro": {
+      "id": "retro",
+      "name": "Retro",
+      "category": "vintage",
+      "description": "80s retro theme with pixelated aesthetics",
+      "preview": {
+        "primary": "#dc2626",
+        "background": "#fef2f2",
+        "surface": "#ffffff"
+      },
+      "colors": {
+        "primary": "#dc2626",
+        "primaryHover": "#b91c1c",
+        "primaryLight": "#ef4444",
+        "accent": "#fbbf24",
+        "success": "#10b981",
+        "warning": "#f59e0b",
+        "error": "#ef4444",
+        "background": "#fef2f2",
+        "surface": "#ffffff",
+        "text": "#1f2937",
+        "textSecondary": "#7f1d1d",
+        "border": "#fecaca"
+      },
+      "fonts": {
+        "primary": "\"Press Start 2P\", \"Courier New\", monospace",
+        "mono": "\"Fira Code\", \"Monaco\", \"Cascadia Code\", monospace"
+      },
+      "spacing": {
+        "compact": 0.8,
+        "normal": 1,
+        "spacious": 1.2
+      },
+      "features": ["darkMode", "customizable", "pixelFont"],
+      "popularity": 55
+    }
+  },
+  "defaults": {
+    "theme": "professional-blue",
+    "darkMode": false,
+    "fontSize": "normal",
+    "spacing": "normal",
+    "animations": true
+  },
+  "customization": {
+    "allowedProperties": [
+      "primary",
+      "primaryHover",
+      "primaryLight",
+      "background",
+      "surface",
+      "text",
+      "textSecondary",
+      "border"
+    ],
+    "fontSizeOptions": {
+      "small": 0.875,
+      "normal": 1,
+      "large": 1.125,
+      "xlarge": 1.25
+    },
+    "spacingOptions": {
+      "compact": 0.8,
+      "normal": 1,
+      "spacious": 1.2
+    }
+  }
+}
