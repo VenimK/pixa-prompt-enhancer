@@ -178,6 +178,55 @@ class TestNewStyles:
         # Test mappings are correct
         assert get_backend_key("Masters Of The Universe") == "masters of the universe"
         assert get_display_name("masters of the universe") == "Masters Of The Universe"
+    
+    def test_new_3d_animated_styles(self):
+        """Test the new 3D & Animated styles are properly configured."""
+        # First batch of new styles
+        new_styles_batch1 = [
+            "lego", "minecraft", "roblox", "pokemon", "sonic", "mario",
+            "minions", "fortnite", "overwatch", "genshin impact",
+            "animal crossing", "among us"
+        ]
+        
+        display_names_batch1 = [
+            "Lego", "Minecraft", "Roblox", "Pokemon", "Sonic", "Mario",
+            "Minions", "Fortnite", "Overwatch", "Genshin Impact",
+            "Animal Crossing", "Among Us"
+        ]
+        
+        # Second batch of new styles
+        new_styles_batch2 = [
+            "illumination", "laika", "aardman", "cartoon network", "nickelodeon",
+            "league of legends", "valorant", "apex legends", "halo", "zelda",
+            "final fantasy", "dark souls", "street fighter", "arcane", "castlevania",
+            "cyberpunk edgerunners", "funko pop", "transformers", "voxel art", "motion graphics"
+        ]
+        
+        display_names_batch2 = [
+            "Illumination", "Laika", "Aardman", "Cartoon Network", "Nickelodeon",
+            "League of Legends", "Valorant", "Apex Legends", "Halo", "Zelda",
+            "Final Fantasy", "Dark Souls", "Street Fighter", "Arcane", "Castlevania",
+            "Cyberpunk Edgerunners", "Funko Pop", "Transformers", "Voxel Art", "Motion Graphics"
+        ]
+        
+        # Test all backend keys exist
+        all_new_styles = new_styles_batch1 + new_styles_batch2
+        for style in all_new_styles:
+            assert style in VALID_STYLE_KEYS, f"Backend key '{style}' not found"
+        
+        # Test all display names exist
+        all_display_names = display_names_batch1 + display_names_batch2
+        for display in all_display_names:
+            assert display in VALID_DISPLAY_NAMES, f"Display name '{display}' not found"
+        
+        # Test mappings are correct for both batches
+        for backend_key, display_name in zip(new_styles_batch1, display_names_batch1):
+            assert get_backend_key(display_name) == backend_key
+            assert get_display_name(backend_key) == display_name
+            
+        for backend_key, display_name in zip(new_styles_batch2, display_names_batch2):
+            assert get_backend_key(display_name) == backend_key
+            assert get_display_name(backend_key) == display_name
 
 
 if __name__ == "__main__":

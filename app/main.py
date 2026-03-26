@@ -2686,6 +2686,196 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
                 "He-Man, Skeletor, and Eternia characters with exaggerated expressions and heroic stances, "
                 "retro-futuristic fantasy aesthetic from the original Filmation series."
             ),
+            "lego": (
+                "LEGO style: render characters and scenes as LEGO minifigures and brick constructions, "
+                "distinctive LEGO minifigure proportions with cylindrical head, blocky body, and detachable hands, "
+                "bright primary colors, visible LEGO studs and brick textures, plastic sheen, "
+                "modular construction aesthetic, clean geometric shapes, playful toy-like appearance."
+            ),
+            "minecraft": (
+                "Minecraft blocky style: pixelated cubic voxel aesthetic with visible block edges, "
+                "16-bit pixel art textures, blocky character models with square heads and bodies, "
+                "distinctive Minecraft materials (stone, wood, dirt, diamond blocks), "
+                "isometric perspective potential, vibrant but limited color palette, blocky environment design."
+            ),
+            "roblox": (
+                "Roblox style: blocky avatar aesthetic with simplified geometric shapes, "
+                "plastic-like material appearance, bright saturated colors, "
+                "distinctive Roblox character proportions with blocky limbs and heads, "
+                "clean toy-like surfaces, cartoon game art style, simplified facial features."
+            ),
+            "pokemon": (
+                "Pokémon anime/game style: colorful creature design with expressive eyes, "
+                "anime art style with bold outlines and vibrant colors, "
+                "Pokémon creature anatomy and proportions, battle-ready poses, "
+                "elemental effects (fire, water, electric, grass), cute yet powerful aesthetic."
+            ),
+            "sonic": (
+                "Sonic the Hedgehog style: Sega Genesis/Mega Drive aesthetic with bold colors and clean lines, "
+                "fast dynamic poses with motion blur effects, Sonic character design with spiky blue hair and red shoes, "
+                "looping environments and golden rings, bright primary color scheme, "
+                "high-speed action poses, cartoon video game art style."
+            ),
+            "mario": (
+                "Nintendo Mario style: classic Nintendo game art with vibrant colors and clean design, "
+                "Mario character design with red cap, blue overalls, and mustache, "
+                "blocky mushroom kingdom environments, question mark blocks and power-ups, "
+                "bright cheerful color palette, playful cartoon game aesthetic."
+            ),
+            "minions": (
+                "Illumination Minions style: cute yellow pill-shaped characters with goggles and overalls, "
+                "expressive large eyes and simple facial features, bright yellow and blue color scheme, "
+                "playful mischievous poses, clean CGI animation style, "
+                "toy-like appearance with smooth surfaces and simple geometry."
+            ),
+            "fortnite": (
+                "Fortnite game art style: vibrant cartoon battle royale aesthetic, "
+                "stylized character designs with exaggerated proportions and expressive animations, "
+                "bright saturated colors with cel-shaded rendering, "
+                "dynamic action poses, iconic Fortnite building elements and weapons, "
+                "playful yet competitive game art style."
+            ),
+            "overwatch": (
+                "Overwatch game art style: Blizzard's vibrant hero shooter aesthetic, "
+                "stylized character designs with diverse body types and cultural influences, "
+                "bold color coding for team identification, dynamic action poses with ability effects, "
+                "clean polished CGI appearance, futuristic technology elements."
+            ),
+            "genshin impact": (
+                "Genshin Impact anime style: miHoYo's polished anime RPG aesthetic, "
+                "elegant character designs with flowing hair and detailed costumes, "
+                "vibrant fantasy environments with elemental effects, "
+                "anime cel-shading with soft lighting, magical particle effects and elemental powers."
+            ),
+            "animal crossing": (
+                "Animal Crossing cute style: Nintendo's charming life simulation aesthetic, "
+                "simple cute character designs with rounded features, "
+                "soft pastel color palette, cozy village environments, "
+                "toy-like appearance with clean simple shapes, peaceful and whimsical atmosphere."
+            ),
+            "among us": (
+                "Among Us game style: simple colorful bean-shaped crewmate characters, "
+                "minimalist design with bold primary colors and simple visors, "
+                "clean cartoon game art style, space station environments, "
+                "simplified geometry with bright colors, distinctive crewmate anatomy."
+            ),
+            "illumination": (
+                "Illumination Entertainment style: bright cheerful CGI animation with vibrant colors, "
+                "expressive character designs with large eyes and simple features, "
+                "clean polished surfaces, playful comedic timing, "
+                "family-friendly aesthetic with warm lighting and soft textures."
+            ),
+            "laika": (
+                "Laika stop-motion style: intricate handcrafted stop-motion animation, "
+                "visible texture and materials in puppets and sets, "
+                "slightly eerie dark fantasy atmosphere, detailed practical effects, "
+                "tactile handmade quality with subtle imperfections and organic textures."
+            ),
+            "aardman": (
+                "Aardman Animations style: British claymation with distinctive plasticine characters, "
+                "visible fingerprints and clay texture, warm British humor, "
+                "slightly irregular shapes and movements, charming handmade aesthetic, "
+                "gentle comedic timing with expressive facial features."
+            ),
+            "cartoon network": (
+                "Cartoon Network style: bold modern animation with expressive outlines, "
+                "vibrant saturated colors and dynamic character poses, "
+                "contemporary cartoon aesthetic with geometric shapes, "
+                "energetic action sequences and exaggerated expressions."
+            ),
+            "nickelodeon": (
+                "Nickelodeon style: classic Nick animation with bold colors and outlines, "
+                "playful cartoon aesthetic with exaggerated proportions, "
+                "bright orange branding influence, energetic character designs, "
+                "family-friendly humor with dynamic action poses."
+            ),
+            "league of legends": (
+                "League of Legends style: Riot Games MOBA aesthetic with detailed character designs, "
+                "fantasy champion designs with distinctive silhouettes and abilities, "
+                "vibrant magical effects and elemental powers, "
+                "polished game art style with competitive edge."
+            ),
+            "valorant": (
+                "Valorant style: tactical shooter aesthetic with clean geometric designs, "
+                "futuristic agent characters with tactical gear and abilities, "
+                "bold color coding for team identification, sci-fi environments, "
+                "competitive tactical art style with precision and clarity."
+            ),
+            "apex legends": (
+                "Apex Legends style: fast-paced battle royale aesthetic with dynamic character designs, "
+                "legend characters with unique abilities and personalities, "
+                "futuristic sci-fi environments and weapons, "
+                "high-energy action poses with motion blur effects."
+            ),
+            "halo": (
+                "Halo style: Microsoft's sci-fi military aesthetic with sleek armor designs, "
+                "Master Chief and UNSC military characters, Covenant alien designs, "
+                "futuristic weapons and vehicles, clean sci-fi environments with epic scale."
+            ),
+            "zelda": (
+                "Zelda style: Nintendo's fantasy adventure game art with cel-shaded graphics, "
+                "Link character design with green tunic and Master Sword, "
+                "magical fantasy environments with dungeons and puzzles, "
+                "bright colors with adventure and exploration themes."
+            ),
+            "final fantasy": (
+                "Final Fantasy style: Square Enix JRPG aesthetic with detailed character designs, "
+                "spiky hair and elaborate costumes, fantasy weapons and magic effects, "
+                "epic cinematic scenes with summons and battles, polished anime-inspired art."
+            ),
+            "dark souls": (
+                "Dark Souls style: FromSoftware dark fantasy aesthetic with gothic horror elements, "
+                "detailed armor designs and weapon craftsmanship, "
+                "somber atmospheric environments with dramatic lighting, "
+                "epic boss character designs with imposing presence."
+            ),
+            "street fighter": (
+                "Street Fighter style: classic fighting game art with muscular character designs, "
+                "dynamic fighting poses with energy effects and hadoukens, "
+                "global character diversity with distinct fighting styles, "
+                "bold outlines and vibrant colors with competitive energy."
+            ),
+            "arcane": (
+                "Arcane style: Netflix series aesthetic with painterly textures and detailed environments, "
+                "character designs with emotional depth and complex relationships, "
+                "steampunk technology mixed with magical elements, "
+                "cinematic lighting with rich color palettes and dramatic shadows."
+            ),
+            "castlevania": (
+                "Castlevania style: Netflix anime adaptation with gothic horror aesthetic, "
+                "vampire hunters and demonic creatures with detailed designs, "
+                "dark medieval environments with castles and dungeons, "
+                "dramatic action sequences with supernatural elements."
+            ),
+            "cyberpunk edgerunners": (
+                "Cyberpunk Edgerunners style: Studio Trigger anime with vibrant cyberpunk aesthetic, "
+                "neon-soaked Night City environments with holographic displays, "
+                "cybernetically enhanced characters with glowing implants, "
+                "high-energy action with dynamic camera work and particle effects."
+            ),
+            "funko pop": (
+                "Funko Pop style: vinyl collectible figure aesthetic with simplified proportions, "
+                "distinctive large head and small body design, black beady eyes, "
+                "chibi-style character representations with minimal details, "
+                "collectible toy appearance with smooth plastic surfaces."
+            ),
+            "transformers": (
+                "Transformers style: mechanical robot designs with detailed transformations, "
+                "Autobot and Decepticon characters with vehicle alt modes, "
+                "metallic textures and mechanical parts, sci-fi military aesthetic with epic scale."
+            ),
+            "voxel art": (
+                "Voxel art style: 3D pixel art with cubic voxel building blocks, "
+                "retro gaming aesthetic with visible 3D pixels, "
+                "colorful geometric constructions with depth, "
+                "blocky character models and environments with charming simplicity."
+            ),
+            "motion graphics": (
+                "Motion graphics style: animated design with clean typography and geometric shapes, "
+                "smooth transitions and kinetic typography effects, "
+                "modern graphic design aesthetic with bold colors, "
+                "professional animation style with information visualization elements."
+            ),
         }
         style_art_guidance = ""
         if request.style:
