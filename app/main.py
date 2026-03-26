@@ -136,8 +136,13 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
+# Import style constants
+from app.style_constants import VALID_STYLE_KEYS, is_valid_style
+
 
 # --- Pydantic Models ---
+from pydantic import field_validator
+
 class EnhanceRequest(BaseModel):
     prompt: str
     prompt_type: str  # VEO or WAN2 or Image or 3D or LTX2
@@ -156,6 +161,36 @@ class EnhanceRequest(BaseModel):
     audio_characteristics: dict | None = None  # Structured audio analysis data from /analyze-audio
     movement_level: str | None = None  # LTX-2 movement level: 'static', 'minimal', 'natural', 'expressive', 'dynamic'
     ltx2_style: str | None = None  # LTX-2 video style: 'music_video', 'cinematic', 'artistic', etc.
+    
+    @field_validator('style')
+    @classmethod
+    def validate_style(cls, v):
+        if not isinstance(v, str):
+            raise ValueError('Style must be a string')
+        
+        # Sanitize input
+        v = v.strip()
+        
+        # Check for potentially dangerous content
+        dangerous_patterns = ['<script', 'javascript:', 'data:', 'vbscript:', 'onload=', 'onerror=']
+        v_lower = v.lower()
+        for pattern in dangerous_patterns:
+            if pattern in v_lower:
+                raise ValueError('Style contains invalid content')
+        
+        # Length validation
+        if len(v) > 100:
+            raise ValueError('Style name too long (max 100 characters)')
+        
+        # Validate against known styles (allow empty/auto values)
+        if v_lower not in ("", "none", "auto", "automatic"):
+            if not is_valid_style(v):
+                # Log warning for unknown style but don't raise error to allow flexibility
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Unknown style '{v}' provided - will use fallback handling")
+        
+        return v
     # Audio Integration
     lipsync_intensity: str | None = None  # 'subtle', 'natural', 'exaggerated'
     audio_reactivity: str | None = None  # 'low', 'medium', 'high'
@@ -2396,6 +2431,24 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
                 "vibrant saturated colors, magical soft lighting, smooth hyper-clean surfaces, "
                 "fairy-tale atmosphere. Reference: Frozen, Tangled, Moana."
             ),
+            "cute stylized 3d avatar": (
+                "Render as a cute stylized 3D avatar: large expressive eyes with subtle highlights, smooth rounded facial features, "
+                "soft subsurface skin scattering giving a warm glow, gentle ambient occlusion creating soft shadows, "
+                "clean studio lighting with subtle rim lighting, simplified but appealing proportions, "
+                "physically-based materials with soft textures, warm inviting color palette, "
+                "portrait-style composition focusing on the face, friendly approachable expression, "
+                "modern social media/avatar aesthetic with professional 3D character design quality."
+            ),
+            "real-to-avatar comparison": (
+                "Create an artistic overlay comparison: FOREGROUND shows a cute stylized 3D avatar with large expressive eyes, "
+                "smooth rounded facial features, soft subsurface skin scattering, clean studio lighting, simplified appealing proportions. "
+                "BACKGROUND shows the original reference photograph, softly blurred, faded, and partially transparent, creating a ghost-like "
+                "ethereal layer behind the avatar. The real person should be visible through the avatar as a subtle shadow or reflection, "
+                "maintaining the same pose and position as the avatar. CRITICAL: The background must preserve the original photograph's "
+                "composition but with reduced opacity (30-40%) and soft blur to create depth. The foreground avatar should be sharp, "
+                "well-lit, and the main focus. This creates a before/after transformation effect where the original person subtly "
+                "shows through behind their stylized avatar version, like a memory or reflection."
+            ),
             "dreamworks 3d": (
                 "Render in DreamWorks CGI style: slightly edgier character design, bold silhouettes, "
                 "dynamic action-oriented poses, strong contrasting lighting, epic scale environments. "
@@ -2626,10 +2679,28 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
                 "mystical occult symbolism, moss-covered stone, ethereal fog, "
                 "folk magic and botanical witchcraft atmosphere."
             ),
+            "masters of the universe": (
+                "Masters of the Universe animation style: classic 80s American cartoon with bold black outlines, "
+                "vibrant primary colors (reds, blues, oranges), muscular heroic proportions, "
+                "fantasy armor and weapons, dramatic action poses, castle Grayskull setting, "
+                "He-Man, Skeletor, and Eternia characters with exaggerated expressions and heroic stances, "
+                "retro-futuristic fantasy aesthetic from the original Filmation series."
+            ),
         }
         style_art_guidance = ""
         if request.style:
-            style_art_guidance = _3D_ANIMATED_STYLE_GUIDANCE.get(request.style.strip().lower(), "")
+            style_key = request.style.strip().lower()
+            style_art_guidance = _3D_ANIMATED_STYLE_GUIDANCE.get(style_key, "")
+            
+            # Log warning if style not found (for debugging)
+            if not style_art_guidance and style_key not in ("", "none", "auto", "automatic"):
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Style '{request.style}' not found in _3D_ANIMATED_STYLE_GUIDANCE dictionary")
+                logger.info(f"Available styles: {sorted(VALID_STYLE_KEYS)}")
+                
+                # Provide fallback guidance for unknown styles
+                style_art_guidance = "Apply artistic styling consistent with the requested aesthetic while maintaining high visual quality."
 
         # --- Build image_context, overriding to re-imagine mode for stylized art styles ---
         if request.image_description:
