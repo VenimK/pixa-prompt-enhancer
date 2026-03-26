@@ -32,22 +32,16 @@ The app needs a Google API key to work:
    - Command Prompt: echo GOOGLE_API_KEY=your_key_here > .env
    - PowerShell: "GOOGLE_API_KEY=your_key_here" | Out-File .env
 
-DETAILED STEPS:
---------------
-If you prefer manual control:
+QUICK START (Windows):
+----------------------
+1. Double-click: setup_portable.bat  
+   - Choose Python 3.11.7 (stable) or Python 3.14.3 (latest)
+   - Downloads and configures Python automatically
 
-1. Double-click: setup_portable.bat
-   - Downloads Python embeddable package automatically
-   - Extracts and configures portable environment
-   - Installs pip
-   - Helps create .env file template
-
-2. Create .env file with your Google API key (if prompted during setup)
-
-3. Double-click: install_deps.bat  
+2. Double-click: install_deps.bat  
    - Installs required packages (FastAPI, Google AI, etc.)
 
-4. Double-click: run_app.bat
+3. Double-click: run_app.bat
    - Starts the application
    - Browser opens automatically
 
@@ -61,9 +55,31 @@ WHAT HAPPENS AUTOMATICALLY:
 - Creates necessary directories
 - Launches FastAPI web server
 
+PYTHON VERSION OPTIONS:
+-----------------------
+• Python 3.11.7 - Stable, thoroughly tested
+• Python 3.14.3 - Latest, recommended for new features
+  ✓ Enhanced Google GenAI compatibility
+  ✓ Latest Python optimizations
+  ✓ Better performance
+
+FEATURES:
+---------
+• AI-Powered Prompt Enhancement
+• 8 Professional Themes
+• Advanced Theme Editor
+• Export Themes (JSON, CSS, SCSS)
+• Python 3.14 Support
+• Google GenAI Integration
+• Image & Audio Processing
+
 TROUBLESHOOTING:
 ---------------
 - If download fails: Check internet connection and run again
+- If Python errors: Delete portable_python folder and retry
+- If API errors: Check .env file contains valid GOOGLE_API_KEY
+- For Python 3.14: Uses google-genai package (latest)
+- For Python 3.11: Uses google-generativeai package (legacy)
 - If setup fails: Delete portable_python folder and try again
 - If app won't start: Run check_environment.bat for diagnosis
 - If dependencies fail: Run install_deps.bat manually

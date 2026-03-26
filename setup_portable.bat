@@ -1,9 +1,38 @@
 @echo off
 echo ========================================
-echo Prompt Enhancer - Automatic Python Setup
+echo Prompt Enhancer - Python Setup
 echo ========================================
 echo.
+echo Choose Python version:
+echo 1. Python 3.11.7 (Stable, tested)
+echo 2. Python 3.14.3 (Latest, recommended)
+echo.
+set /p python_choice="Enter choice (1 or 2): "
 
+if "%python_choice%"=="1" goto setup_python311
+if "%python_choice%"=="2" goto setup_python314
+echo Invalid choice. Please select 1 or 2.
+echo.
+pause
+exit /b 1
+
+:setup_python311
+echo Setting up Python 3.11.7...
+set PYTHON_VERSION=3.11.7
+set PYTHON_EMBED=python-3.11.7-embed-amd64.zip
+set PYTHON_PTH=python311._pth
+set PYTHON_ZIP=python311.zip
+goto download_python
+
+:setup_python314
+echo Setting up Python 3.14.3...
+set PYTHON_VERSION=3.14.3
+set PYTHON_EMBED=python-3.14.3-embed-amd64.zip
+set PYTHON_PTH=python314._pth
+set PYTHON_ZIP=python314.zip
+goto download_python
+
+:download_python
 REM Check if portable Python already exists
 if exist "portable_python\python.exe" (
     echo Portable Python already found!
@@ -13,16 +42,16 @@ if exist "portable_python\python.exe" (
     exit /b 0
 )
 
-echo Downloading Python embeddable package automatically...
+echo Downloading Python %PYTHON_VERSION% embeddable package automatically...
 echo This may take a few minutes depending on your internet speed.
 echo.
 
 REM Create portable_python directory
 if not exist "portable_python" mkdir portable_python
 
-REM Download latest Python 3.11 embeddable package
-echo [1/3] Downloading Python 3.11 embeddable package...
-powershell -Command "& {$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.11.7/python-3.11.7-embed-amd64.zip' -OutFile 'python-embed.zip'}"
+REM Download Python embeddable package
+echo [1/3] Downloading Python %PYTHON_VERSION% embeddable package...
+powershell -Command "& {$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/%PYTHON_VERSION%/%PYTHON_EMBED%' -OutFile 'python-embed.zip'}"
 
 if not exist "python-embed.zip" (
     echo ERROR: Failed to download Python package
@@ -57,15 +86,15 @@ del python-embed.zip
 REM Configure Python for pip (fix embeddable package)
 echo Configuring Python for package installation...
 
-REM The embeddable package stores stdlib in python311.zip
-REM We need: python311.zip, current dir, Lib, and import site
+REM The embeddable package stores stdlib in pythonXXX.zip
+REM We need: pythonXXX.zip, current dir, Lib, and import site
 (
-    echo python311.zip
+    echo %PYTHON_ZIP%
     echo .
     echo Lib
     echo Lib\site-packages
     echo import site
-) > portable_python\python311._pth
+) > portable_python\%PYTHON_PTH%
 
 REM Verify Python works
 echo Testing Python configuration...
@@ -109,7 +138,7 @@ if not exist ".env" (
 
 echo.
 echo ========================================
-echo SUCCESS: Portable Python setup complete!
+echo SUCCESS: Portable Python %PYTHON_VERSION% setup complete!
 echo ========================================
 echo.
 echo Next steps:
