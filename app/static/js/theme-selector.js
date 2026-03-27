@@ -24,6 +24,7 @@ class ThemeSelector {
         const selector = document.createElement('div');
         selector.id = 'theme-selector';
         selector.className = 'theme-selector';
+        selector.style.display = 'none'; // CRITICAL FIX: Hidden by default
         selector.innerHTML = `
             <div class="theme-selector-header">
                 <h3 class="theme-selector-title">Select Theme</h3>
@@ -40,6 +41,13 @@ class ThemeSelector {
                     <circle cx="11" cy="11" r="8"/>
                     <path d="m21 21-4.35-4.35"/>
                 </svg>
+            </div>
+            
+            <div class="recent-themes" id="recent-themes">
+                <h4 class="recent-themes-title">Recent</h4>
+                <div class="recent-themes-grid" id="recent-themes-grid">
+                    <!-- Recent theme cards will be inserted here -->
+                </div>
             </div>
             
             <div class="theme-categories">
@@ -82,6 +90,78 @@ class ThemeSelector {
         `;
 
         document.body.appendChild(toggle);
+
+        // Create separate light/dark mode toggle button
+        const modeToggle = document.createElement('button');
+        modeToggle.id = 'mode-toggle';
+        modeToggle.className = 'mode-toggle';
+        modeToggle.setAttribute('aria-label', 'Toggle light/dark mode');
+        modeToggle.innerHTML = `
+            <svg id="mode-icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg id="mode-icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+        `;
+
+        document.body.appendChild(modeToggle);
+
+        // Bind light/dark mode toggle event
+        modeToggle.addEventListener('click', () => this.toggleLightDarkMode());
+
+        // Initialize mode icon
+        this.updateModeIcon();
+    }
+
+    toggleLightDarkMode() {
+        // Use ThemeManager to toggle dark mode properly (preserves current theme)
+        if (window.themeManager) {
+            window.themeManager.toggleDarkMode();
+            this.updateModeIcon();
+            const isDark = window.themeManager.isDarkMode;
+            this.showToast(isDark ? 'Switched to dark mode' : 'Switched to light mode', 'info');
+        } else {
+            // Fallback if ThemeManager not available
+            const isDark = document.body.classList.contains('dark-mode');
+            if (isDark) {
+                document.body.classList.remove('dark-mode');
+                document.body.classList.add('light-mode');
+                localStorage.setItem('darkMode', 'false');
+            } else {
+                document.body.classList.remove('light-mode');
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('darkMode', 'true');
+            }
+            this.updateModeIcon();
+            this.showToast(isDark ? 'Switched to light mode' : 'Switched to dark mode', 'info');
+        }
+    }
+
+    updateModeIcon() {
+        const isDark = document.body.classList.contains('dark-mode');
+        const sunIcon = document.getElementById('mode-icon-sun');
+        const moonIcon = document.getElementById('mode-icon-moon');
+        if (sunIcon && moonIcon) {
+            sunIcon.style.display = isDark ? 'none' : 'block';
+            moonIcon.style.display = isDark ? 'block' : 'none';
+        }
+    }
+
+    showToast(message, type = 'info') {
+        if (window.showToast) {
+            window.showToast(message, type);
+        } else {
+            console.log(`[${type}] ${message}`);
+        }
     }
 
     bindEvents() {
@@ -101,10 +181,60 @@ class ThemeSelector {
             });
         });
 
-        // Search input
+        // Search input with debouncing
         const searchInput = document.querySelector('.theme-search-input');
+        let searchTimeout;
         searchInput.addEventListener('input', (e) => {
-            this.setSearchQuery(e.target.value);
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                this.setSearchQuery(e.target.value);
+            }, 150); // 150ms debounce
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (!this.isOpen) return;
+            
+            const cards = document.querySelectorAll('.theme-card');
+            const activeCard = document.querySelector('.theme-card.active');
+            let currentIndex = Array.from(cards).indexOf(activeCard);
+            
+            switch(e.key) {
+                case 'ArrowRight':
+                    e.preventDefault();
+                    if (currentIndex < cards.length - 1) {
+                        cards[currentIndex + 1].focus();
+                        cards[currentIndex + 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    if (currentIndex > 0) {
+                        cards[currentIndex - 1].focus();
+                        cards[currentIndex - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    if (currentIndex < cards.length - 1) {
+                        cards[currentIndex + 1].focus();
+                        cards[currentIndex + 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    if (currentIndex > 0) {
+                        cards[currentIndex - 1].focus();
+                        cards[currentIndex - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    break;
+                case 'Enter':
+                    if (activeCard) {
+                        const themeId = activeCard.dataset.themeId;
+                        this.selectTheme(themeId);
+                    }
+                    break;
+            }
         });
 
         // Reset button
@@ -155,6 +285,8 @@ class ThemeSelector {
 
     renderThemes(themes = null) {
         const grid = document.getElementById('theme-grid');
+        const recentGrid = document.getElementById('recent-themes-grid');
+        const recentSection = document.getElementById('recent-themes');
         const themeList = themes || this.themeManager.getAvailableThemes();
         
         // Filter themes
@@ -162,6 +294,19 @@ class ThemeSelector {
         
         // Clear grid
         grid.innerHTML = '';
+        
+        // Render recent themes
+        const recentThemes = this.getRecentThemes();
+        if (recentThemes.length > 0 && this.currentCategory === 'all' && !this.searchQuery) {
+            recentSection.style.display = 'block';
+            recentGrid.innerHTML = '';
+            recentThemes.slice(0, 3).forEach(theme => {
+                const card = this.createThemeCard(theme, true);
+                recentGrid.appendChild(card);
+            });
+        } else {
+            recentSection.style.display = 'none';
+        }
         
         // Render theme cards
         filteredThemes.forEach(theme => {
@@ -216,7 +361,32 @@ class ThemeSelector {
         `;
         
         card.addEventListener('click', () => {
+            // Clear originalTheme to prevent mouseleave from reverting the selected theme
+            originalTheme = null;
+            clearTimeout(previewTimeout);
             this.selectTheme(theme.id);
+        });
+        
+        // Add hover preview functionality
+        let previewTimeout;
+        let originalTheme = null;
+        
+        card.addEventListener('mouseenter', () => {
+            previewTimeout = setTimeout(() => {
+                if (!originalTheme) {
+                    originalTheme = this.themeManager.currentTheme;
+                }
+                this.themeManager.applyTheme(theme.id, true); // true = preview mode
+            }, 300); // 300ms delay for preview
+        });
+        
+        card.addEventListener('mouseleave', () => {
+            clearTimeout(previewTimeout);
+            // Only revert if originalTheme exists AND the theme hasn't been selected (clicked)
+            if (originalTheme) {
+                this.themeManager.applyTheme(originalTheme);
+                originalTheme = null;
+            }
         });
         
         return card;
@@ -248,8 +418,28 @@ class ThemeSelector {
 
     selectTheme(themeId) {
         this.themeManager.applyTheme(themeId);
+        this.addToRecentThemes(themeId);
         this.close();
         this.showToast(`Theme changed to ${this.getThemeName(themeId)}`, 'success');
+    }
+
+    addToRecentThemes(themeId) {
+        const recent = JSON.parse(localStorage.getItem('recentThemes') || '[]');
+        // Remove if already exists
+        const index = recent.indexOf(themeId);
+        if (index > -1) {
+            recent.splice(index, 1);
+        }
+        // Add to beginning
+        recent.unshift(themeId);
+        // Keep only last 5
+        const limited = recent.slice(0, 5);
+        localStorage.setItem('recentThemes', JSON.stringify(limited));
+    }
+
+    getRecentThemes() {
+        const recent = JSON.parse(localStorage.getItem('recentThemes') || '[]');
+        return recent.map(id => this.themeManager.themes.get(id)).filter(Boolean);
     }
 
     getThemeName(themeId) {

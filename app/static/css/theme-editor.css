@@ -54,8 +54,57 @@
 }
 
 .theme-editor-actions {
-    display: flex;
+    display: flex !important;
     gap: 0.5rem;
+    align-items: center;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 10;
+}
+
+/* Theme Editor Action Buttons */
+.theme-editor-actions .btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0.5rem;
+    border-radius: var(--radius-base);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--theme-transition-fast);
+    border: 1px solid transparent;
+    background: var(--surface-color);
+    color: var(--text-secondary);
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.theme-editor-actions .btn:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.theme-editor-actions .btn-primary {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    padding: 0.5rem 1rem;
+    min-width: auto;
+}
+
+.theme-editor-actions .btn-primary:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+.theme-editor-actions .btn svg {
+    width: 20px;
+    height: 20px;
+    display: block;
 }
 
 .theme-editor-close {

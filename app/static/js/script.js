@@ -1,11 +1,7 @@
     
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Initialize Theme Early ---
-    const savedTheme = localStorage.getItem('darkMode');
-    if (savedTheme === 'true') {
-        document.documentElement.classList.add('dark-mode');
-        document.body.classList.add('dark-mode');
-    }
+    // --- Theme initialization is now handled by ThemeManager ---
+    // The ThemeManager will properly load and apply saved preferences including dark mode
 
     // --- Specialized Enhancement Modes ---
     let currentEnhancementMode = 'general';

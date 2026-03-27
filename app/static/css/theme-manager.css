@@ -311,6 +311,45 @@ body.dark-mode {
     letter-spacing: 0.05em;
 }
 
+/* Recent Themes Section */
+.recent-themes {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.recent-themes-title {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.75rem 0;
+}
+
+.recent-themes-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.recent-themes-grid .theme-card {
+    min-width: auto;
+    padding: 0.5rem;
+}
+
+.recent-themes-grid .theme-preview {
+    height: 30px;
+    margin-bottom: 0.25rem;
+}
+
+.recent-themes-grid .theme-name {
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* Theme Toggle Button */
 .theme-toggle {
     position: fixed;
@@ -339,6 +378,52 @@ body.dark-mode {
 
 .theme-toggle:active {
     transform: scale(0.95);
+}
+
+/* Mode Toggle Button (Light/Dark Mode) - Separate from Theme Editor */
+.mode-toggle {
+    position: fixed;
+    bottom: 20px;
+    right: 80px; /* Positioned to the left of theme toggle */
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    background: var(--surface-color);
+    color: var(--text-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    transition: var(--theme-transition);
+}
+
+.mode-toggle:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.05);
+    box-shadow: var(--shadow-xl);
+}
+
+.mode-toggle:active {
+    transform: scale(0.95);
+}
+
+.mode-toggle svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .mode-toggle {
+        bottom: 80px;
+        right: 80px;
+        width: 44px;
+        height: 44px;
+    }
 }
 
 /* Custom Theme Panel */
