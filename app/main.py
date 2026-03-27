@@ -1320,7 +1320,7 @@ async def read_root(request: Request):
             masked_key = "[Invalid key format]"
         api_key_info = {"set": True, "masked_key": masked_key}
 
-    version = int(time.time())  # Using timestamp as version for cache busting
+    version = "1.0.0"  # Fixed version string to prevent caching issues
     return templates.TemplateResponse(
         "index.html",
         {
@@ -1339,7 +1339,7 @@ async def read_root(request: Request):
 async def style_test_page(request: Request):
     """Render the style test page."""
     log_debug("GET /style-test - Style test page accessed")
-    version = int(time.time())  # Using timestamp as version for cache busting
+    version = "1.0.0"  # Fixed version string to prevent caching issues
     return templates.TemplateResponse(
         "style-test.html", {"request": request, "version": version}
     )

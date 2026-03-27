@@ -122,3 +122,14 @@ INFO:     127.0.0.1:58694 - "GET /static/js/template-engine.js?v=1774594064 HTTP
 INFO:     127.0.0.1:58694 - "GET / HTTP/1.1" 200 OK
 INFO:     127.0.0.1:58694 - "GET /static/data/templates.json HTTP/1.1" 304 Not Modified
 INFO:     127.0.0.1:58694 - "GET /static/data/themes.json HTTP/1.1" 304 Not Modified
+WARNING:  WatchFiles detected changes in 'app/main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1584]
+Fatal Python error: init_sys_streams: can't initialize sys standard streams
+Python runtime state: core initialized
+OSError: [Errno 9] Bad file descriptor
+
+Current thread 0x0000000208637100 (most recent call first):
+  <no Python frame>
