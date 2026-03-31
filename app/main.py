@@ -226,6 +226,8 @@ class EnhanceRequest(BaseModel):
 
 class EnhanceResponse(BaseModel):
     enhanced_prompt: str
+    quality_scores: dict[str, float] | None = None
+    top_improvements: list[str] | None = None
 
 
 class AnalyzeResponse(BaseModel):
@@ -383,6 +385,130 @@ def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str
         error_details = traceback.format_exc()
         print(f"Detailed error: {error_details}")
         return f"An unexpected error occurred: {e}. Please try again later."
+
+
+_QUALITY_SCORE_KEYS = (
+    "clarity",
+    "visual_specificity",
+    "composition_lighting",
+    "consistency",
+    "model_compatibility",
+    "overall",
+)
+
+_DEFAULT_QUALITY_SCORES = {
+    "clarity": 7.0,
+    "visual_specificity": 7.0,
+    "composition_lighting": 7.0,
+    "consistency": 7.0,
+    "model_compatibility": 7.0,
+    "overall": 7.0,
+}
+
+_DEFAULT_TOP_IMPROVEMENTS = [
+    "Add more concrete subject details.",
+    "Specify composition and camera perspective.",
+    "Clarify lighting and atmosphere cues.",
+]
+
+
+def _clamp_quality_score(value, default: float) -> float:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        numeric = default
+    numeric = max(0.0, min(10.0, numeric))
+    return round(numeric, 1)
+
+
+def _extract_json_object(text: str) -> str | None:
+    if not text:
+        return None
+
+    candidate = text.strip()
+    if candidate.startswith("```"):
+        lines = candidate.splitlines()
+        if lines:
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        candidate = "\n".join(lines).strip()
+
+    if candidate.startswith("{") and candidate.endswith("}"):
+        return candidate
+
+    start = candidate.find("{")
+    end = candidate.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return candidate[start:end + 1]
+    return None
+
+
+def evaluate_enhanced_prompt_quality(
+    enhanced_prompt: str,
+    prompt_type: str | None = None,
+    model: str | None = None,
+    gemini_model: str | None = None,
+) -> dict | None:
+    if not enhanced_prompt:
+        return None
+    if enhanced_prompt.startswith("Error") or enhanced_prompt.startswith("An unexpected error"):
+        return None
+
+    scoring_prompt = (
+        "You are a strict quality evaluator for generative AI prompts. "
+        "Assess the enhanced prompt and return ONLY valid JSON with this exact schema: "
+        "{\"quality_scores\":{\"clarity\":0-10,\"visual_specificity\":0-10,\"composition_lighting\":0-10,\"consistency\":0-10,\"model_compatibility\":0-10,\"overall\":0-10},"
+        "\"top_improvements\":[\"string\",\"string\",\"string\"]}.\n"
+        "Rules: no markdown, no explanations, scores must be numbers, top_improvements must be concise actionable items.\n"
+        f"Prompt type context: {prompt_type or 'unknown'}\n"
+        f"Model context: {model or 'default'}\n"
+        f"Enhanced prompt:\n{enhanced_prompt}"
+    )
+
+    try:
+        raw_result = run_gemini(scoring_prompt, model_override=gemini_model)
+        if raw_result.startswith("Error") or raw_result.startswith("An unexpected error"):
+            log_debug(f"Prompt quality scoring skipped due to Gemini error: {raw_result[:120]}")
+            return None
+
+        json_payload = _extract_json_object(raw_result)
+        if not json_payload:
+            log_debug("Prompt quality scoring skipped: no JSON payload found")
+            return None
+
+        parsed = json.loads(json_payload)
+        if not isinstance(parsed, dict):
+            log_debug("Prompt quality scoring skipped: parsed payload is not an object")
+            return None
+
+        raw_scores = parsed.get("quality_scores", {})
+        quality_scores = {}
+        for key in _QUALITY_SCORE_KEYS:
+            default = _DEFAULT_QUALITY_SCORES[key]
+            value = raw_scores.get(key, default) if isinstance(raw_scores, dict) else default
+            quality_scores[key] = _clamp_quality_score(value, default)
+
+        improvements_raw = parsed.get("top_improvements", [])
+        improvements: list[str] = []
+        if isinstance(improvements_raw, list):
+            for item in improvements_raw:
+                if not isinstance(item, str):
+                    continue
+                cleaned = item.strip()
+                if cleaned:
+                    improvements.append(cleaned[:160])
+
+        if not improvements:
+            improvements = _DEFAULT_TOP_IMPROVEMENTS.copy()
+
+        return {
+            "quality_scores": quality_scores,
+            "top_improvements": improvements[:3],
+        }
+    except Exception as e:
+        log_debug(f"Prompt quality scoring failed: {e}")
+        return None
 
 
 def analyze_artistic_style(image_path: str) -> dict:
@@ -960,9 +1086,23 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
             # Fallback to general enhancement
             enhanced_prompt = run_gemini(f"Enhance this prompt for AI image generation: {request.prompt}", model_override=gm)
             enhanced_prompt = limit_prompt_length(enhanced_prompt, request.prompt_type or "image")
+
+        if enhanced_prompt.startswith("Error") or enhanced_prompt.startswith("An unexpected error"):
+            return EnhanceResponse(enhanced_prompt=enhanced_prompt)
+
+        quality_payload = evaluate_enhanced_prompt_quality(
+            enhanced_prompt=enhanced_prompt,
+            prompt_type=request.prompt_type,
+            model=request.model,
+            gemini_model=gm,
+        )
         
         log_debug(f"Specialized enhancement completed: {len(enhanced_prompt)} chars")
-        return EnhanceResponse(enhanced_prompt=enhanced_prompt)
+        return EnhanceResponse(
+            enhanced_prompt=enhanced_prompt,
+            quality_scores=quality_payload["quality_scores"] if quality_payload else None,
+            top_improvements=quality_payload["top_improvements"] if quality_payload else None,
+        )
         
     except Exception as e:
         import traceback
@@ -3962,6 +4102,13 @@ Output the enhanced prompt now, keeping the character's identity intact while na
 
         limited_prompt = limit_prompt_length(enhanced_prompt, model_for_limit)
 
+        quality_payload = evaluate_enhanced_prompt_quality(
+            enhanced_prompt=limited_prompt,
+            prompt_type=request.prompt_type,
+            model=request.model,
+            gemini_model=request.gemini_model,
+        )
+
         log_debug(f"\nFinal Output:")
         log_debug(f"  - Length: {len(limited_prompt)} chars")
         log_debug(
@@ -3972,7 +4119,11 @@ Output the enhanced prompt now, keeping the character's identity intact while na
         log_debug(f"\n⏱️  Processing time: {elapsed_time:.2f} seconds")
         log_debug(f"{'='*60}\n")
 
-        return EnhanceResponse(enhanced_prompt=limited_prompt)
+        return EnhanceResponse(
+            enhanced_prompt=limited_prompt,
+            quality_scores=quality_payload["quality_scores"] if quality_payload else None,
+            top_improvements=quality_payload["top_improvements"] if quality_payload else None,
+        )
 
     except Exception as e:
         import traceback

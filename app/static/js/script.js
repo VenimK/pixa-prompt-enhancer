@@ -1017,6 +1017,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (historyItem.enhancedPrompt) {
             els.result.style.display = 'block';
             els.resultText.innerText = historyItem.enhancedPrompt;
+            renderQualityPanel(historyItem.qualityScores, historyItem.topImprovements);
+        } else {
+            clearQualityPanel();
         }
         
         // Update UI based on prompt type
@@ -1049,6 +1052,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Display the shared prompt
             els.result.style.display = 'block';
             els.resultText.innerText = sharedPrompt;
+            clearQualityPanel();
             
             // Set other parameters if available
             const promptType = urlParams.get('type');
@@ -1128,6 +1132,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Containers and        // Results
         result: document.getElementById('result'),
         resultText: document.getElementById('result-text'),
+        qualityPanel: document.getElementById('quality-panel'),
+        qualityMetrics: document.getElementById('quality-metrics'),
+        qualityImprovements: document.getElementById('quality-improvements'),
+        qualityOverall: document.getElementById('quality-overall'),
         singleView: document.getElementById('single-view'),
         compareView: document.getElementById('compare-view'),
         currentPrompt: document.getElementById('current-prompt'),
@@ -1219,6 +1227,107 @@ document.addEventListener('DOMContentLoaded', () => {
         bubbleTextContainer: document.getElementById('bubble-text-container'),
         bubbleText: document.getElementById('bubble-text')
     };
+
+    const QUALITY_SCORE_LABELS = {
+        clarity: 'Clarity',
+        visual_specificity: 'Visual Specificity',
+        composition_lighting: 'Composition & Lighting',
+        consistency: 'Consistency',
+        model_compatibility: 'Model Compatibility'
+    };
+
+    const QUALITY_SCORE_KEYS = [
+        'clarity',
+        'visual_specificity',
+        'composition_lighting',
+        'consistency',
+        'model_compatibility'
+    ];
+
+    function clearQualityPanel() {
+        if (!els.qualityPanel) return;
+        if (els.qualityMetrics) els.qualityMetrics.innerHTML = '';
+        if (els.qualityImprovements) els.qualityImprovements.innerHTML = '';
+        if (els.qualityOverall) els.qualityOverall.textContent = '—';
+        els.qualityPanel.style.display = 'none';
+    }
+
+    function createQualityMetricRow(key, scoreValue) {
+        const safeScore = Math.max(0, Math.min(10, Number(scoreValue) || 0));
+        const percentage = Math.round((safeScore / 10) * 100);
+        const row = document.createElement('div');
+        row.className = 'quality-metric';
+
+        const label = document.createElement('span');
+        label.className = 'quality-metric-label';
+        label.textContent = QUALITY_SCORE_LABELS[key] || key;
+
+        const bar = document.createElement('div');
+        bar.className = 'quality-metric-bar';
+
+        const fill = document.createElement('div');
+        fill.className = 'quality-metric-fill';
+        fill.style.width = `${percentage}%`;
+        bar.appendChild(fill);
+
+        const value = document.createElement('span');
+        value.className = 'quality-metric-value';
+        value.textContent = safeScore.toFixed(1);
+
+        row.appendChild(label);
+        row.appendChild(bar);
+        row.appendChild(value);
+        return row;
+    }
+
+    function renderQualityPanel(qualityScores, topImprovements) {
+        if (!els.qualityPanel || !qualityScores || typeof qualityScores !== 'object') {
+            clearQualityPanel();
+            return;
+        }
+
+        const validScores = QUALITY_SCORE_KEYS
+            .map((key) => Number(qualityScores[key]))
+            .filter((score) => Number.isFinite(score));
+
+        if (validScores.length === 0) {
+            clearQualityPanel();
+            return;
+        }
+
+        if (els.qualityMetrics) {
+            els.qualityMetrics.innerHTML = '';
+            QUALITY_SCORE_KEYS.forEach((key) => {
+                if (Number.isFinite(Number(qualityScores[key]))) {
+                    els.qualityMetrics.appendChild(createQualityMetricRow(key, qualityScores[key]));
+                }
+            });
+        }
+
+        const overallRaw = Number(qualityScores.overall);
+        const overallScore = Number.isFinite(overallRaw)
+            ? overallRaw
+            : validScores.reduce((sum, item) => sum + item, 0) / validScores.length;
+
+        if (els.qualityOverall) {
+            els.qualityOverall.textContent = `${Math.max(0, Math.min(10, overallScore)).toFixed(1)} / 10`;
+        }
+
+        if (els.qualityImprovements) {
+            els.qualityImprovements.innerHTML = '';
+            const improvements = Array.isArray(topImprovements)
+                ? topImprovements.filter((item) => typeof item === 'string' && item.trim())
+                : [];
+
+            improvements.slice(0, 3).forEach((item) => {
+                const li = document.createElement('li');
+                li.textContent = item.trim();
+                els.qualityImprovements.appendChild(li);
+            });
+        }
+
+        els.qualityPanel.style.display = 'block';
+    }
 
     // --- Plain Enhance persistence and UI toggle ---
     function togglePlainEnhanceUI() {
@@ -3246,6 +3355,7 @@ POST-PROCESSING:
             els.enhance.disabled = true;
             els.result.style.display = 'block';
             els.resultText.innerHTML = '<div class="loader"></div>';
+            clearQualityPanel();
 
             // Prepare text emphasis details if provided
             let textEmphasisDetails = '';
@@ -3393,6 +3503,7 @@ POST-PROCESSING:
                     const errorMsg = errorData.error || `Server error: ${response.status}`;
                     showToast(errorMsg, 'error');
                     els.resultText.innerText = '';
+                    clearQualityPanel();
                     els.enhance.disabled = false;
                     return;
                 }
@@ -3405,6 +3516,7 @@ POST-PROCESSING:
                     console.error('Failed to parse JSON response:', jsonError);
                     console.log('Response text:', responseText);
                     showToast('Failed to parse server response. Check console for details.', 'error');
+                    clearQualityPanel();
                     return;
                 }
 
@@ -3417,6 +3529,7 @@ POST-PROCESSING:
                 if (data.enhanced_prompt) {
                     console.log('Setting result text...');
                     els.resultText.innerText = data.enhanced_prompt;
+                    renderQualityPanel(data.quality_scores, data.top_improvements);
                     console.log('Result text set to:', els.resultText.innerText);
                     
                     
@@ -3428,6 +3541,7 @@ POST-PROCESSING:
                     console.log('- export button:', els.export);
                 } else {
                     console.log('No enhanced_prompt in response data');
+                    clearQualityPanel();
                 }
 
                 if (els.result) {
@@ -3450,6 +3564,7 @@ POST-PROCESSING:
                 if (data.enhanced_prompt.startsWith('Error:') ||
                     data.enhanced_prompt.startsWith('An unexpected error')) {
                     showToast(data.enhanced_prompt.split('.')[0], 'error');
+                    clearQualityPanel();
                     updateProgress(2, 'active');
                 } else {
                     showToast('Prompt enhanced successfully!', 'success');
@@ -3469,11 +3584,14 @@ POST-PROCESSING:
                         cinematography: cinematography,
                         lighting: lighting,
                         motionEffect: motionEffect,
-                        model: selectedModel
+                        model: selectedModel,
+                        qualityScores: data.quality_scores || null,
+                        topImprovements: data.top_improvements || null
                     });
                 }
             } catch (error) {
                 els.resultText.innerHTML = '';
+                clearQualityPanel();
                 showToast(error.message, 'error');
             } finally {
                 els.enhance.disabled = false;

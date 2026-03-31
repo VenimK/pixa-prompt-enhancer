@@ -1547,6 +1547,89 @@ body.dark-mode button:disabled {
     display: block;
 }
 
+.quality-panel {
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--input-bg);
+}
+
+.quality-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.quality-panel-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-color);
+}
+
+.quality-overall-score {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--button-bg);
+}
+
+.quality-metrics {
+    display: grid;
+    gap: 8px;
+}
+
+.quality-metric {
+    display: grid;
+    grid-template-columns: minmax(130px, 1fr) 2fr auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.quality-metric-label,
+.quality-metric-value {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.quality-metric-value {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.quality-metric-bar {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--border-color);
+    overflow: hidden;
+}
+
+.quality-metric-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+}
+
+.quality-improvements-block {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+.quality-improvements-block h5 {
+    margin: 0 0 6px;
+    font-size: 0.85rem;
+    color: var(--text-color);
+}
+
+.quality-improvements {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    display: grid;
+    gap: 4px;
+}
+
 .compare-container {
     display: flex;
     gap: 20px;

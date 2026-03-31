@@ -133,3 +133,11 @@ OSError: [Errno 9] Bad file descriptor
 
 Current thread 0x0000000208637100 (most recent call first):
   <no Python frame>
+WARNING:  WatchFiles detected changes in 'app/main.py'. Reloading...
+Python(34141) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+Fatal Python error: init_sys_streams: can't initialize sys standard streams
+Python runtime state: core initialized
+OSError: [Errno 9] Bad file descriptor
+
+Current thread 0x0000000208637100 (most recent call first):
+  <no Python frame>
