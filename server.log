@@ -141,3 +141,4 @@ OSError: [Errno 9] Bad file descriptor
 
 Current thread 0x0000000208637100 (most recent call first):
   <no Python frame>
+INFO:     Stopping reloader process [1581]

@@ -1547,6 +1547,57 @@ body.dark-mode button:disabled {
     display: block;
 }
 
+/* Negative prompt panel (LTX2) */
+.negative-prompt-panel {
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--input-bg);
+}
+
+.negative-prompt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.negative-prompt-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-color);
+}
+
+.negative-prompt-header h4 i {
+    color: #e74c3c;
+    margin-right: 6px;
+}
+
+.negative-prompt-header .copy-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    color: var(--text-color);
+    font-size: 0.8rem;
+    transition: background 0.15s;
+}
+
+.negative-prompt-header .copy-btn:hover {
+    background: var(--border-color);
+}
+
+.negative-prompt-text {
+    font-family: 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--text-secondary, #aaa);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 .quality-panel {
     margin-top: 14px;
     padding: 12px;

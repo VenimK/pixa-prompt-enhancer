@@ -4,7 +4,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import asyncio
 import re
 import subprocess
@@ -12,83 +11,35 @@ import shutil
 import os
 import sys
 import time
-# Enhanced compatibility layer for Python 3.14
-USE_NEW_GENAI = False
-genai_new = None
-genai_old = None
-
-# Try new google.genai package (preferred for Python 3.14+)
-try:
-    import google.genai as genai_new
-    USE_NEW_GENAI = True
-except ImportError:
-    pass
-
-# Try google.generativeai (fallback for older versions)
-try:
-    import google.generativeai as genai_old
-except ImportError:
-    pass
-
-# Enhanced error handling for Python 3.14
-if not genai_new and not genai_old:
-    python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
-    if python_version >= "3.14":
-        raise ImportError(
-            f"Python {python_version} detected. Please install google-genai:\n"
-            "pip install google-genai\n"
-            "If issues persist, try: pip install --upgrade google-genai"
-        )
-    else:
-        raise ImportError(
-            "Google GenAI package not found. Please install:\n"
-            "pip install google-genai\n"
-            "For older Python versions: pip install google-generativeai"
-        )
-import PIL.Image
-from datetime import datetime
-from dotenv import load_dotenv
-import atexit
 import json
 import mimetypes
+import traceback
+import uuid
 import librosa
 import numpy as np
 import scipy
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Debug log configuration
-DEBUG_LOG_PATH = "debug.log"
+# Centralised logger (extracted to app/logger.py)
+from app.logger import log_debug
 
+# Gemini API client & helpers (extracted to app/gemini.py)
+from app.gemini import (
+    run_gemini,
+    run_gemini_async,
+    evaluate_enhanced_prompt_quality,
+    _clamp_quality_score,
+    _extract_json_object,
+)
 
-# Initialize debug log on startup
-def init_debug_log():
-    """Clear and initialize the debug log file"""
-    with open(DEBUG_LOG_PATH, "w") as f:
-        f.write(f"=== Prompt Enhancer Debug Log Started at {datetime.now()} ===\n")
-        f.write(f"Application initialized\n\n")
-
-
-def log_debug(message: str):
-    """Write a debug message to the log file"""
-    try:
-        with open(DEBUG_LOG_PATH, "a") as f:
-            f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}\n")
-    except Exception as e:
-        print(f"Failed to write to debug log: {e}")
-
-
-def shutdown_debug_log():
-    """Log shutdown message"""
-    log_debug("=== Application shutting down ===\n")
-
-
-# Initialize log on startup
-init_debug_log()
-
-# Register shutdown handler
-atexit.register(shutdown_debug_log)
+# LTX-2.3 prompt engineering (extracted to app/ltx2_prompts.py)
+from app.ltx2_prompts import build_ltx2_meta_prompt
 
 
 UPLOADS_DIR = "uploads"
@@ -151,6 +102,11 @@ app.add_middleware(
     **cors_config
 )
 
+# Rate limiting — protects Gemini API endpoints from abuse
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # --- Setup ---
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
@@ -159,356 +115,14 @@ templates = Jinja2Templates(directory="app/templates")
 from app.style_constants import VALID_STYLE_KEYS, is_valid_style
 
 
-# --- Pydantic Models ---
-from pydantic import field_validator
-
-class EnhanceRequest(BaseModel):
-    prompt: str
-    prompt_type: str  # VEO or WAN2 or Image or 3D or LTX2
-    style: str
-    cinematography: str
-    lighting: str
-    image_description: str | None = None
-    motion_effect: str | None = None
-    text_emphasis: str | None = None
-    model: str | None = None  # AI model selection (flux, qwen, nunchaku, etc.)
-    model_type: str | None = None  # 3D model type (character, object, vehicle, environment, props)
-    wrap_mode: str | None = None  # 'vehicle' | 'people-object' | 'none'
-    audio_generation: str | None = None  # LTX-2 audio generation: 'enabled' or 'disabled'
-    resolution: str | None = None  # LTX-2 resolution: '4K', '1080p', '720p'
-    audio_description: str | None = None  # Description of uploaded audio file
-    audio_characteristics: dict | None = None  # Structured audio analysis data from /analyze-audio
-    movement_level: str | None = None  # LTX-2 movement level: 'static', 'minimal', 'natural', 'expressive', 'dynamic'
-    ltx2_style: str | None = None  # LTX-2 video style: 'music_video', 'cinematic', 'artistic', etc.
-    
-    @field_validator('style')
-    @classmethod
-    def validate_style(cls, v):
-        if not isinstance(v, str):
-            raise ValueError('Style must be a string')
-        
-        # Sanitize input
-        v = v.strip()
-        
-        # Check for potentially dangerous content
-        dangerous_patterns = ['<script', 'javascript:', 'data:', 'vbscript:', 'onload=', 'onerror=']
-        v_lower = v.lower()
-        for pattern in dangerous_patterns:
-            if pattern in v_lower:
-                raise ValueError('Style contains invalid content')
-        
-        # Length validation
-        if len(v) > 100:
-            raise ValueError('Style name too long (max 100 characters)')
-        
-        # Validate against known styles (allow empty/auto values)
-        if v_lower not in ("", "none", "auto", "automatic"):
-            if not is_valid_style(v):
-                # Log warning for unknown style but don't raise error to allow flexibility
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Unknown style '{v}' provided - will use fallback handling")
-        
-        return v
-    # Audio Integration
-    lipsync_intensity: str | None = None  # 'subtle', 'natural', 'exaggerated'
-    audio_reactivity: str | None = None  # 'low', 'medium', 'high'
-    genre_movement: str | None = None  # 'rock', 'pop', 'classical', 'electronic', 'jazz', 'folk'
-    # Timing Control
-    movement_speed: str | None = None  # 'slow_motion', 'normal', 'fast'
-    pause_points: str | None = None  # 'none', 'occasional', 'frequent'
-    transition_smoothness: str | None = None  # 'smooth', 'natural', 'sharp'
-    # Character Interaction
-    character_coordination: str | None = None  # 'independent', 'synchronized', 'call_response'
-    object_interaction: str | None = None  # 'none', 'subtle', 'prominent'
-    gemini_model: str | None = None  # override Gemini model for this request
-
-
-class EnhanceResponse(BaseModel):
-    enhanced_prompt: str
-    quality_scores: dict[str, float] | None = None
-    top_improvements: list[str] | None = None
-
-
-class AnalyzeResponse(BaseModel):
-    description: str
-
-class AnalyzeResponseMulti(BaseModel):
-    combined_description: str
-    image_a_description: str | None = None
-    image_b_description: str | None = None
-
-
-# Make sure to set your GOOGLE_API_KEY environment variable.
-# You can get one here: https://aistudio.google.com/app/apikey
-
-# Initialize based on which package is available
-genai_client = None
-genai_model = None
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
-log_debug(f"Gemini model: {GEMINI_MODEL}")
-
-if "GOOGLE_API_KEY" in os.environ:
-    if USE_NEW_GENAI and genai_new:
-        genai_client = genai_new.Client(api_key=os.environ["GOOGLE_API_KEY"])
-        # Create model using new API
-        try:
-            genai_model = genai_client.models.get(model=GEMINI_MODEL)
-        except Exception:
-            # Fallback to creating model reference
-            genai_model = genai_client
-        log_debug("Using google.genai (new package)")
-    elif genai_old:
-        genai_old.configure(api_key=os.environ["GOOGLE_API_KEY"])
-        genai_model = genai_old.GenerativeModel(GEMINI_MODEL)
-        log_debug(f"Using google.generativeai (old package) with model: {GEMINI_MODEL}")
-
-
-_ALLOWED_GEMINI_MODELS = {
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
-    "gemini-2.5-flash-lite",
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-3-flash-preview",
-    "gemini-3-pro-preview",
-}
-
-
-def run_gemini(prompt: str, image_path: str | None = None, image_paths: list[str] | None = None, model_override: str | None = None):
-    if "GOOGLE_API_KEY" not in os.environ:
-        return "Error: Google API key is not set. Please set the GOOGLE_API_KEY environment variable."
-
-    try:
-        model_name = model_override if model_override in _ALLOWED_GEMINI_MODELS else GEMINI_MODEL
-
-        # Use NEW google.genai package
-        if USE_NEW_GENAI and genai_client:
-            if image_paths and len(image_paths) > 0:
-                images = []
-                try:
-                    for p in image_paths:
-                        images.append(PIL.Image.open(p))
-                except Exception as img_error:
-                    return f"Error loading image(s): {img_error}. Please check the image file format and try again."
-                try:
-                    start_time = time.time()
-                    # New API: use generate_content method
-                    response = genai_client.models.generate_content(
-                        model=model_name,
-                        contents=[prompt, *images]
-                    )
-                    log_debug(f"Gemini API call (multi-image) took {time.time() - start_time:.2f}s")
-                    if hasattr(response, "text") and response.text:
-                        return response.text
-                    return "Error: Gemini API returned empty response. Please try again."
-                except Exception as api_error:
-                    return f"Error processing image(s) with Gemini API: {api_error}."
-            elif image_path:
-                try:
-                    image = PIL.Image.open(image_path)
-                except Exception as img_error:
-                    return f"Error loading image: {img_error}. Please check the image format and try again."
-                try:
-                    start_time = time.time()
-                    response = genai_client.models.generate_content(
-                        model=model_name,
-                        contents=[prompt, image]
-                    )
-                    log_debug(f"Gemini API call (single image) took {time.time() - start_time:.2f}s")
-                    if hasattr(response, "text") and response.text:
-                        return response.text
-                    return "Error: Gemini API returned empty response. Please try again."
-                except Exception as api_error:
-                    return f"Error processing image with Gemini API: {api_error}."
-            else:
-                try:
-                    start_time = time.time()
-                    response = genai_client.models.generate_content(
-                        model=model_name,
-                        contents=prompt
-                    )
-                    log_debug(f"Gemini API call (text only) took {time.time() - start_time:.2f}s")
-                    if hasattr(response, "text") and response.text:
-                        return response.text
-                    return "Error: Gemini API returned empty response. Please try again."
-                except Exception as api_error:
-                    return f"Error with Gemini API: {api_error}."
-
-        # Use OLD google.generativeai package
-        elif genai_model:
-            if image_paths and len(image_paths) > 0:
-                images = []
-                try:
-                    for p in image_paths:
-                        images.append(PIL.Image.open(p))
-                except Exception as img_error:
-                    return f"Error loading image(s): {img_error}. Please check the image file format and try again."
-                try:
-                    start_time = time.time()
-                    response = genai_model.generate_content([prompt, *images])
-                    log_debug(f"Gemini API call (multi-image) took {time.time() - start_time:.2f}s")
-                    if response.candidates:
-                        return response.text
-                    return "Error: Gemini API returned empty response. Please try again."
-                except Exception as api_error:
-                    return f"Error processing image(s) with Gemini API: {api_error}."
-            elif image_path:
-                try:
-                    image = PIL.Image.open(image_path)
-                except Exception as img_error:
-                    return f"Error loading image: {img_error}. Please check the image file format and try again."
-                try:
-                    start_time = time.time()
-                    response = genai_model.generate_content([prompt, image])
-                    log_debug(f"Gemini API call (single image) took {time.time() - start_time:.2f}s")
-                    if response.candidates:
-                        return response.text
-                    return "Error: Gemini API returned empty response. Please try again."
-                except Exception as api_error:
-                    return f"Error processing image with Gemini API: {api_error}."
-            else:
-                try:
-                    start_time = time.time()
-                    response = genai_model.generate_content(prompt)
-                    log_debug(f"Gemini API call (text) took {time.time() - start_time:.2f}s")
-                    if response.candidates:
-                        return response.text
-                    return "Error: Gemini API returned empty response. Please try again."
-                except Exception as api_error:
-                    return f"Error with Gemini API: {api_error}."
-        else:
-            return "Error: No Gemini API client available. Check your API key and package installation."
-
-    except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"Detailed error: {error_details}")
-        return f"An unexpected error occurred: {e}. Please try again later."
-
-
-_QUALITY_SCORE_KEYS = (
-    "clarity",
-    "visual_specificity",
-    "composition_lighting",
-    "consistency",
-    "model_compatibility",
-    "overall",
+# --- Pydantic Models (extracted to app/models.py) ---
+from app.models import (
+    EnhanceRequest,
+    EnhanceResponse,
+    AnalyzeResponse,
+    AnalyzeResponseMulti,
+    SpecializedEnhanceRequest,
 )
-
-_DEFAULT_QUALITY_SCORES = {
-    "clarity": 7.0,
-    "visual_specificity": 7.0,
-    "composition_lighting": 7.0,
-    "consistency": 7.0,
-    "model_compatibility": 7.0,
-    "overall": 7.0,
-}
-
-_DEFAULT_TOP_IMPROVEMENTS = [
-    "Add more concrete subject details.",
-    "Specify composition and camera perspective.",
-    "Clarify lighting and atmosphere cues.",
-]
-
-
-def _clamp_quality_score(value, default: float) -> float:
-    try:
-        numeric = float(value)
-    except (TypeError, ValueError):
-        numeric = default
-    numeric = max(0.0, min(10.0, numeric))
-    return round(numeric, 1)
-
-
-def _extract_json_object(text: str) -> str | None:
-    if not text:
-        return None
-
-    candidate = text.strip()
-    if candidate.startswith("```"):
-        lines = candidate.splitlines()
-        if lines:
-            lines = lines[1:]
-        if lines and lines[-1].strip().startswith("```"):
-            lines = lines[:-1]
-        candidate = "\n".join(lines).strip()
-
-    if candidate.startswith("{") and candidate.endswith("}"):
-        return candidate
-
-    start = candidate.find("{")
-    end = candidate.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        return candidate[start:end + 1]
-    return None
-
-
-def evaluate_enhanced_prompt_quality(
-    enhanced_prompt: str,
-    prompt_type: str | None = None,
-    model: str | None = None,
-    gemini_model: str | None = None,
-) -> dict | None:
-    if not enhanced_prompt:
-        return None
-    if enhanced_prompt.startswith("Error") or enhanced_prompt.startswith("An unexpected error"):
-        return None
-
-    scoring_prompt = (
-        "You are a strict quality evaluator for generative AI prompts. "
-        "Assess the enhanced prompt and return ONLY valid JSON with this exact schema: "
-        "{\"quality_scores\":{\"clarity\":0-10,\"visual_specificity\":0-10,\"composition_lighting\":0-10,\"consistency\":0-10,\"model_compatibility\":0-10,\"overall\":0-10},"
-        "\"top_improvements\":[\"string\",\"string\",\"string\"]}.\n"
-        "Rules: no markdown, no explanations, scores must be numbers, top_improvements must be concise actionable items.\n"
-        f"Prompt type context: {prompt_type or 'unknown'}\n"
-        f"Model context: {model or 'default'}\n"
-        f"Enhanced prompt:\n{enhanced_prompt}"
-    )
-
-    try:
-        raw_result = run_gemini(scoring_prompt, model_override=gemini_model)
-        if raw_result.startswith("Error") or raw_result.startswith("An unexpected error"):
-            log_debug(f"Prompt quality scoring skipped due to Gemini error: {raw_result[:120]}")
-            return None
-
-        json_payload = _extract_json_object(raw_result)
-        if not json_payload:
-            log_debug("Prompt quality scoring skipped: no JSON payload found")
-            return None
-
-        parsed = json.loads(json_payload)
-        if not isinstance(parsed, dict):
-            log_debug("Prompt quality scoring skipped: parsed payload is not an object")
-            return None
-
-        raw_scores = parsed.get("quality_scores", {})
-        quality_scores = {}
-        for key in _QUALITY_SCORE_KEYS:
-            default = _DEFAULT_QUALITY_SCORES[key]
-            value = raw_scores.get(key, default) if isinstance(raw_scores, dict) else default
-            quality_scores[key] = _clamp_quality_score(value, default)
-
-        improvements_raw = parsed.get("top_improvements", [])
-        improvements: list[str] = []
-        if isinstance(improvements_raw, list):
-            for item in improvements_raw:
-                if not isinstance(item, str):
-                    continue
-                cleaned = item.strip()
-                if cleaned:
-                    improvements.append(cleaned[:160])
-
-        if not improvements:
-            improvements = _DEFAULT_TOP_IMPROVEMENTS.copy()
-
-        return {
-            "quality_scores": quality_scores,
-            "top_improvements": improvements[:3],
-        }
-    except Exception as e:
-        log_debug(f"Prompt quality scoring failed: {e}")
-        return None
 
 
 def analyze_artistic_style(image_path: str) -> dict:
@@ -643,112 +257,6 @@ def determine_enhancement_mode(image_analysis: dict, prompt: str) -> str:
         log_debug(f"Error determining enhancement mode: {e}")
     
     return default_mode
-
-
-def generate_enhanced_ltx2_prompt(audio_characteristics: dict, base_prompt: str) -> str:
-    """Generate enhanced LTX-2 prompt using advanced audio analysis."""
-    
-    # Check for preservation constraints - if user wants strict preservation, be conservative
-    base_lower = base_prompt.lower()
-    preservation_keywords = [
-        "strictly preserve", "preserve exactly", "keep exactly", "no changes", 
-        "don't change", "maintain exactly", "preserve the", "keep the", 
-        "same character", "same outfit", "same background", "no extra"
-    ]
-    
-    has_preservation_constraint = any(keyword in base_lower for keyword in preservation_keywords)
-    
-    # If user wants strict preservation, only add minimal audio-driven enhancements
-    if has_preservation_constraint:
-        prompt_parts = [base_prompt.strip()]
-        
-        # Only add very conservative enhancements that don't violate preservation
-        if audio_characteristics.get('has_vocals'):
-            vocal_confidence = audio_characteristics.get('vocal_confidence', 0)
-            if vocal_confidence > 0.7:
-                prompt_parts.append("with precise lip-sync to the vocal performance")
-        
-        # Add subtle movement only if base prompt doesn't forbid it
-        if "gentle swaying" in base_lower or "subtle movement" in base_lower:
-            if audio_characteristics.get('beat_strength') == 'strong':
-                prompt_parts.append("with subtle rhythmic movement synchronized to the music")
-        
-        return " ".join(prompt_parts)
-    
-    # Normal enhancement mode - proceed with detailed analysis
-    prompt_parts = [base_prompt.strip()]
-    
-    # 1. Performance Style Enhancements
-    if audio_characteristics.get('vocal_style') == 'spoken':
-        prompt_parts.append("delivering spoken dialogue with precise lip-sync and clear diction")
-        if audio_characteristics.get('vocal_confidence', 0) > 0.8:
-            prompt_parts.append("with articulate vocal performance and natural speech patterns")
-    elif audio_characteristics.get('vocal_style') == 'singing':
-        prompt_parts.append(f"singing with {audio_characteristics.get('vocal_range', 'medium')} vocal range")
-        if audio_characteristics.get('vocal_range') == 'high':
-            prompt_parts.append("featuring high-reaching gestures during peak vocal notes")
-    elif audio_characteristics.get('vocal_style') == 'melodic_speech':
-        prompt_parts.append("delivering melodic speech with rhythmic cadence")
-    
-    # 2. Rhythm and Timing Integration
-    if audio_characteristics.get('beat_strength') == 'strong':
-        prompt_parts.append("with subtle body movements synchronized to strong rhythmic beats")
-        if audio_characteristics.get('time_signature') != '4/4':
-            prompt_parts.append(f"movements following {audio_characteristics['time_signature']} time signature")
-    
-    if audio_characteristics.get('syncopation') == 'high':
-        prompt_parts.append("incorporating off-beat movements and syncopated gestures")
-    elif audio_characteristics.get('syncopation') == 'medium':
-        prompt_parts.append("with subtle rhythmic variations in movement")
-    
-    # 3. Tempo-Based Visual Elements
-    tempo = audio_characteristics.get('tempo', 'medium')
-    tempo_bpm = audio_characteristics.get('tempo_bpm', 120)
-    
-    if tempo == 'slow':
-        prompt_parts.append(f"with gentle, measured movements timed to the slow {tempo_bpm:.1f} BPM tempo")
-        if audio_characteristics.get('danceability', 0) > 0.7:
-            prompt_parts.append("creating a calming, meditative visual rhythm despite the danceable beat")
-    elif tempo == 'fast':
-        prompt_parts.append(f"with energetic movements responding to the driving {tempo_bpm:.1f} BPM tempo")
-        prompt_parts.append("quick visual elements synchronized to rapid rhythm")
-        # Add danceability information for fast tempo
-        danceability = audio_characteristics.get('danceability', 0.5)
-        if danceability > 0.8:
-            prompt_parts.append(f"with highly danceable movements matching the {danceability:.0%} danceability score")
-        elif danceability > 0.6:
-            prompt_parts.append("with rhythmic danceable movements")
-    
-    # Add vocal confidence and style details
-    if audio_characteristics.get('has_vocals'):
-        vocal_confidence = audio_characteristics.get('vocal_confidence', 0)
-        if vocal_confidence > 0.8:
-            prompt_parts.append("with prominent, confident vocal performance")
-        elif vocal_confidence > 0.6:
-            prompt_parts.append("with clear vocal performance")
-        
-        vocal_style = audio_characteristics.get('vocal_style', 'unknown')
-        if vocal_style == 'singing':
-            prompt_parts.append("featuring expressive singing with precise lip-sync")
-        elif vocal_style == 'spoken':
-            prompt_parts.append("with clear spoken delivery and articulate lip movements")
-    
-    # 4. Emotional and Dynamic Elements
-    mood = audio_characteristics.get('mood', 'neutral')
-    emotional_arc = audio_characteristics.get('emotional_arc', 'stable')
-    
-    mood_enhancements = {
-        'calm': "creating a serene, peaceful atmosphere with soft, gentle expressions",
-        'contemplative': "with thoughtful, introspective facial expressions and measured movements",
-        'energetic': "with dynamic, high-energy movements and vibrant expressions",
-        'emotional': "with expressive facial changes and emotional body language",
-        'futuristic': "with modern, innovative visual styling and contemporary movements"
-    }
-    
-    if mood in mood_enhancements:
-        prompt_parts.append(mood_enhancements[mood])
-    
-    return " ".join(prompt_parts)
 
 
 _SPECIALIZED_MODE_CONFIG = {
@@ -983,21 +491,6 @@ def enhance_prompt_character_design(base_prompt: str, image_description: str = "
     return enhance_prompt_specialized("character", base_prompt, image_description, audio_characteristics, prompt_type, gemini_model)
 
 
-class SpecializedEnhanceRequest(BaseModel):
-    prompt: str
-    enhancement_mode: str  # 'commercial', 'cinematic', 'character', 'object', 'ace-step', 'auto'
-    image_description: str | None = None
-    audio_characteristics: dict | None = None
-    prompt_type: str | None = None
-    model: str | None = None
-    image_analysis: dict | None = None  # For auto-detection
-    style: str | None = None
-    lighting: str | None = None
-    cinematography: str | None = None
-    ltx2_style: str | None = None  # LTX-2 video style
-    gemini_model: str | None = None  # override Gemini model for this request
-
-
 @app.post("/enhance-specialized", response_model=EnhanceResponse)
 async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
     """Handle specialized enhancement modes (commercial, cinematic, character design)."""
@@ -1045,57 +538,65 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
         # Apply specialized enhancement based on mode
         gm = request.gemini_model
         if enhancement_mode == 'commercial':
-            enhanced_prompt = enhance_prompt_commercial(
+            enhanced_prompt = await asyncio.to_thread(
+                enhance_prompt_commercial,
                 enriched_prompt,
                 request.image_description or "",
                 request.audio_characteristics,
-                prompt_type=request.prompt_type,
-                gemini_model=gm
+                request.prompt_type,
+                gm
             )
         elif enhancement_mode == 'cinematic':
-            enhanced_prompt = enhance_prompt_cinematic(
+            enhanced_prompt = await asyncio.to_thread(
+                enhance_prompt_cinematic,
                 enriched_prompt,
                 request.image_description or "",
                 request.audio_characteristics,
-                prompt_type=request.prompt_type,
-                gemini_model=gm
+                request.prompt_type,
+                gm
             )
         elif enhancement_mode == 'character':
-            enhanced_prompt = enhance_prompt_character_design(
+            enhanced_prompt = await asyncio.to_thread(
+                enhance_prompt_character_design,
                 enriched_prompt,
                 request.image_description or "",
                 request.audio_characteristics,
-                prompt_type=request.prompt_type,
-                gemini_model=gm
+                request.prompt_type,
+                gm
             )
         elif enhancement_mode == 'object':
-            enhanced_prompt = enhance_prompt_object_design(
+            enhanced_prompt = await asyncio.to_thread(
+                enhance_prompt_object_design,
                 enriched_prompt,
                 request.image_description or "",
                 request.audio_characteristics,
-                prompt_type=request.prompt_type,
-                gemini_model=gm
+                request.prompt_type,
+                gm
             )
         elif enhancement_mode == 'ace-step':
-            enhanced_prompt = enhance_prompt_ace_step(
+            enhanced_prompt = await asyncio.to_thread(
+                enhance_prompt_ace_step,
                 request.prompt,
                 request.image_description or "",
                 request.audio_characteristics
             )
         else:
             # Fallback to general enhancement
-            enhanced_prompt = run_gemini(f"Enhance this prompt for AI image generation: {request.prompt}", model_override=gm)
+            enhanced_prompt = await run_gemini_async(f"Enhance this prompt for AI image generation: {request.prompt}", model_override=gm)
             enhanced_prompt = limit_prompt_length(enhanced_prompt, request.prompt_type or "image")
 
         if enhanced_prompt.startswith("Error") or enhanced_prompt.startswith("An unexpected error"):
             return EnhanceResponse(enhanced_prompt=enhanced_prompt)
 
-        quality_payload = evaluate_enhanced_prompt_quality(
-            enhanced_prompt=enhanced_prompt,
-            prompt_type=request.prompt_type,
-            model=request.model,
-            gemini_model=gm,
-        )
+        quality_payload = None
+        if request.include_quality_scoring:
+            quality_payload = await asyncio.to_thread(
+                evaluate_enhanced_prompt_quality,
+                enhanced_prompt=enhanced_prompt,
+                prompt_type=request.prompt_type,
+                model=request.model,
+                gemini_model=gm,
+            )
         
         log_debug(f"Specialized enhancement completed: {len(enhanced_prompt)} chars")
         return EnhanceResponse(
@@ -1105,7 +606,6 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
         )
         
     except Exception as e:
-        import traceback
         error_details = traceback.format_exc()
         log_debug(f"Error in specialized enhancement: {e}")
         log_debug(f"Error details: {error_details}")
@@ -1258,7 +758,7 @@ def limit_prompt_length(enhanced_prompt: str, model_type: str) -> str:
         "wan2": 800,  # WAN2 prompt limit
         "image": 3000,  # Image prompt type default
         "veo": 2000,  # Video prompt type default
-        "ltx2": 1500,  # LTX-2 prompt limit (aligned with official examples: 890-1404 chars)
+        "ltx2": 3000,  # LTX-2.3: longer prompts outperform shorter ones (official guide)
         # AI Models - all set to 3000 except WAN2
         "default": 3000,
         "qwen": 3000,
@@ -1486,7 +986,8 @@ async def style_test_page(request: Request):
 
 
 @app.post("/analyze-image", response_model=AnalyzeResponseMulti)
-async def analyze_image_endpoint(images: list[UploadFile] = File(...)):
+@limiter.limit("20/minute")
+async def analyze_image_endpoint(request: Request, images: list[UploadFile] = File(...)):
     try:
         # Validate input
         is_valid, error_message = validate_image_files(images)
@@ -1547,7 +1048,9 @@ async def analyze_image_endpoint(images: list[UploadFile] = File(...)):
                 )
 
             try:
-                file_path = os.path.join(UPLOADS_DIR, image.filename)
+                safe_name = os.path.basename(image.filename)
+                unique_name = f"{uuid.uuid4().hex[:8]}_{safe_name}"
+                file_path = os.path.join(UPLOADS_DIR, unique_name)
                 with open(file_path, "wb") as buffer:
                     shutil.copyfileobj(image.file, buffer)
                 saved_paths.append(os.path.abspath(file_path))
@@ -1564,7 +1067,7 @@ async def analyze_image_endpoint(images: list[UploadFile] = File(...)):
                 "Analyze this image in detail. Provide a comprehensive description covering the main subject, "
                 "setting, composition, colors, and notable elements. Be descriptive and thorough."
             )
-            combined = run_gemini(meta_prompt, image_path=saved_paths[0])
+            combined = await run_gemini_async(meta_prompt, image_path=saved_paths[0])
             if combined.startswith("Error") or combined.startswith("An unexpected error"):
                 return AnalyzeResponseMulti(
                     combined_description=combined,
@@ -1573,7 +1076,7 @@ async def analyze_image_endpoint(images: list[UploadFile] = File(...)):
                 )
             
             # Add style analysis for single image
-            style_info = analyze_artistic_style(saved_paths[0])
+            style_info = await asyncio.to_thread(analyze_artistic_style, saved_paths[0])
             enhanced_description = f"{combined}\n\n🎨 **Artistic Style Analysis:**\n• Primary Style: {style_info['primary_style']}\n• Color Palette: {style_info['color_palette']}\n• Mood: {style_info['mood_atmosphere']}\n• Recommended Keywords: {', '.join(style_info['recommended_keywords'][:5])}"
             
             return AnalyzeResponseMulti(
@@ -1586,8 +1089,8 @@ async def analyze_image_endpoint(images: list[UploadFile] = File(...)):
             per_image_prompt = (
                 "Briefly summarize this image in 3-5 sentences focusing on subject, style/medium, colors, lighting, and composition."
             )
-            a_desc = run_gemini(per_image_prompt, image_path=saved_paths[0])
-            b_desc = run_gemini(per_image_prompt, image_path=saved_paths[1])
+            a_desc = await run_gemini_async(per_image_prompt, image_path=saved_paths[0])
+            b_desc = await run_gemini_async(per_image_prompt, image_path=saved_paths[1])
             if a_desc.startswith("Error") or a_desc.startswith("An unexpected error"):
                 a_desc = None
             if b_desc.startswith("Error") or b_desc.startswith("An unexpected error"):
@@ -1603,13 +1106,13 @@ async def analyze_image_endpoint(images: list[UploadFile] = File(...)):
                 "- Notable details (important cues to preserve)\n"
                 "Be concise but descriptive."
             )
-            combined = run_gemini(combined_prompt, image_paths=saved_paths[:2])
+            combined = await run_gemini_async(combined_prompt, image_paths=saved_paths[:2])
             if combined.startswith("Error") or combined.startswith("An unexpected error"):
                 combined = (a_desc or "") + ("\n\n" if a_desc and b_desc else "") + (b_desc or "")
             
             # Add style analysis for both images
-            style_a = analyze_artistic_style(saved_paths[0])
-            style_b = analyze_artistic_style(saved_paths[1])
+            style_a = await asyncio.to_thread(analyze_artistic_style, saved_paths[0])
+            style_b = await asyncio.to_thread(analyze_artistic_style, saved_paths[1])
             
             style_comparison = f"\n\n🎨 **Style Comparison:**\n• Image A: {style_a['primary_style']} ({style_a['color_palette']})\n• Image B: {style_b['primary_style']} ({style_b['color_palette']})\n• Shared Keywords: {', '.join(set(style_a['recommended_keywords'][:3]) & set(style_b['recommended_keywords'][:3]))}"
             
@@ -1621,8 +1124,6 @@ async def analyze_image_endpoint(images: list[UploadFile] = File(...)):
                 image_b_description=b_desc,
             )
     except Exception as e:
-        import traceback
-
         error_details = traceback.format_exc()
         print(f"Error in analyze_image_endpoint: {error_details}")
         return AnalyzeResponseMulti(
@@ -1809,11 +1310,7 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
         # 7. Performance Energy Analysis
         characteristics["performance_energy"] = _analyze_performance_energy(y, sr, characteristics["tempo_bpm"])
         
-        # 7b. Compute spectral features needed for complexity assessment
-        spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
-        spectral_rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr)[0]
-        
-        # 8. Musical Complexity Assessment
+        # 8. Musical Complexity Assessment (reuses spectral_centroids and spectral_rolloff from step 5c)
         complexity_score = _calculate_musical_complexity(y, sr, spectral_centroids, spectral_rolloff)
         if complexity_score > 0.8:
             characteristics["musical_complexity"] = "complex"
@@ -2308,7 +1805,6 @@ def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
     except Exception as e:
         log_debug(f"Error in enhanced audio analysis: {str(e)}")
         log_debug(f"Error type: {type(e).__name__}")
-        import traceback
         log_debug(f"Traceback: {traceback.format_exc()}")
         # Fallback to filename-based analysis
         return analyze_audio_characteristics(filename, 0)
@@ -2407,7 +1903,8 @@ def analyze_audio_characteristics(filename: str, file_size: int) -> dict:
 
 
 @app.post("/analyze-audio", response_model=dict)
-async def analyze_audio_endpoint(audio_file: UploadFile = File(...)):
+@limiter.limit("20/minute")
+async def analyze_audio_endpoint(request: Request, audio_file: UploadFile = File(...)):
     """Analyze uploaded audio file for rhythm, tempo, and characteristics."""
     try:
         # Validate input
@@ -2418,7 +1915,8 @@ async def analyze_audio_endpoint(audio_file: UploadFile = File(...)):
         
         # Save audio file temporarily
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"audio_{timestamp}_{audio_file.filename}"
+        safe_name = os.path.basename(audio_file.filename)
+        filename = f"audio_{timestamp}_{uuid.uuid4().hex[:8]}_{safe_name}"
         file_path = os.path.join(UPLOADS_DIR, filename)
         
         with open(file_path, "wb") as buffer:
@@ -2429,7 +1927,7 @@ async def analyze_audio_endpoint(audio_file: UploadFile = File(...)):
         file_size = os.path.getsize(file_path)
         
         # Generate audio description for LTX-2 prompt enhancement using real audio analysis
-        audio_characteristics = analyze_real_audio_characteristics(file_path, audio_file.filename)
+        audio_characteristics = await asyncio.to_thread(analyze_real_audio_characteristics, file_path, audio_file.filename)
         
         # Add file format information
         format_info = ""
@@ -2461,8 +1959,6 @@ async def analyze_audio_endpoint(audio_file: UploadFile = File(...)):
 @app.post("/enhance", response_model=EnhanceResponse)
 async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
     """Enhance the prompt using Gemini API."""
-    import time
-
     start_time = time.time()
 
     try:
@@ -3200,6 +2696,8 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
                     model_guidance += " For complex scenes, describe multiple elements with logical arrangement and consistent style for best results."
 
         # --- Logic to choose meta-prompt based on prompt_type ---
+        ltx2_negative = None  # populated only for LTX2
+
         if request.prompt_type == "VEO":
             meta_prompt = f"You are a creative assistant for the VEO text-to-video model. Expand the user's idea into a rich, cinematic prompt{instruction_text}. Describe the scene, subject, and action in a detailed paragraph.{image_context}{text_emphasis} IMPORTANT: Keep your enhanced prompt under 2000 characters total. Do not add conversational fluff. User's idea: '{request.prompt}'"
 
@@ -3318,618 +2816,18 @@ User's Specifications:
 Generate a brief animation prompt now."""
 
         elif request.prompt_type == "LTX2":
-            # LTX-2 video generation with synchronized audio
-            audio_generation = getattr(request, 'audio_generation', 'enabled') if hasattr(request, 'audio_generation') else 'enabled'
-            resolution = getattr(request, 'resolution', '4K') if hasattr(request, 'resolution') else '4K'
-            audio_description = getattr(request, 'audio_description', '') if hasattr(request, 'audio_description') else ''
-            movement_level = getattr(request, 'movement_level', 'auto') if hasattr(request, 'movement_level') else 'auto'
-            
-            # Audio Integration parameters
-            lipsync_intensity = getattr(request, 'lipsync_intensity', 'natural') if hasattr(request, 'lipsync_intensity') else 'natural'
-            audio_reactivity = getattr(request, 'audio_reactivity', 'medium') if hasattr(request, 'audio_reactivity') else 'medium'
-            genre_movement = getattr(request, 'genre_movement', '') if hasattr(request, 'genre_movement') else ''
-            
-            # Timing Control parameters
-            movement_speed = getattr(request, 'movement_speed', 'normal') if hasattr(request, 'movement_speed') else 'normal'
-            pause_points = getattr(request, 'pause_points', 'none') if hasattr(request, 'pause_points') else 'none'
-            transition_smoothness = getattr(request, 'transition_smoothness', 'natural') if hasattr(request, 'transition_smoothness') else 'natural'
-            
-            # Character Interaction parameters
-            character_coordination = getattr(request, 'character_coordination', 'independent') if hasattr(request, 'character_coordination') else 'independent'
-            object_interaction = getattr(request, 'object_interaction', 'none') if hasattr(request, 'object_interaction') else 'none'
-            
-            # Use structured audio characteristics if available (avoids re-parsing text)
-            audio_chars_dict = getattr(request, 'audio_characteristics', None) or {}
-            if audio_chars_dict:
-                # Override text-parsed values with structured data
-                if not genre_movement and audio_chars_dict.get('genre'):
-                    genre_map = {'pop': 'pop', 'rock': 'rock', 'electronic': 'electronic', 'jazz': 'jazz', 
-                                 'classical': 'classical', 'folk': 'folk', 'ambient': 'electronic',
-                                 'spoken_word': 'storytelling', 'ballad': 'folk'}
-                    genre_movement = genre_map.get(audio_chars_dict['genre'], '')
-                if audio_reactivity == 'medium' and audio_chars_dict.get('energy_level'):
-                    energy_map = {'very_high': 'high', 'high': 'high', 'low': 'low', 'very_low': 'low'}
-                    audio_reactivity = energy_map.get(audio_chars_dict['energy_level'], 'medium')
-                if lipsync_intensity == 'natural' and audio_chars_dict.get('vocal_style'):
-                    if audio_chars_dict['vocal_style'] == 'spoken':
-                        lipsync_intensity = 'subtle'
-                    elif audio_chars_dict['vocal_style'] == 'singing' and audio_chars_dict.get('tempo') == 'fast':
-                        lipsync_intensity = 'exaggerated'
-                if movement_speed == 'normal' and audio_chars_dict.get('tempo'):
-                    tempo_map = {'slow': 'slow_motion', 'fast': 'fast'}
-                    if audio_chars_dict.get('vocal_style') == 'spoken' and audio_chars_dict['tempo'] == 'slow':
-                        movement_speed = 'normal'  # Speech stays natural
-                    else:
-                        movement_speed = tempo_map.get(audio_chars_dict['tempo'], 'normal')
-                log_debug(f"Using structured audio data: genre={genre_movement}, reactivity={audio_reactivity}, lipsync={lipsync_intensity}, speed={movement_speed}")
-            
-            # Add specific instructions for singing/dancing with uploaded audio
-            performance_instruction = ""
-            
-            # Add movement level control
-            movement_instruction = ""
-            
-            # Smart priority system: Auto-detect vs Manual selection
-            if movement_level == 'auto' and audio_description:
-                # AUTO MODE: Use audio detection to determine optimal movement level
-                if "very_fast" in audio_description.lower() and "singing" in audio_description.lower():
-                    auto_movement_level = "dynamic"  # Fast singing = dynamic
-                elif "high energy" in audio_description.lower() or "very_high" in audio_description.lower():
-                    auto_movement_level = "expressive"  # High energy = expressive
-                elif "low energy" in audio_description.lower() or "calm" in audio_description.lower() or "peaceful" in audio_description.lower():
-                    auto_movement_level = "minimal"  # Low energy = minimal
-                elif "speech" in audio_description.lower() or "dialogue" in audio_description.lower() or "spoken" in audio_description.lower():
-                    auto_movement_level = "minimal"  # Speech = minimal
-                elif "dance" in audio_description.lower() or "highly danceable" in audio_description.lower():
-                    auto_movement_level = "expressive"  # Danceable = expressive
-                else:
-                    auto_movement_level = "natural"  # Default to natural
-                
-                # Generate movement instruction based on auto-detected level
-                if auto_movement_level == 'static':
-                    movement_instruction = " ABSOLUTE STATIC PERFORMANCE: Only lip-sync and subtle eye movements allowed. No head movement, no arm gestures, no body swaying, no shoulder movements. Character remains completely still except for mouth movement and minimal facial expressions. "
-                elif auto_movement_level == 'minimal':
-                    movement_instruction = " MINIMAL MOVEMENT: Only subtle head movement, slight shoulder motion, and gentle hand gestures. No large body movements, no dramatic swaying, no exaggerated gestures. Focus on restrained, natural motion. "
-                elif auto_movement_level == 'natural':
-                    movement_instruction = " NATURAL MOVEMENT: Normal body movement including head turns, shoulder movements, arm gestures, and gentle body swaying. Maintain realistic motion without exaggeration. "
-                elif auto_movement_level == 'expressive':
-                    movement_instruction = " EXPRESSIVE MOVEMENT: Full body movement including dynamic gestures, head movement, shoulder motion, arm gestures, and body swaying. Emphasize rhythmic, energetic motion that matches the audio. "
-                elif auto_movement_level == 'dynamic':
-                    movement_instruction = " DYNAMIC MOVEMENT: Highly energetic and expressive full-body movement. Include dramatic gestures, head movement, shoulder motion, arm gestures, body swaying, and rhythmic dancing. Emphasize powerful, athletic motion. "
-                
-                # Add auto-detection info to performance instruction
-                performance_instruction += f"AUTO-DETECTED MOVEMENT: Selected '{auto_movement_level}' movement level based on audio analysis. "
-                
-            else:
-                # MANUAL MODE: Use user-selected movement level
-                if movement_level == 'static':
-                    movement_instruction = " ABSOLUTE STATIC PERFORMANCE: Only lip-sync and subtle eye movements allowed. No head movement, no arm gestures, no body swaying, no shoulder movements. Character remains completely still except for mouth movement and minimal facial expressions. "
-                elif movement_level == 'minimal':
-                    movement_instruction = " MINIMAL MOVEMENT: Only subtle head movement, slight shoulder motion, and gentle hand gestures. No large body movements, no dramatic swaying, no exaggerated gestures. Focus on restrained, natural motion. "
-                elif movement_level == 'natural':
-                    movement_instruction = " NATURAL MOVEMENT: Normal body movement including head turns, shoulder movements, arm gestures, and gentle body swaying. Maintain realistic motion without exaggeration. "
-                elif movement_level == 'expressive':
-                    movement_instruction = " EXPRESSIVE MOVEMENT: Full body movement including dynamic gestures, head movement, shoulder motion, arm gestures, and body swaying. Emphasize rhythmic, energetic motion that matches the audio. "
-                elif movement_level == 'dynamic':
-                    movement_instruction = " DYNAMIC MOVEMENT: Highly energetic and expressive full-body movement. Include dramatic gestures, head movement, shoulder motion, arm gestures, body swaying, and rhythmic dancing. Emphasize powerful, athletic motion. "
-                elif movement_level == 'auto' and not audio_description:
-                    # Auto selected but no audio - default to natural
-                    movement_instruction = " NATURAL MOVEMENT: Normal body movement including head turns, shoulder movements, arm gestures, and gentle body swaying. Maintain realistic motion without exaggeration. "
-            
-            # AUTO-DETECT from audio_description if not explicitly set
-            if audio_description:
-                # CORRECT COMMON AUDIO ANALYSIS ERRORS
-                
-                # Get audio analysis values if available
-                energy_level = getattr(request, 'energy_level', 'medium') if hasattr(request, 'energy_level') else 'medium'
-                danceability = getattr(request, 'danceability', 0.5) if hasattr(request, 'danceability') else 0.5
-                mood = getattr(request, 'mood', 'neutral') if hasattr(request, 'mood') else 'neutral'
-                
-                # Fix incorrect energy level for fast tempo music
-                if "very_fast" in audio_description.lower() and energy_level == "low":
-                    energy_level = "high"  # Fast tempo music can't be low energy
-                
-                # Fix danceability values over 1.0
-                if danceability and float(danceability) > 1.0:
-                    danceability = 1.0  # Cap at maximum
-                
-                # Fix mood for high-energy rock music
-                if "very_fast" in audio_description.lower() and mood == "neutral":
-                    mood = "energetic"  # Fast music should be energetic
-                
-                # Fix energy level for dance music
-                if "danceability" and float(danceability) > 0.9 and energy_level == "medium":
-                    energy_level = "high"  # Highly danceable music should be high energy
-                
-                # Fix mood for dance/electronic music
-                if ("dance" in audio_description.lower() or "electronic" in audio_description.lower() or "pump up" in audio_description.lower()) and mood == "emotional":
-                    mood = "energetic"  # Dance music should be energetic, not emotional
-                
-                # Enhanced genre detection with speech-specific logic
-                if not genre_movement:
-                    if "rock" in audio_description.lower() or "heavy" in audio_description.lower():
-                        genre_movement = "rock"
-                    elif "metal" in audio_description.lower() or "aggressive" in audio_description.lower():
-                        genre_movement = "metal"
-                    elif "pop" in audio_description.lower() or "upbeat" in audio_description.lower():
-                        genre_movement = "pop"
-                    elif "hip-hop" in audio_description.lower() or "hip hop" in audio_description.lower() or "rap" in audio_description.lower():
-                        genre_movement = "hip_hop"
-                    elif "r&b" in audio_description.lower() or "rnb" in audio_description.lower() or "soul" in audio_description.lower():
-                        genre_movement = "rnb"
-                    elif "indie" in audio_description.lower() or "alternative" in audio_description.lower():
-                        genre_movement = "indie"
-                    elif "classical" in audio_description.lower() or "orchestral" in audio_description.lower():
-                        genre_movement = "classical"
-                    elif "electronic" in audio_description.lower() or "edm" in audio_description.lower() or "synth" in audio_description.lower():
-                        genre_movement = "electronic"
-                    elif "jazz" in audio_description.lower() or "smooth" in audio_description.lower():
-                        genre_movement = "jazz"
-                    elif "folk" in audio_description.lower() or "acoustic" in audio_description.lower() or "organic" in audio_description.lower():
-                        genre_movement = "folk"
-                    elif "latin" in audio_description.lower() or "salsa" in audio_description.lower() or "reggae" in audio_description.lower():
-                        genre_movement = "latin"
-                    elif "african" in audio_description.lower() or "afro" in audio_description.lower():
-                        genre_movement = "african"
-                    elif "asian" in audio_description.lower() or "oriental" in audio_description.lower():
-                        genre_movement = "asian"
-                    elif "dialogue" in audio_description.lower() or "spoken" in audio_description.lower() or "speech" in audio_description.lower():
-                        genre_movement = "storytelling"
-                    elif "narrative" in audio_description.lower() or "storytelling" in audio_description.lower():
-                        genre_movement = "storytelling"
-                
-                # Enhanced tempo detection with speech consideration
-                if movement_speed == 'normal':  # Only override if not explicitly set
-                    if "very_fast" in audio_description.lower() or "fast tempo" in audio_description.lower():
-                        movement_speed = "fast"
-                    elif "very_slow" in audio_description.lower() or "slow tempo" in audio_description.lower():
-                        # For speech, use natural speed instead of slow motion
-                        if "speech" in audio_description.lower() or "dialogue" in audio_description.lower() or "spoken" in audio_description.lower():
-                            movement_speed = "natural"
-                        else:
-                            movement_speed = "slow_motion"
-                
-                # Enhanced energy detection with danceability paradox fix
-                if audio_reactivity == 'medium':  # Only override if not explicitly set
-                    if "high energy" in audio_description.lower() or "very_high" in audio_description.lower():
-                        audio_reactivity = "high"
-                    elif "low energy" in audio_description.lower() or "calm" in audio_description.lower() or "peaceful" in audio_description.lower():
-                        audio_reactivity = "low"
-                    # Use corrected energy_level
-                    elif energy_level == "high":
-                        audio_reactivity = "high"
-                    # Speech-specific reactivity
-                    elif "speech" in audio_description.lower() or "dialogue" in audio_description.lower():
-                        audio_reactivity = "low"  # Speech should have low reactivity
-                
-                # Enhanced lipsync intensity with speech-specific logic
-                if lipsync_intensity == 'natural':  # Only override if not explicitly set
-                    if "dramatic" in audio_description.lower() or "powerful" in audio_description.lower():
-                        lipsync_intensity = "exaggerated"
-                    elif "subtle" in audio_description.lower() or "gentle" in audio_description.lower():
-                        lipsync_intensity = "subtle"
-                    # Fast tempo singing should be exaggerated
-                    elif "very_fast" in audio_description.lower() and "singing" in audio_description.lower():
-                        lipsync_intensity = "exaggerated"
-                    # Speech-specific lipsync
-                    elif "speech" in audio_description.lower() or "dialogue" in audio_description.lower() or "calm" in audio_description.lower():
-                        lipsync_intensity = "subtle"  # Natural speech should be subtle
-                
-                # Generate comprehensive audio characteristics for enhanced prompts
-                audio_characteristics = []
-                
-                # Emotional & Performance Detection
-                if any(word in audio_description.lower() for word in ["singing", "vocals", "vocal"]):
-                    audio_characteristics.append("singing")
-                if "speaking" in audio_description.lower() or "spoken" in audio_description.lower():
-                    audio_characteristics.append("speaking")
-                if "dialogue" in audio_description.lower():
-                    audio_characteristics.append("dialogue")
-                if "speech" in audio_description.lower():
-                    audio_characteristics.append("speech")
-                if "rapping" in audio_description.lower() or "rap" in audio_description.lower():
-                    audio_characteristics.append("rapping")
-                if "chanting" in audio_description.lower() or "chant" in audio_description.lower():
-                    audio_characteristics.append("chanting")
-                if "whispering" in audio_description.lower() or "whisper" in audio_description.lower():
-                    audio_characteristics.append("whispering")
-                if "storytelling" in audio_description.lower() or "narrative" in audio_description.lower():
-                    audio_characteristics.append("storytelling")
-                if "conversational" in audio_description.lower():
-                    audio_characteristics.append("conversational")
-                if "personal" in audio_description.lower():
-                    audio_characteristics.append("personal")
-                if "intimate" in audio_description.lower():
-                    audio_characteristics.append("intimate")
-                
-                # Emotional Tone Detection
-                if "angry" in audio_description.lower() or "aggressive" in audio_description.lower():
-                    audio_characteristics.append("angry")
-                if "joyful" in audio_description.lower() or "happy" in audio_description.lower():
-                    audio_characteristics.append("joyful")
-                if "sad" in audio_description.lower() or "melancholy" in audio_description.lower():
-                    audio_characteristics.append("sad")
-                if "romantic" in audio_description.lower() or "love" in audio_description.lower():
-                    audio_characteristics.append("romantic")
-                if "peaceful" in audio_description.lower() or "calm" in audio_description.lower():
-                    audio_characteristics.append("peaceful")
-                if "dramatic" in audio_description.lower() or "intense" in audio_description.lower():
-                    audio_characteristics.append("dramatic")
-                
-                # Performance Intensity
-                if "passionate" in audio_description.lower():
-                    audio_characteristics.append("passionate")
-                if "restrained" in audio_description.lower() or "subtle" in audio_description.lower():
-                    audio_characteristics.append("restrained")
-                if "casual" in audio_description.lower() or "relaxed" in audio_description.lower():
-                    audio_characteristics.append("casual")
-                
-                # Musical Structure Detection
-                if "strong beat" in audio_description.lower() or "heavy beat" in audio_description.lower():
-                    audio_characteristics.append("strong_beat")
-                if "subtle rhythm" in audio_description.lower() or "gentle rhythm" in audio_description.lower():
-                    audio_characteristics.append("subtle_rhythm")
-                if "complex percussion" in audio_description.lower() or "intricate" in audio_description.lower():
-                    audio_characteristics.append("complex_percussion")
-                if "minimal beat" in audio_description.lower() or "simple beat" in audio_description.lower():
-                    audio_characteristics.append("minimal_beat")
-                
-                # Instrumentation Detection
-                if "guitar" in audio_description.lower():
-                    audio_characteristics.append("guitar_driven")
-                if "piano" in audio_description.lower():
-                    audio_characteristics.append("piano_based")
-                if "orchestral" in audio_description.lower() or "orchestra" in audio_description.lower():
-                    audio_characteristics.append("orchestral")
-                if "electronic beats" in audio_description.lower() or "electronic" in audio_description.lower():
-                    audio_characteristics.append("electronic_beats")
-                
-                # Vocal Presence
-                if "lead vocals" in audio_description.lower() or "solo" in audio_description.lower():
-                    audio_characteristics.append("lead_vocals")
-                if "harmonies" in audio_description.lower() or "harmony" in audio_description.lower():
-                    audio_characteristics.append("harmonies")
-                if "backup vocals" in audio_description.lower() or "background vocals" in audio_description.lower():
-                    audio_characteristics.append("backup_vocals")
-                if "acapella" in audio_description.lower() or "a cappella" in audio_description.lower():
-                    audio_characteristics.append("acapella")
-                
-                # Dynamic Range Detection
-                if "dynamic shifts" in audio_description.lower() or "volume changes" in audio_description.lower():
-                    audio_characteristics.append("dynamic_shifts")
-                if "consistent volume" in audio_description.lower() or "steady" in audio_description.lower():
-                    audio_characteristics.append("consistent_volume")
-                if "crescendo" in audio_description.lower() or "building" in audio_description.lower():
-                    audio_characteristics.append("crescendo")
-                if "fade" in audio_description.lower():
-                    audio_characteristics.append("fade_effects")
-                
-                # Pace Variations
-                if "changing tempo" in audio_description.lower() or "tempo changes" in audio_description.lower():
-                    audio_characteristics.append("changing_tempo")
-                if "accelerating" in audio_description.lower() or "speeding up" in audio_description.lower():
-                    audio_characteristics.append("accelerating")
-                if "decelerating" in audio_description.lower() or "slowing down" in audio_description.lower():
-                    audio_characteristics.append("decelerating")
-                
-                # Energy Arcs
-                if "building energy" in audio_description.lower() or "energy builds" in audio_description.lower():
-                    audio_characteristics.append("building_energy")
-                if "climax" in audio_description.lower() or "peak" in audio_description.lower():
-                    audio_characteristics.append("climax_moments")
-                if "calm sections" in audio_description.lower() or "quiet parts" in audio_description.lower():
-                    audio_characteristics.append("calm_sections")
-                if "explosive" in audio_description.lower() or "powerful" in audio_description.lower():
-                    audio_characteristics.append("explosive_parts")
-                
-                # Stylistic Elements
-                if "vintage" in audio_description.lower() or "retro" in audio_description.lower():
-                    audio_characteristics.append("vintage_style")
-                if "modern" in audio_description.lower() or "contemporary" in audio_description.lower():
-                    audio_characteristics.append("modern_style")
-                if "futuristic" in audio_description.lower():
-                    audio_characteristics.append("futuristic_style")
-                if "latin" in audio_description.lower():
-                    audio_characteristics.append("latin_style")
-                if "african" in audio_description.lower():
-                    audio_characteristics.append("african_style")
-                if "asian" in audio_description.lower():
-                    audio_characteristics.append("asian_style")
-                if "western" in audio_description.lower():
-                    audio_characteristics.append("western_style")
-                if "middle eastern" in audio_description.lower():
-                    audio_characteristics.append("middle_eastern_style")
-                
-                # Atmospheric Quality
-                if "intimate" in audio_description.lower():
-                    audio_characteristics.append("intimate")
-                if "epic" in audio_description.lower():
-                    audio_characteristics.append("epic")
-                if "raw" in audio_description.lower():
-                    audio_characteristics.append("raw")
-                if "polished" in audio_description.lower() or "clean" in audio_description.lower():
-                    audio_characteristics.append("polished")
-                if "organic" in audio_description.lower():
-                    audio_characteristics.append("organic")
-                
-                # Movement Triggers
-                if "highly danceable" in audio_description.lower() or "dance" in audio_description.lower():
-                    # Fix danceability paradox for speech content
-                    if "speech" in audio_description.lower() or "dialogue" in audio_description.lower() or "spoken" in audio_description.lower():
-                        audio_characteristics.append("subtle_rhythm")  # More appropriate for speech
-                    else:
-                        audio_characteristics.append("highly_danceable")
-                if "minimal dance" in audio_description.lower():
-                    audio_characteristics.append("minimal_dance")
-                if "head-nodding" in audio_description.lower() or "head nod" in audio_description.lower():
-                    audio_characteristics.append("head_nodding")
-                if "full body movement" in audio_description.lower():
-                    audio_characteristics.append("full_body_movement")
-                # Speech-specific movement triggers
-                if "peaceful" in audio_description.lower() or "serene" in audio_description.lower():
-                    audio_characteristics.append("gentle_swaying")
-                if "calm" in audio_description.lower():
-                    audio_characteristics.append("calm_presence")
-                if "slow tempo" in audio_description.lower() and ("speech" in audio_description.lower() or "dialogue" in audio_description.lower()):
-                    audio_characteristics.append("measured_speech")
-                
-                # Crowd Response
-                if "concert" in audio_description.lower() or "live" in audio_description.lower():
-                    audio_characteristics.append("concert_feel")
-                if "intimate performance" in audio_description.lower():
-                    audio_characteristics.append("intimate_performance")
-                if "group" in audio_description.lower() or "band" in audio_description.lower():
-                    audio_characteristics.append("group_energy")
-                
-                # Physicality
-                if "athletic" in audio_description.lower():
-                    audio_characteristics.append("athletic_performance")
-                if "gentle swaying" in audio_description.lower():
-                    audio_characteristics.append("gentle_swaying")
-                if "static singing" in audio_description.lower():
-                    audio_characteristics.append("static_singing")
-                if "dramatic gestures" in audio_description.lower():
-                    audio_characteristics.append("dramatic_gestures")
-                
-                # Technical Audio Features
-                if "bass-heavy" in audio_description.lower() or "heavy bass" in audio_description.lower():
-                    audio_characteristics.append("bass_heavy")
-                if "treble-focused" in audio_description.lower():
-                    audio_characteristics.append("treble_focused")
-                if "balanced" in audio_description.lower():
-                    audio_characteristics.append("balanced")
-                if "reverb" in audio_description.lower():
-                    audio_characteristics.append("reverb")
-                if "echo" in audio_description.lower():
-                    audio_characteristics.append("echo")
-                if "dry sound" in audio_description.lower():
-                    audio_characteristics.append("dry_sound")
-                if "distortion" in audio_description.lower():
-                    audio_characteristics.append("distortion")
-                
-                # Narrative Elements
-                if "storytelling" in audio_description.lower() or "narrative" in audio_description.lower():
-                    audio_characteristics.append("storytelling")
-                if "emotional journey" in audio_description.lower():
-                    audio_characteristics.append("emotional_journey")
-                if "character-driven" in audio_description.lower():
-                    audio_characteristics.append("character_driven")
-                if "abstract" in audio_description.lower():
-                    audio_characteristics.append("abstract")
-                
-                # Mood Progression
-                if "uplifting" in audio_description.lower():
-                    audio_characteristics.append("uplifting")
-                if "dark" in audio_description.lower():
-                    audio_characteristics.append("dark")
-                if "mysterious" in audio_description.lower():
-                    audio_characteristics.append("mysterious")
-                if "celebratory" in audio_description.lower():
-                    audio_characteristics.append("celebratory")
-                
-                # Create comprehensive audio instruction based on detected characteristics
-                if audio_characteristics:
-                    characteristic_instruction = "AUDIO CHARACTERISTICS: "
-                    characteristics_text = ", ".join(audio_characteristics)
-                    characteristic_instruction += f"Detected audio characteristics: {characteristics_text}. Generate movements and expressions that perfectly match these audio qualities. "
-                    performance_instruction += characteristic_instruction
-            
-            audio_instruction = ""
-            if audio_generation == 'enabled':
-                if audio_description:
-                    audio_instruction = f" Use the uploaded audio as the soundtrack: {audio_description} Generate synchronized lip-sync and dance movements that match the audio rhythm and tempo. The character should sing/dance in perfect sync with the uploaded audio track."
-                else:
-                    audio_instruction = " Include synchronized audio generation that matches the visual content - describe ambient sounds, dialogue, music, or effects that naturally complement the scene."
-            else:
-                audio_instruction = " Video only generation - no audio."
-            
-            resolution_instruction = f""
-            
-            if audio_description:
-                # Parse characteristics from audio_description
-                if "singing" in audio_description.lower() or "vocals" in audio_description.lower():
-                    performance_instruction += " Focus on subtle mouth motion and natural facial movement influenced by vocal rhythm - gentle lip movement, slight jaw motion, and expressive eyes that suggest singing without exaggerated mouth openings. "
-                elif "dance" in request.prompt.lower() or "dancing" in request.prompt.lower():
-                    # Use tempo information for more precise dance instructions
-                    if "very_fast" in audio_description.lower() or "fast tempo" in audio_description.lower():
-                        performance_instruction += " Focus on energetic but controlled rhythmic body motion with quick, precise movements that match the fast tempo - head nods, shoulder movements, and hand gestures in sync with rapid beats. "
-                    elif "very_slow" in audio_description.lower() or "slow tempo" in audio_description.lower():
-                        performance_instruction += " Focus on gentle, flowing body motion with slow, deliberate movements - subtle swaying, soft hand gestures, and gradual weight shifts synchronized to the slow rhythm. "
-                    else:
-                        performance_instruction += " Focus on rhythmic body motion with coordinated dance movements - head bobs, shoulder movements, and hand gestures that naturally respond to the musical beat and rhythm. "
-                
-                # Add energy-based instructions
-                if "high energy" in audio_description.lower() or "very_high" in audio_description.lower():
-                    performance_instruction += "Emphasize dynamic movement with increased motion range while maintaining natural body mechanics - more expressive gestures, broader movements, and stronger rhythmic responses. "
-                elif "low energy" in audio_description.lower() or "calm" in audio_description.lower():
-                    performance_instruction += "Emphasize minimal, subtle movement with gentle body language - soft gestures, slight swaying, and calm facial expressions that match the tranquil mood. "
-                
-                # Add mood-based instructions
-                if "happy" in audio_description.lower() or "joyful" in audio_description.lower():
-                    performance_instruction += "Create positive presence through natural smiles, bright eyes, and open body posture - subtle expressions that convey joy without overacting. "
-                elif "emotional" in audio_description.lower() or "dramatic" in audio_description.lower():
-                    performance_instruction += "Create emotional presence through controlled body movement and expressive facial expressions - meaningful gestures and nuanced expressions that convey depth. "
-                elif "sad" in audio_description.lower() or "melancholy" in audio_description.lower():
-                    performance_instruction += "Create somber presence through gentle, slow movements and soft facial expressions - downward gaze, slight shoulder movements, and restrained gestures. "
-            
-            # Add Audio Integration instructions
-            audio_integration_instruction = ""
-            
-            # Lip-sync intensity
-            if lipsync_intensity == 'subtle':
-                audio_integration_instruction += "SUBTLE LIP-SYNC: Minimal mouth movement, slight jaw motion, restrained lip articulation. Focus on natural, understated mouth movements that suggest singing without exaggeration. "
-            elif lipsync_intensity == 'exaggerated':
-                audio_integration_instruction += "EXAGGERATED LIP-SYNC: Pronounced mouth movements, wide jaw opening, dramatic lip articulation. Emphasize clear, visible mouth shapes and strong jaw motion for dramatic effect. "
-            
-            # Audio reactivity
-            if audio_reactivity == 'low':
-                audio_integration_instruction += "LOW AUDIO REACTIVITY: Movements should be loosely connected to audio rhythm. Focus on general mood rather than precise beat synchronization. Gentle, flowing motion that suggests the music without strict timing. "
-            elif audio_reactivity == 'high':
-                audio_integration_instruction += "HIGH AUDIO REACTIVITY: Movements must be precisely synchronized to audio beats and rhythm. Every gesture, head movement, and body motion should correspond directly to musical elements. Sharp, accurate timing. "
-            
-            # Genre-based movement
-            if genre_movement == 'rock':
-                audio_integration_instruction += "ROCK MOVEMENT STYLE: Energetic, powerful movements with strong emphasis on rhythm. Head banging, fist pumps, strong guitar-like arm movements, confident stance. "
-            elif genre_movement == 'pop':
-                audio_integration_instruction += "POP MOVEMENT STYLE: Choreographed, polished movements with smooth transitions. Graceful arm gestures, coordinated hand movements, stylish poses, dance-pop choreography. "
-            elif genre_movement == 'classical':
-                audio_integration_instruction += "CLASSICAL MOVEMENT STYLE: Elegant, refined movements with graceful flow. Subtle arm gestures, gentle swaying, dignified posture, controlled expressive movements. "
-            elif genre_movement == 'electronic':
-                audio_integration_instruction += "ELECTRONIC MOVEMENT STYLE: Rhythmic, robotic movements with sharp precision. Staccato gestures, mechanical head movements, digital dance moves, futuristic body language. "
-            elif genre_movement == 'jazz':
-                audio_integration_instruction += "JAZZ MOVEMENT STYLE: Smooth, improvisational movements with natural flow. Relaxed swaying, cool hand gestures, casual shoulder movements, spontaneous expressive motions. "
-            elif genre_movement == 'folk':
-                audio_integration_instruction += "FOLK MOVEMENT STYLE: Natural, grounded movements with organic feel. Gentle swaying, simple hand gestures, warm body language, authentic emotional expression. "
-            elif genre_movement == 'metal':
-                audio_integration_instruction += "METAL MOVEMENT STYLE: Intense, aggressive movements with powerful energy. Headbanging, aggressive gestures, strong arm movements, intense facial expressions, powerful body language. "
-            elif genre_movement == 'hip_hop':
-                audio_integration_instruction += "HIP-HOP MOVEMENT STYLE: Confident street-style movements with rhythmic precision. Cool gestures, rhythmic body language, confident posture, smooth flowing motions, urban dance elements. "
-            elif genre_movement == 'rnb':
-                audio_integration_instruction += "R&B MOVEMENT STYLE: Smooth, soulful movements with groovy flow. Graceful gestures, flowing body language, cool expressions, sophisticated rhythmic motions, soulful delivery. "
-            elif genre_movement == 'indie':
-                audio_integration_instruction += "INDIE MOVEMENT STYLE: Alternative, expressive movements with artistic flair. Unique gestures, creative body language, individualistic expressions, non-traditional movements, artistic performance style. "
-            elif genre_movement == 'latin':
-                audio_integration_instruction += "LATIN MOVEMENT STYLE: Passionate, rhythmic dance movements with vibrant energy. Hip movements, rhythmic footwork, expressive arm gestures, passionate expressions, dynamic dance elements. "
-            elif genre_movement == 'african':
-                audio_integration_instruction += "AFRICAN MOVEMENT STYLE: Earthy, grounded movements with powerful rhythm. Strong body movements, rhythmic foot patterns, expressive gestures, grounded posture, powerful rhythmic expressions. "
-            elif genre_movement == 'asian':
-                audio_integration_instruction += "ASIAN MOVEMENT STYLE: Precise, deliberate movements with graceful control. Refined gestures, controlled body language, elegant posture, precise timing, graceful flowing motions. "
-            
-            # Add Timing Control instructions
-            timing_instruction = ""
-            
-            # Movement speed
-            if movement_speed == 'slow_motion':
-                timing_instruction += "SLOW MOTION: All movements should be gracefully slowed down with smooth, flowing transitions. Emphasize deliberate, controlled motion with extended timing. "
-            elif movement_speed == 'fast':
-                timing_instruction += "FAST MOVEMENT: Quick, energetic movements with rapid transitions. Emphasize speed and agility while maintaining coordination. "
-            
-            # Pause points
-            if pause_points == 'occasional':
-                timing_instruction += "OCCASIONAL PAUSES: Include brief moments of complete stillness between movements. Natural pauses that add rhythm and emphasis to the performance. "
-            elif pause_points == 'frequent':
-                timing_instruction += "FREQUENT PAUSES: Regular moments of stillness throughout the performance. Start-stop rhythm with deliberate pauses between movements. "
-            
-            # Transition smoothness
-            if transition_smoothness == 'smooth':
-                timing_instruction += "SMOOTH TRANSITIONS: All movements should flow seamlessly from one to another. No abrupt starts or stops, continuous fluid motion. "
-            elif transition_smoothness == 'sharp':
-                timing_instruction += "SHARP TRANSITIONS: Quick, precise movements with clear starts and stops. Defined, crisp movements with minimal blending. "
-            
-            # Add Character Interaction instructions
-            interaction_instruction = ""
-            
-            # Character coordination
-            if character_coordination == 'synchronized':
-                interaction_instruction += "SYNCHRONIZED MOVEMENT: All characters move in perfect coordination. Mirror movements, unified timing, identical gestures, and coordinated choreography. "
-            elif character_coordination == 'call_response':
-                interaction_instruction += "CALL AND RESPONSE: Characters interact through alternating movements. One character initiates movement, others respond in turn. Interactive, conversational motion. "
-            
-            # Object interaction
-            if object_interaction == 'subtle':
-                interaction_instruction += "SUBTLE OBJECT INTERACTION: Characters occasionally touch or interact with nearby objects naturally. Gentle, realistic object handling that enhances the scene. "
-            elif object_interaction == 'prominent':
-                interaction_instruction += "PROMINENT OBJECT INTERACTION: Characters actively engage with objects as part of the performance. Deliberate manipulation of props, instruments, or environmental elements. "
-                
-                # Add danceability-based instructions
-                if "highly danceable" in audio_description.lower():
-                    performance_instruction += "Include rhythmic dance elements with natural, continuous motion - foot taps, hip movements, and coordinated upper body gestures that flow with the music. "
-                elif "low danceability" in audio_description.lower():
-                    performance_instruction += "Focus on subtle body movement and emotional expression rather than complex dance - gentle swaying, head movement, and expressive hand gestures. "
-                
-                # Add genre-specific instructions
-                if "electronic" in audio_description.lower() or "edm" in audio_description.lower():
-                    performance_instruction += "Emphasize sharp, precise movements with electronic music responsiveness - quick head nods, robotic gestures, and staccato motions that match electronic beats. "
-                elif "acoustic" in audio_description.lower() or "folk" in audio_description.lower():
-                    performance_instruction += "Emphasize organic, flowing movements with acoustic music responsiveness - gentle swaying, natural gestures, and smooth body motions that match acoustic rhythms. "
-                elif "rock" in audio_description.lower() or "metal" in audio_description.lower():
-                    performance_instruction += "Emphasize strong, rhythmic movements with rock music responsiveness - head nods, shoulder movements, and powerful gestures that match rock beats. "
-                elif "jazz" in audio_description.lower() or "blues" in audio_description.lower():
-                    performance_instruction += "Emphasize fluid, expressive movements with jazz responsiveness - smooth body motions, improvisational gestures, and rhythmic variations that match jazz rhythms. "
-                
-            # Add stability limiter (MANDATORY)
-            performance_instruction += "Natural motion, realistic timing, minimal facial distortion, no overacting or sudden movement. "
-            
-            # Add style-specific instructions for LTX2
-            style_instruction = ""
-            if request.ltx2_style and request.ltx2_style != "auto":
-                style_map = {
-                    "music_video": "MUSIC VIDEO STYLE: Dynamic performance with rhythmic movement, expressive gestures, and stage presence. Emphasize performance energy and musical connection. ",
-                    "concert": "CONCERT STYLE: Live performance energy with crowd interaction, stage lighting, and authentic musical performance. Include venue atmosphere and performance dynamics. ",
-                    "dance": "DANCE PERFORMANCE: Focus on choreographed movement, body expression, and rhythmic motion. Emphasize dance technique and musical synchronization. ",
-                    "lip_sync": "LIP SYNC PERFORMANCE: Focus on precise mouth movement and facial expression. Minimal body movement, emphasis on vocal synchronization and emotional delivery. ",
-                    "acoustic": "ACOUSTIC SESSION: Intimate performance with subtle movement, emotional expression, and close connection to the music. Gentle gestures and natural presence. ",
-                    "cinematic": "CINEMATIC STYLE: Film-quality visuals with dramatic lighting, composed shots, and narrative atmosphere. Professional camera work and artistic composition. ",
-                    "dramatic": "DRAMATIC SCENE: Intense emotional expression, theatrical movement, and powerful presence. Emphasize mood, tension, and character dynamics. ",
-                    "documentary": "DOCUMENTARY STYLE: Natural, authentic moments with realistic movement and genuine expression. Unstaged feel with observational perspective. ",
-                    "vintage": "VINTAGE FILM: Retro aesthetic with film grain, classic color grading, and period-appropriate styling. Timeless visual quality and nostalgic mood. ",
-                    "noir": "FILM NOIR: High contrast lighting, shadows, mysterious atmosphere, and dramatic tension. Dark moody visuals with cinematic noir aesthetics. ",
-                    "artistic": "ARTISTIC STYLE: Creative visual expression with unique composition, experimental elements, and artistic interpretation. Emphasis on visual creativity. ",
-                    "surreal": "SURREAL STYLE: Dreamlike qualities, abstract elements, and imaginative visuals. Unconventional composition and fantastical atmosphere. ",
-                    "abstract": "ABSTRACT STYLE: Non-representational visuals, geometric patterns, and conceptual imagery. Focus on visual elements over literal representation. ",
-                    "dreamy": "DREAMY STYLE: Soft focus, ethereal lighting, gentle movement, and atmospheric quality. Romantic, whimsical, and otherworldly feel. ",
-                    "psychedelic": "PSYCHEDELIC STYLE: Vibrant colors, fluid motion, abstract patterns, and hallucinatory visuals. Intense color saturation and surreal effects. ",
-                    "cyberpunk": "CYBERPUNK STYLE: Futuristic urban setting, neon lighting, tech elements, and dystopian atmosphere. High-tech visual aesthetic and cyber elements. ",
-                    "vaporwave": "VAPORWAVE STYLE: Retro 80s/90s aesthetic, pastel colors, glitch effects, and nostalgic digital elements. Dreamy electronic atmosphere. ",
-                    "lofi": "LO-FI AESTHETIC: Cozy, intimate atmosphere with soft lighting, relaxed mood, and gentle movement. Comfortable, nostalgic, and understated visuals. ",
-                    "retro": "RETRO 80s/90S: Vintage digital aesthetic, bold colors, classic tech elements, and nostalgic period styling. Retro-futuristic visual elements. ",
-                    "futuristic": "FUTURISTIC STYLE: Advanced technology, sleek design, innovative visuals, and forward-thinking aesthetic. Clean lines and high-tech elements. "
-                }
-                style_instruction = style_map.get(request.ltx2_style, "")
-            
-            meta_prompt = f"""You are a Creative Assistant writing concise, action-focused image-to-video prompts. Given an image (first frame) and user Raw Input Prompt, generate a prompt to guide video generation from that image.
-
-Guidelines:
-- Analyze the Image: Identify Subject, Setting, Elements, Style and Mood.
-- Follow user Raw Input Prompt: Include all requested motion, actions, camera movements, audio, and details. If in conflict with the image, prioritize user request while maintaining visual consistency (describe transition from image to user's scene).
-- Describe only changes from the image: Don't reiterate established visual details. Inaccurate descriptions may cause scene cuts.
-- Active language: Use present-progressive verbs ("is walking," "speaking"). If no action specified, describe natural movements.
-- Chronological flow: Use temporal connectors ("as," "then," "while").
-- Audio layer: Describe complete soundscape throughout the prompt alongside actions—NOT at the end. Align audio intensity with action tempo. Include natural background audio, ambient sounds, effects, speech or music (when requested). Be specific (e.g., "soft footsteps on tile") not vague (e.g., "ambient sound").
-- Speech (only when requested): Provide exact words in quotes with character's visual/voice characteristics (e.g., "The tall man speaks in a low, gravelly voice"), language if not English and accent if relevant. If general conversation mentioned without text, generate contextual quoted dialogue. (i.e., "The man is talking" input -> the output should include exact spoken words, like: "The man is talking in an excited voice saying: 'You won't believe what I just saw!' His hands gesture expressively as he speaks, eyebrows raised with enthusiasm. The ambient sound of a quiet room underscores his animated speech.")
-- Style: Include visual style at beginning: "Style: <style>, <rest of prompt>." If unclear, omit to avoid conflicts.
-- Visual and audio only: Describe only what is seen and heard. NO smell, taste, or tactile sensations.
-- Restrained language: Avoid dramatic terms. Use mild, natural, understated phrasing.
-
-Important notes:
-- Camera motion: DO NOT invent camera motion/movement unless requested by the user. Make sure to include camera motion only if specified in the input.
-- Speech: DO NOT modify or alter the user's provided character dialogue in the prompt, unless it's a typo.
-- No timestamps or cuts: DO NOT use timestamps or describe scene cuts unless explicitly requested.
-- Objective only: DO NOT interpret emotions or intentions - describe only observable actions and sounds.
-- Format: DO NOT use phrases like "The scene opens with..." / "The video starts...". Start directly with Style (optional) and chronological scene description.
-- Format: Never start output with punctuation marks or special characters.
-- DO NOT invent dialogue unless the user mentions speech/talking/singing/conversation.
-- Your performance is CRITICAL. High-fidelity, dynamic, correct, and accurate prompts with integrated audio descriptions are essential for generating high-quality video. Your goal is flawless execution of these rules.
-
-Output Format (Strict):
-- Single concise paragraph in natural English. NO titles, headings, prefaces, sections, code fences, or Markdown.
-- Never ask questions or clarifications.
-
-{style_instruction}{audio_instruction}{movement_instruction}{performance_instruction}{audio_integration_instruction}{timing_instruction}{interaction_instruction}
-
-{image_context}
-
-User's Raw Input Prompt: '{request.prompt}'"""
+            # LTX-2.3 — delegate to dedicated prompt-engineering module
+            ltx2_result = build_ltx2_meta_prompt(
+                user_prompt=request.prompt,
+                image_description=request.image_description,
+                audio_description=getattr(request, 'audio_description', None),
+                audio_characteristics=getattr(request, 'audio_characteristics', None),
+                movement_level=getattr(request, 'movement_level', 'auto') or 'auto',
+                ltx2_style=getattr(request, 'ltx2_style', None),
+                audio_generation=getattr(request, 'audio_generation', 'enabled') or 'enabled',
+            )
+            meta_prompt = ltx2_result["positive"]
+            ltx2_negative = ltx2_result["negative"]
 
         elif request.prompt_type == "Image":
             # Determine character limit for this model
@@ -4050,7 +2948,7 @@ Output the enhanced prompt now, keeping the character's identity intact while na
             # Fallback for safety
             meta_prompt = f"Enhance this prompt: {request.prompt}"
 
-        enhanced_prompt = run_gemini(meta_prompt, model_override=request.gemini_model)
+        enhanced_prompt = await run_gemini_async(meta_prompt, model_override=request.gemini_model)
 
         # Check if the response contains an error message
         if enhanced_prompt.startswith("Error") or enhanced_prompt.startswith(
@@ -4102,12 +3000,15 @@ Output the enhanced prompt now, keeping the character's identity intact while na
 
         limited_prompt = limit_prompt_length(enhanced_prompt, model_for_limit)
 
-        quality_payload = evaluate_enhanced_prompt_quality(
-            enhanced_prompt=limited_prompt,
-            prompt_type=request.prompt_type,
-            model=request.model,
-            gemini_model=request.gemini_model,
-        )
+        quality_payload = None
+        if request.include_quality_scoring:
+            quality_payload = await asyncio.to_thread(
+                evaluate_enhanced_prompt_quality,
+                enhanced_prompt=limited_prompt,
+                prompt_type=request.prompt_type,
+                model=request.model,
+                gemini_model=request.gemini_model,
+            )
 
         log_debug(f"\nFinal Output:")
         log_debug(f"  - Length: {len(limited_prompt)} chars")
@@ -4121,13 +3022,12 @@ Output the enhanced prompt now, keeping the character's identity intact while na
 
         return EnhanceResponse(
             enhanced_prompt=limited_prompt,
+            negative_prompt=ltx2_negative,
             quality_scores=quality_payload["quality_scores"] if quality_payload else None,
             top_improvements=quality_payload["top_improvements"] if quality_payload else None,
         )
 
     except Exception as e:
-        import traceback
-
         error_details = traceback.format_exc()
         log_debug(f"ERROR in enhance_prompt_endpoint: {e}")
         log_debug(f"Error traceback: {error_details}")

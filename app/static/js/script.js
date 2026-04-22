@@ -1280,6 +1280,34 @@ document.addEventListener('DOMContentLoaded', () => {
         return row;
     }
 
+    // --- Negative prompt panel (LTX2) ---
+    function renderNegativePrompt(negativePrompt) {
+        const panel = document.getElementById('negative-prompt-panel');
+        const textEl = document.getElementById('negative-prompt-text');
+        if (!panel) return;
+        if (!negativePrompt) {
+            panel.style.display = 'none';
+            return;
+        }
+        textEl.textContent = negativePrompt;
+        panel.style.display = 'block';
+    }
+
+    // Copy-negative-prompt button
+    const copyNegBtn = document.getElementById('copy-negative-btn');
+    if (copyNegBtn) {
+        copyNegBtn.addEventListener('click', () => {
+            const text = document.getElementById('negative-prompt-text')?.textContent;
+            if (text) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('Negative prompt copied!', 'success');
+                }).catch(() => {
+                    showToast('Failed to copy negative prompt.', 'error');
+                });
+            }
+        });
+    }
+
     function renderQualityPanel(qualityScores, topImprovements) {
         if (!els.qualityPanel || !qualityScores || typeof qualityScores !== 'object') {
             clearQualityPanel();
@@ -3530,6 +3558,7 @@ POST-PROCESSING:
                     console.log('Setting result text...');
                     els.resultText.innerText = data.enhanced_prompt;
                     renderQualityPanel(data.quality_scores, data.top_improvements);
+                    renderNegativePrompt(data.negative_prompt);
                     console.log('Result text set to:', els.resultText.innerText);
                     
                     
@@ -3542,6 +3571,7 @@ POST-PROCESSING:
                 } else {
                     console.log('No enhanced_prompt in response data');
                     clearQualityPanel();
+                    renderNegativePrompt(null);
                 }
 
                 if (els.result) {

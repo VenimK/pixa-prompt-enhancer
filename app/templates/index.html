@@ -1289,6 +1289,14 @@
                 <!-- Single View Mode -->
                 <div id="single-view" class="view-mode active">
                     <div id="result-text" class="result-text"></div>
+                    <!-- Negative prompt (LTX2 only) -->
+                    <div id="negative-prompt-panel" class="negative-prompt-panel" style="display: none;">
+                        <div class="negative-prompt-header">
+                            <h4><i class="fas fa-ban"></i> Negative Prompt</h4>
+                            <button class="copy-btn" id="copy-negative-btn" title="Copy negative prompt"><i class="fas fa-copy"></i></button>
+                        </div>
+                        <div id="negative-prompt-text" class="negative-prompt-text"></div>
+                    </div>
                     <div id="quality-panel" class="quality-panel" style="display: none;">
                         <div class="quality-panel-header">
                             <h4>Prompt Quality</h4>
