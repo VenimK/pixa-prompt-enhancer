@@ -52,6 +52,7 @@ STYLE_MAPPINGS = {
     "voxel art": "Voxel Art",
     "motion graphics": "Motion Graphics",
     "ideogram4": "Ideogram 4.0 (JSON)",
+    "ideogram4_storyboard": "Ideogram 4.0 Storyboard (JSON)",
     
     # Pop Culture & Aesthetic Styles
     "vaporwave": "Vaporwave",

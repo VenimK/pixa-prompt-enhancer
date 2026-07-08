@@ -41,6 +41,12 @@ STRICT RULES:
    - Non-photo: aesthetics, lighting, medium, art_style, color_palette
 8. color_palette is optional but strongly recommended
 9. Include high_level_description (1-2 sentences) for better results
+10. NEVER name or reference a real, identifiable individual (public figures, celebrities, \
+athletes, politicians, etc.) even if the input mentions one (e.g. "reminiscent of X", \
+"looks like Y"). Most image models reject or degrade prompts naming real people. Instead, \
+translate any such reference into purely physical/generic descriptive traits (hair color \
+and style, build, complexion, clothing, expression) with no proper name attached. This \
+applies to every field: high_level_description, style_description, and every element desc.
 
 SCHEMA:
 {
@@ -75,6 +81,154 @@ typical composition rules:
 
 Generate the JSON now. Ensure it is valid and follows all formatting rules.
 """
+
+
+_STORYBOARD_LAYOUT_GRIDS: dict[str, tuple[int, int]] = {
+    "horizontal_2": (1, 2),
+    "horizontal_3": (1, 3),
+    "vertical_2": (2, 1),
+    "vertical_3": (3, 1),
+    "grid_2x2": (2, 2),
+    "grid_3x2": (2, 3),
+}
+
+_PANEL_COUNT_TO_LAYOUT: dict[int, str] = {
+    2: "horizontal_2",
+    3: "horizontal_3",
+    4: "grid_2x2",
+    6: "grid_3x2",
+}
+
+
+def _compute_grid_bboxes(rows: int, cols: int, gutter: int = 15) -> list[list[int]]:
+    """
+    Compute non-overlapping panel bboxes on a 0-1000 canvas, in reading order
+    (left-to-right, top-to-bottom), separated by a fixed gutter.
+
+    Returns bboxes as [y_min, x_min, y_max, x_max].
+    """
+    cell_h = (1000 - gutter * (rows + 1)) / rows
+    cell_w = (1000 - gutter * (cols + 1)) / cols
+
+    bboxes: list[list[int]] = []
+    for r in range(rows):
+        y_min = int(round(gutter + r * (cell_h + gutter)))
+        y_max = int(round(y_min + cell_h))
+        for c in range(cols):
+            x_min = int(round(gutter + c * (cell_w + gutter)))
+            x_max = int(round(x_min + cell_w))
+            bboxes.append([y_min, x_min, y_max, x_max])
+    return bboxes
+
+
+_IDEOGRAM4_STORYBOARD_SYSTEM_PROMPT = """\
+You are an expert prompt engineer for Ideogram 4.0, generating a SINGLE-IMAGE COMIC-STYLE \
+STORYBOARD using the structured JSON caption schema. The final image is ONE composite image \
+divided into multiple panels (like a comic strip), each panel depicting a different beat of \
+the same story, in sequence.
+
+STRICT RULES:
+1. Output ONLY valid JSON — no markdown, no explanations, no text outside the JSON object.
+2. The JSON follows the standard Ideogram 4.0 schema: high_level_description, \
+style_description, compositional_deconstruction (background, elements).
+3. Each entry in "elements" represents ONE PANEL of the storyboard. type must be "obj".
+4. You MUST use the EXACT bbox values provided below for each panel, in the EXACT order given \
+— do not invent, resize, or reorder bboxes.
+5. Each panel's "desc" must describe a DIFFERENT, sequential beat of the story (clear \
+narrative progression from panel 1 to the last panel) — do not repeat the same moment twice.
+6. Keep the SAME character identity, appearance, clothing, and art style consistent across \
+every panel — only action, expression, camera angle, and environment should change between \
+panels to show progression.
+7. "background" should describe the shared storyboard framing: clean panel gutters/borders \
+separating each panel (e.g. "white gutters with thin black comic-panel borders separating \
+each panel"), NOT the content of any single panel.
+8. Hex colors must be uppercase #RRGGBB. color_palette optional, up to 16 image-level / 5 \
+per-element.
+9. high_level_description must summarize the overall story arc across all panels (1-2 \
+sentences).
+10. NEVER name or reference a real, identifiable individual (public figures, celebrities, \
+athletes, politicians, etc.) even if the input mentions one. Translate any such reference \
+into purely physical/generic descriptive traits (hair color/style, build, complexion, \
+clothing, expression) with no proper name attached. Applies to every field.
+
+SCHEMA (elements array MUST have exactly one entry per panel, in the given bbox order):
+{
+  "high_level_description": "string (1-2 sentence overall story summary)",
+  "style_description": {
+    "aesthetics": "string",
+    "lighting": "string",
+    "photo": "string (or art_style if illustrated)",
+    "medium": "string",
+    "color_palette": ["#RRGGBB", ...]
+  },
+  "compositional_deconstruction": {
+    "background": "string (shared panel-gutter/border framing description)",
+    "elements": [
+      {"type": "obj", "bbox": [y_min, x_min, y_max, x_max], "desc": "panel 1 story beat..."},
+      {"type": "obj", "bbox": [y_min, x_min, y_max, x_max], "desc": "panel 2 story beat..."}
+    ]
+  }
+}
+
+Generate the JSON now, using exactly the panel bboxes provided in the input, in order.
+"""
+
+
+def build_ideogram4_storyboard_prompt(
+    user_story: str,
+    panel_count: int = 4,
+    layout: str | None = None,
+    style: str = "none",
+    cinematography: str = "none",
+    lighting: str = "none",
+    image_description: str | None = None,
+) -> str:
+    """
+    Build a meta-prompt that produces a single Ideogram 4.0 JSON caption representing a
+    multi-panel comic-style storyboard (one image, N panels, each a sequential story beat).
+
+    Args:
+        user_story: The user's story/scene idea to break into sequential beats.
+        panel_count: Desired number of panels (2, 3, 4, or 6). Ignored if layout is given.
+        layout: Explicit layout key from _STORYBOARD_LAYOUT_GRIDS. Overrides panel_count.
+        style, cinematography, lighting: Same as build_ideogram4_json_prompt.
+        image_description: Optional reference image analysis for character consistency.
+
+    Returns:
+        Meta-prompt string to send to the model provider.
+    """
+    layout_key = layout if layout in _STORYBOARD_LAYOUT_GRIDS else _PANEL_COUNT_TO_LAYOUT.get(
+        panel_count, "grid_2x2"
+    )
+    rows, cols = _STORYBOARD_LAYOUT_GRIDS[layout_key]
+    bboxes = _compute_grid_bboxes(rows, cols)
+
+    context_parts = [
+        f"Story/scene idea to break into {len(bboxes)} sequential panels: {user_story}",
+        f"Panel layout: {layout_key} ({rows} row(s) x {cols} column(s))",
+        f"Use these EXACT panel bboxes, in this EXACT order (panel 1 first): {bboxes}",
+    ]
+
+    if style and style.lower() not in ("none", "auto", "", "ideogram4_storyboard"):
+        context_parts.append(f"Style preference: {style}")
+    if cinematography and cinematography.lower() not in ("none", "auto", ""):
+        context_parts.append(f"Cinematography hint: {cinematography}")
+    if lighting and lighting.lower() not in ("none", "auto", ""):
+        context_parts.append(f"Lighting preference: {lighting}")
+    if image_description:
+        context_parts.append(
+            f"Reference character/subject appearance to keep consistent across all panels: "
+            f"{image_description}"
+        )
+
+    context = "\n".join(context_parts)
+    full_prompt = f"{_IDEOGRAM4_STORYBOARD_SYSTEM_PROMPT}\n\nINPUT:\n{context}\n\nOUTPUT:"
+
+    log_debug(
+        f"[ideogram4_storyboard] Built prompt (layout={layout_key}, panels={len(bboxes)}, "
+        f"length={len(full_prompt)})"
+    )
+    return full_prompt
 
 
 def build_ideogram4_json_prompt(
@@ -235,6 +389,39 @@ def validate_ideogram4_json(json_str: str) -> tuple[bool, list[str]]:
                         errors.append(f"element {i}: bbox coordinates must be 0-1000, got {coord}")
 
     return (len(errors) == 0, errors)
+
+
+def validate_ideogram4_storyboard_json(
+    json_str: str, expected_panels: int
+) -> tuple[bool, list[str]]:
+    """
+    Validate a storyboard Ideogram 4.0 JSON: base schema plus an exact panel count check.
+
+    Args:
+        json_str: JSON string to validate
+        expected_panels: Number of panels the layout should have produced
+
+    Returns:
+        (is_valid, list of error messages)
+    """
+    is_valid, errors = validate_ideogram4_json(json_str)
+
+    try:
+        data = json.loads(json_str)
+        elements = data.get("compositional_deconstruction", {}).get("elements", [])
+        if len(elements) != expected_panels:
+            errors.append(
+                f"Expected {expected_panels} panels, got {len(elements)}"
+            )
+            is_valid = False
+        for i, element in enumerate(elements):
+            if "bbox" not in element:
+                errors.append(f"panel {i}: missing bbox (required for storyboard panels)")
+                is_valid = False
+    except json.JSONDecodeError:
+        pass  # Already captured by validate_ideogram4_json
+
+    return (is_valid and len(errors) == 0, errors)
 
 
 def format_ideogram4_json(data: dict) -> str:

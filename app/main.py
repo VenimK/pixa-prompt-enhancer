@@ -38,7 +38,14 @@ from app.providers.ollama_provider import OllamaProvider
 from app.ltx2_prompts import build_ltx2_meta_prompt
 
 # Ideogram 4.0 JSON prompt engineering (new)
-from app.ideogram4_prompts import build_ideogram4_json_prompt, validate_ideogram4_json
+from app.ideogram4_prompts import (
+    build_ideogram4_json_prompt,
+    validate_ideogram4_json,
+    build_ideogram4_storyboard_prompt,
+    validate_ideogram4_storyboard_json,
+    _STORYBOARD_LAYOUT_GRIDS,
+    _PANEL_COUNT_TO_LAYOUT,
+)
 
 # LTX-2.3 Director character/reference sheet prompt engineering (new)
 from app.character_sheet_prompts import (
@@ -2802,17 +2809,40 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
                 ):
                     model_guidance += " For complex scenes, describe multiple elements with logical arrangement and consistent style for best results."
 
-        # --- Ideogram 4.0 JSON mode — bypasses normal meta-prompt flow ---
-        # Triggered by explicit flag OR by selecting the "ideogram4" style.
-        if request.use_ideogram4_json or (request.style or "").strip().lower() == "ideogram4":
-            ideogram4_meta_prompt = build_ideogram4_json_prompt(
-                user_prompt=request.prompt,
-                style=request.style,
-                cinematography=request.cinematography,
-                lighting=request.lighting,
-                image_description=request.image_description,
-                prompt_type=request.prompt_type,
-            )
+        # --- Ideogram 4.0 JSON modes — bypass normal meta-prompt flow ---
+        style_lower = (request.style or "").strip().lower()
+        is_ideogram4_storyboard = request.use_ideogram4_storyboard or style_lower == "ideogram4_storyboard"
+        is_ideogram4_single = request.use_ideogram4_json or style_lower == "ideogram4"
+
+        if is_ideogram4_storyboard or is_ideogram4_single:
+            expected_panels = None
+            if is_ideogram4_storyboard:
+                layout_key = (
+                    request.storyboard_layout
+                    if request.storyboard_layout in _STORYBOARD_LAYOUT_GRIDS
+                    else _PANEL_COUNT_TO_LAYOUT.get(request.storyboard_panels or 4, "grid_2x2")
+                )
+                rows, cols = _STORYBOARD_LAYOUT_GRIDS[layout_key]
+                expected_panels = rows * cols
+                ideogram4_meta_prompt = build_ideogram4_storyboard_prompt(
+                    user_story=request.prompt,
+                    panel_count=request.storyboard_panels or 4,
+                    layout=layout_key,
+                    style=request.style,
+                    cinematography=request.cinematography,
+                    lighting=request.lighting,
+                    image_description=request.image_description,
+                )
+            else:
+                ideogram4_meta_prompt = build_ideogram4_json_prompt(
+                    user_prompt=request.prompt,
+                    style=request.style,
+                    cinematography=request.cinematography,
+                    lighting=request.lighting,
+                    image_description=request.image_description,
+                    prompt_type=request.prompt_type,
+                )
+
             raw_json_response = await provider_generate_text(
                 ideogram4_meta_prompt,
                 model_override=provider_model_override,
@@ -2834,7 +2864,12 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
                     lines = lines[:-1]
                 cleaned_json = "\n".join(lines).strip()
 
-            is_valid, validation_errors = validate_ideogram4_json(cleaned_json)
+            if is_ideogram4_storyboard:
+                is_valid, validation_errors = validate_ideogram4_storyboard_json(
+                    cleaned_json, expected_panels
+                )
+            else:
+                is_valid, validation_errors = validate_ideogram4_json(cleaned_json)
             if not is_valid:
                 log_debug(f"[ideogram4] JSON validation warnings: {validation_errors}")
 

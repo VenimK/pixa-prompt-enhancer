@@ -32,6 +32,9 @@ class EnhanceRequest(BaseModel):
     ollama_model: str | None = None  # Ollama model name: 'gemma:2b', 'gemma:7b', etc.
     ltx2_style: str | None = None  # LTX-2 video style: 'music_video', 'cinematic', 'artistic', etc.
     use_ideogram4_json: bool = False  # Generate Ideogram4 JSON format instead of plain text
+    use_ideogram4_storyboard: bool = False  # Generate multi-panel Ideogram4 storyboard JSON
+    storyboard_panels: int | None = None  # 2, 3, 4, or 6 panels
+    storyboard_layout: str | None = None  # 'horizontal_2'|'horizontal_3'|'vertical_2'|'vertical_3'|'grid_2x2'|'grid_3x2'
 
     @field_validator('style')
     @classmethod

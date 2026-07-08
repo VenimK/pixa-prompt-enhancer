@@ -3465,7 +3465,9 @@ POST-PROCESSING:
 
                 // Route specialized enhancement modes to /enhance-specialized
                 // Ideogram4 JSON mode always uses /enhance (enhance-specialized has no JSON support)
-                const isIdeogram4 = (style || '').toLowerCase() === 'ideogram4';
+                const isIdeogram4Single = (style || '').toLowerCase() === 'ideogram4';
+                const isIdeogram4Storyboard = (style || '').toLowerCase() === 'ideogram4_storyboard';
+                const isIdeogram4 = isIdeogram4Single || isIdeogram4Storyboard;
                 let response;
                 if (!isIdeogram4 && promptType !== 'LTX2' && currentEnhancementMode && currentEnhancementMode !== 'general' && currentEnhancementMode !== 'auto') {
                     console.log(`Using specialized enhancement: ${currentEnhancementMode}`);
@@ -3539,7 +3541,9 @@ POST-PROCESSING:
                         provider: els.providerSelect ? els.providerSelect.value : null,
                         ollama_model: els.ollamaModelSelect ? els.ollamaModelSelect.value : null,
                         gemini_model: els.geminiModelSelect ? els.geminiModelSelect.value : null,
-                        use_ideogram4_json: isIdeogram4
+                        use_ideogram4_json: isIdeogram4Single,
+                        use_ideogram4_storyboard: isIdeogram4Storyboard,
+                        storyboard_layout: isIdeogram4Storyboard ? (document.getElementById('ideogram4-storyboard-layout')?.value || 'grid_2x2') : null
                     }),
                 });
                 }
@@ -3647,6 +3651,18 @@ POST-PROCESSING:
                 els.enhance.disabled = false;
             }
         });
+    }
+
+    // --- Ideogram 4.0 Storyboard: show/hide layout selector ---
+    if (els.style) {
+        const storyboardLayoutContainer = document.getElementById('ideogram4-storyboard-layout-container');
+        const toggleStoryboardLayout = () => {
+            if (storyboardLayoutContainer) {
+                storyboardLayoutContainer.style.display = els.style.value === 'ideogram4_storyboard' ? 'flex' : 'none';
+            }
+        };
+        els.style.addEventListener('change', toggleStoryboardLayout);
+        toggleStoryboardLayout();
     }
 
     // --- LTX-2.3 Director: Character/Reference Sheet Generator ---
