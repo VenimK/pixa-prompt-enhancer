@@ -29,17 +29,103 @@ load_dotenv()
 # Centralised logger (extracted to app/logger.py)
 from app.logger import log_debug
 
-# Gemini API client & helpers (extracted to app/gemini.py)
-from app.gemini import (
-    run_gemini,
-    run_gemini_async,
-    evaluate_enhanced_prompt_quality,
-    _clamp_quality_score,
-    _extract_json_object,
-)
+# Model provider abstraction (Gemini, ollama/Gemma, etc.)
+from app.providers.base import ModelProvider
+from app.providers.gemini_provider import GeminiProvider, run_gemini_async as gemini_run_async
+from app.providers.ollama_provider import OllamaProvider
 
 # LTX-2.3 prompt engineering (extracted to app/ltx2_prompts.py)
 from app.ltx2_prompts import build_ltx2_meta_prompt
+
+# Ideogram 4.0 JSON prompt engineering (new)
+from app.ideogram4_prompts import build_ideogram4_json_prompt, validate_ideogram4_json
+
+# LTX-2.3 Director character/reference sheet prompt engineering (new)
+from app.character_sheet_prompts import (
+    build_character_sheet_image_prompt,
+    build_director_character_description,
+)
+
+
+# --- Provider initialization ---
+DEFAULT_MODEL_PROVIDER = os.environ.get("MODEL_PROVIDER", "gemini").lower()
+log_debug(f"[main] Default model provider (env): {DEFAULT_MODEL_PROVIDER}")
+
+# Initialize default provider
+try:
+    if DEFAULT_MODEL_PROVIDER == "ollama":
+        default_provider: ModelProvider = OllamaProvider()
+    else:  # default to gemini
+        default_provider = GeminiProvider()
+except Exception as e:
+    log_debug(f"[main] Failed to initialize default provider {DEFAULT_MODEL_PROVIDER}: {e}. Falling back to Gemini if possible.")
+    try:
+        default_provider = GeminiProvider()
+        DEFAULT_MODEL_PROVIDER = "gemini"
+    except Exception as fallback_error:
+        log_debug(f"[main] Fallback to Gemini also failed: {fallback_error}")
+        default_provider = None  # Will fail at runtime
+
+
+def get_provider(provider_name: str | None = None, ollama_model: str | None = None) -> ModelProvider:
+    """Get a provider instance by name, falling back to default."""
+    if provider_name is None:
+        provider_name = DEFAULT_MODEL_PROVIDER
+
+    provider_name = provider_name.lower()
+
+    if provider_name == "ollama":
+        try:
+            return OllamaProvider(model=ollama_model)
+        except Exception as e:
+            log_debug(f"[main] Failed to create OllamaProvider: {e}. Falling back to default.")
+            return default_provider
+    elif provider_name == "gemini":
+        try:
+            return GeminiProvider()
+        except Exception as e:
+            log_debug(f"[main] Failed to create GeminiProvider: {e}. Falling back to default.")
+            return default_provider
+    else:
+        log_debug(f"[main] Unknown provider: {provider_name}. Using default.")
+        return default_provider
+
+
+# Global provider instance (for backward compatibility with existing code)
+model_provider = default_provider
+
+
+# --- Async wrapper for provider ---
+async def provider_generate_text(prompt: str, model_override: str | None = None, provider: ModelProvider | None = None) -> str:
+    """Async wrapper for provider.generate_text."""
+    provider = provider or model_provider
+    if provider is None:
+        return "Error: No model provider available"
+    return await asyncio.to_thread(provider.generate_text, prompt, model_override)
+
+
+async def provider_generate_with_image(prompt: str, image_path: str, model_override: str | None = None, provider: ModelProvider | None = None) -> str:
+    """Async wrapper for provider.generate_with_image."""
+    provider = provider or model_provider
+    if provider is None:
+        return "Error: No model provider available"
+    return await asyncio.to_thread(provider.generate_with_image, prompt, image_path, model_override)
+
+
+async def provider_generate_with_images(prompt: str, image_paths: list[str], model_override: str | None = None, provider: ModelProvider | None = None) -> str:
+    """Async wrapper for provider.generate_with_images."""
+    provider = provider or model_provider
+    if provider is None:
+        return "Error: No model provider available"
+    return await asyncio.to_thread(provider.generate_with_images, prompt, image_paths, model_override)
+
+
+async def provider_evaluate_quality(enhanced_prompt: str, prompt_type: str | None = None, model: str | None = None, provider: ModelProvider | None = None) -> dict | None:
+    """Async wrapper for provider.evaluate_quality."""
+    provider = provider or model_provider
+    if provider is None:
+        return None
+    return await asyncio.to_thread(provider.evaluate_quality, enhanced_prompt, prompt_type, model)
 
 
 UPLOADS_DIR = "uploads"
@@ -122,6 +208,8 @@ from app.models import (
     AnalyzeResponse,
     AnalyzeResponseMulti,
     SpecializedEnhanceRequest,
+    CharacterSheetRequest,
+    CharacterSheetResponse,
 )
 
 
@@ -507,6 +595,12 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
             )
         
         log_debug(f"Specialized enhancement request: mode={request.enhancement_mode}, prompt_type={request.prompt_type}")
+
+        active_provider_name = (request.provider or DEFAULT_MODEL_PROVIDER).lower()
+        request_provider = get_provider(request.provider, request.ollama_model)
+        provider_model_override = (
+            request.ollama_model if active_provider_name == "ollama" else request.gemini_model
+        )
         
         # Build style context from user's dropdown selections
         style_parts = []
@@ -582,7 +676,11 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
             )
         else:
             # Fallback to general enhancement
-            enhanced_prompt = await run_gemini_async(f"Enhance this prompt for AI image generation: {request.prompt}", model_override=gm)
+            enhanced_prompt = await provider_generate_text(
+                f"Enhance this prompt for AI image generation: {request.prompt}",
+                model_override=provider_model_override,
+                provider=request_provider,
+            )
             enhanced_prompt = limit_prompt_length(enhanced_prompt, request.prompt_type or "image")
 
         if enhanced_prompt.startswith("Error") or enhanced_prompt.startswith("An unexpected error"):
@@ -590,12 +688,11 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
 
         quality_payload = None
         if request.include_quality_scoring:
-            quality_payload = await asyncio.to_thread(
-                evaluate_enhanced_prompt_quality,
+            quality_payload = await provider_evaluate_quality(
                 enhanced_prompt=enhanced_prompt,
                 prompt_type=request.prompt_type,
                 model=request.model,
-                gemini_model=gm,
+                provider=request_provider,
             )
         
         log_debug(f"Specialized enhancement completed: {len(enhanced_prompt)} chars")
@@ -1067,7 +1164,7 @@ async def analyze_image_endpoint(request: Request, images: list[UploadFile] = Fi
                 "Analyze this image in detail. Provide a comprehensive description covering the main subject, "
                 "setting, composition, colors, and notable elements. Be descriptive and thorough."
             )
-            combined = await run_gemini_async(meta_prompt, image_path=saved_paths[0])
+            combined = await provider_generate_with_image(meta_prompt, saved_paths[0])
             if combined.startswith("Error") or combined.startswith("An unexpected error"):
                 return AnalyzeResponseMulti(
                     combined_description=combined,
@@ -1089,8 +1186,8 @@ async def analyze_image_endpoint(request: Request, images: list[UploadFile] = Fi
             per_image_prompt = (
                 "Briefly summarize this image in 3-5 sentences focusing on subject, style/medium, colors, lighting, and composition."
             )
-            a_desc = await run_gemini_async(per_image_prompt, image_path=saved_paths[0])
-            b_desc = await run_gemini_async(per_image_prompt, image_path=saved_paths[1])
+            a_desc = await provider_generate_with_image(per_image_prompt, saved_paths[0])
+            b_desc = await provider_generate_with_image(per_image_prompt, saved_paths[1])
             if a_desc.startswith("Error") or a_desc.startswith("An unexpected error"):
                 a_desc = None
             if b_desc.startswith("Error") or b_desc.startswith("An unexpected error"):
@@ -1106,7 +1203,7 @@ async def analyze_image_endpoint(request: Request, images: list[UploadFile] = Fi
                 "- Notable details (important cues to preserve)\n"
                 "Be concise but descriptive."
             )
-            combined = await run_gemini_async(combined_prompt, image_paths=saved_paths[:2])
+            combined = await provider_generate_with_images(combined_prompt, saved_paths[:2])
             if combined.startswith("Error") or combined.startswith("An unexpected error"):
                 combined = (a_desc or "") + ("\n\n" if a_desc and b_desc else "") + (b_desc or "")
             
@@ -1958,10 +2055,20 @@ async def analyze_audio_endpoint(request: Request, audio_file: UploadFile = File
 
 @app.post("/enhance", response_model=EnhanceResponse)
 async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
-    """Enhance the prompt using Gemini API."""
+    """Enhance the prompt using the selected model provider (Gemini or Ollama)."""
     start_time = time.time()
 
     try:
+        # Select provider based on request or env var
+        request_provider = get_provider(request.provider, request.ollama_model)
+        active_provider_name = (request.provider or DEFAULT_MODEL_PROVIDER).lower()
+        provider_model_override = (
+            request.ollama_model if active_provider_name == "ollama" else request.gemini_model
+        )
+        log_debug(f"[enhance] Using provider: {active_provider_name}")
+        if request.ollama_model:
+            log_debug(f"[enhance] Using ollama model: {request.ollama_model}")
+
         # Validate input
         is_valid, error_message = validate_enhance_request(request)
         if not is_valid:
@@ -1970,8 +2077,8 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
                 enhanced_prompt=f"Validation error: {error_message}"
             )
 
-        # Check for API key
-        if "GOOGLE_API_KEY" not in os.environ:
+        # Skip API key check for ollama (local only)
+        if active_provider_name != "ollama" and "GOOGLE_API_KEY" not in os.environ:
             return EnhanceResponse(
                 enhanced_prompt="Error: Google API key is not set. Please set the GOOGLE_API_KEY environment variable."
             )
@@ -2695,6 +2802,61 @@ async def enhance_prompt_endpoint(request: EnhanceRequest) -> EnhanceResponse:
                 ):
                     model_guidance += " For complex scenes, describe multiple elements with logical arrangement and consistent style for best results."
 
+        # --- Ideogram 4.0 JSON mode — bypasses normal meta-prompt flow ---
+        # Triggered by explicit flag OR by selecting the "ideogram4" style.
+        if request.use_ideogram4_json or (request.style or "").strip().lower() == "ideogram4":
+            ideogram4_meta_prompt = build_ideogram4_json_prompt(
+                user_prompt=request.prompt,
+                style=request.style,
+                cinematography=request.cinematography,
+                lighting=request.lighting,
+                image_description=request.image_description,
+                prompt_type=request.prompt_type,
+            )
+            raw_json_response = await provider_generate_text(
+                ideogram4_meta_prompt,
+                model_override=provider_model_override,
+                provider=request_provider,
+            )
+
+            if raw_json_response.startswith("Error") or raw_json_response.startswith(
+                "An unexpected error"
+            ):
+                return EnhanceResponse(enhanced_prompt=raw_json_response)
+
+            # Strip markdown code fences if the model wrapped the JSON
+            cleaned_json = raw_json_response.strip()
+            if cleaned_json.startswith("```"):
+                lines = cleaned_json.splitlines()
+                if lines:
+                    lines = lines[1:]
+                if lines and lines[-1].strip().startswith("```"):
+                    lines = lines[:-1]
+                cleaned_json = "\n".join(lines).strip()
+
+            is_valid, validation_errors = validate_ideogram4_json(cleaned_json)
+            if not is_valid:
+                log_debug(f"[ideogram4] JSON validation warnings: {validation_errors}")
+
+            quality_payload = None
+            if request.include_quality_scoring:
+                quality_payload = await provider_evaluate_quality(
+                    enhanced_prompt=cleaned_json,
+                    prompt_type=request.prompt_type,
+                    model=request.model,
+                    provider=request_provider,
+                )
+
+            elapsed_time = time.time() - start_time
+            log_debug(f"[ideogram4] Processing time: {elapsed_time:.2f}s, valid={is_valid}")
+
+            return EnhanceResponse(
+                enhanced_prompt=cleaned_json,
+                negative_prompt=None,
+                quality_scores=quality_payload["quality_scores"] if quality_payload else None,
+                top_improvements=quality_payload["top_improvements"] if quality_payload else None,
+            )
+
         # --- Logic to choose meta-prompt based on prompt_type ---
         ltx2_negative = None  # populated only for LTX2
 
@@ -2948,7 +3110,11 @@ Output the enhanced prompt now, keeping the character's identity intact while na
             # Fallback for safety
             meta_prompt = f"Enhance this prompt: {request.prompt}"
 
-        enhanced_prompt = await run_gemini_async(meta_prompt, model_override=request.gemini_model)
+        enhanced_prompt = await provider_generate_text(
+            meta_prompt,
+            model_override=provider_model_override,
+            provider=request_provider,
+        )
 
         # Check if the response contains an error message
         if enhanced_prompt.startswith("Error") or enhanced_prompt.startswith(
@@ -3002,12 +3168,11 @@ Output the enhanced prompt now, keeping the character's identity intact while na
 
         quality_payload = None
         if request.include_quality_scoring:
-            quality_payload = await asyncio.to_thread(
-                evaluate_enhanced_prompt_quality,
+            quality_payload = await provider_evaluate_quality(
                 enhanced_prompt=limited_prompt,
                 prompt_type=request.prompt_type,
                 model=request.model,
-                gemini_model=request.gemini_model,
+                provider=request_provider,
             )
 
         log_debug(f"\nFinal Output:")
@@ -3034,4 +3199,87 @@ Output the enhanced prompt now, keeping the character's identity intact while na
         print(f"Error in enhance_prompt_endpoint: {error_details}")
         return EnhanceResponse(
             enhanced_prompt=f"An unexpected error occurred: {e}. Please try again later."
+        )
+
+
+@app.post("/character-sheet", response_model=CharacterSheetResponse)
+@limiter.limit("20/minute")
+async def character_sheet_endpoint(request: Request, body: CharacterSheetRequest) -> CharacterSheetResponse:
+    """
+    Generate an LTX-2.3 Director-compatible character/reference sheet prompt
+    (for IC-LoRA / Licon-MSR conditioning), plus an optional short 2-line
+    identity description for the Director node's @characterN text field.
+
+    Accepts a text description of the character, optionally combined with an
+    existing reference image analysis (obtained beforehand via /analyze-image).
+    """
+    start_time = time.time()
+
+    try:
+        request_provider = get_provider(body.provider, body.ollama_model)
+        active_provider_name = (body.provider or DEFAULT_MODEL_PROVIDER).lower()
+        provider_model_override = (
+            body.ollama_model if active_provider_name == "ollama" else body.gemini_model
+        )
+
+        if not body.character_description or not body.character_description.strip():
+            return CharacterSheetResponse(
+                sheet_prompt="Validation error: character_description is required."
+            )
+
+        if active_provider_name != "ollama" and "GOOGLE_API_KEY" not in os.environ:
+            return CharacterSheetResponse(
+                sheet_prompt="Error: Google API key is not set. Please set the GOOGLE_API_KEY environment variable."
+            )
+
+        layout = body.layout if body.layout in ("4_column", "2_column", "grid") else "4_column"
+
+        sheet_meta_prompt = build_character_sheet_image_prompt(
+            character_description=body.character_description,
+            layout=layout,
+            props_description=body.props_description,
+            setting_description=body.setting_description,
+            reference_image_description=body.reference_image_description,
+        )
+
+        sheet_prompt = await provider_generate_text(
+            sheet_meta_prompt,
+            model_override=provider_model_override,
+            provider=request_provider,
+        )
+
+        if sheet_prompt.startswith("Error") or sheet_prompt.startswith("An unexpected error"):
+            return CharacterSheetResponse(sheet_prompt=sheet_prompt)
+
+        director_description = None
+        if body.generate_director_description:
+            director_meta_prompt = build_director_character_description(
+                character_description=body.character_description,
+                reference_image_description=body.reference_image_description,
+            )
+            director_description = await provider_generate_text(
+                director_meta_prompt,
+                model_override=provider_model_override,
+                provider=request_provider,
+            )
+            if director_description.startswith("Error") or director_description.startswith(
+                "An unexpected error"
+            ):
+                director_description = None
+
+        elapsed_time = time.time() - start_time
+        log_debug(f"[character-sheet] Processing time: {elapsed_time:.2f}s, layout={layout}")
+
+        return CharacterSheetResponse(
+            sheet_prompt=sheet_prompt.strip(),
+            director_description=director_description.strip() if director_description else None,
+        )
+
+    except Exception as e:
+        error_details = traceback.format_exc()
+        log_debug(f"ERROR in character_sheet_endpoint: {e}")
+        log_debug(f"Error traceback: {error_details}")
+        print(f"Error in character_sheet_endpoint: {error_details}")
+        return CharacterSheetResponse(
+            sheet_prompt=f"An unexpected error occurred: {e}. Please try again later."
         )

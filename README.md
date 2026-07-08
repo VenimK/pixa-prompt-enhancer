@@ -124,6 +124,8 @@ Pixa Prompt Enhancer offers a wide variety of artistic styles to enhance your pr
 
 ## Installation
 
+### Option 1: Cloud (Gemini API) - Default
+
 1.  **Clone the repository:**
     ```bash
     git clone https://github.com/VenimK/pixa-prompt-enhancer.git
@@ -174,6 +176,47 @@ Pixa Prompt Enhancer offers a wide variety of artistic styles to enhance your pr
         # $env:GOOGLE_API_KEY="YOUR_API_KEY_HERE"
         ```
     -   **Note:** If using the terminal method, you must set this variable in the same terminal session where you run the application.
+
+### Option 2: Local (Ollama/Gemma) - Privacy & Offline
+
+For privacy-focused, offline operation without API costs, you can use local Gemma models via ollama.
+
+1.  **Install ollama:**
+    ```bash
+    # macOS
+    brew install ollama
+
+    # Linux
+    curl -fsSL https://ollama.com/install.sh | sh
+
+    # Windows
+    # Download from https://ollama.com/download
+    ```
+
+2.  **Pull Gemma model:**
+    ```bash
+    # Gemma 2B (recommended for 16GB RAM)
+    ollama pull gemma:2b
+
+    # Gemma 7B (requires more RAM)
+    ollama pull gemma:7b
+    ```
+
+3.  **Set provider:**
+    - Via environment variable:
+      ```bash
+      export MODEL_PROVIDER=ollama
+      export OLLAMA_MODEL=gemma:2b
+      ```
+    - Or via UI dropdown: Select "Ollama (local)" in the Provider section
+
+4.  **No API key needed** - ollama runs entirely on your machine
+
+**Tradeoffs:**
+- **Quality:** Gemma 2B produces good prompts but lower quality than Gemini 2.5 Pro
+- **Speed:** Local inference may be slower than cloud API
+- **Privacy:** 100% local, no data leaves your machine
+- **Cost:** Free after initial model download
 
 ### Troubleshooting API Key Issues
 

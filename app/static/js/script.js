@@ -1111,6 +1111,8 @@ document.addEventListener('DOMContentLoaded', () => {
         textControlsToggle: document.getElementById('text-controls-toggle'),
         modelSelect: document.getElementById('model-select'),
         modelTypeSelect: document.getElementById('model-type-select'),
+        providerSelect: document.getElementById('provider-select'),
+        ollamaModelSelect: document.getElementById('ollama-model-select'),
         geminiModelSelect: document.getElementById('gemini-model-select'),
         style: document.getElementById('style-select'),
         cinematography: document.getElementById('cinematography-select'),
@@ -1160,6 +1162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ltx2ResolutionContainer: document.getElementById('ltx2-resolution-container'),
         ltx2MovementContainer: document.getElementById('ltx2-movement-container'),
         ltx2StyleContainer: document.getElementById('ltx2-style-container'),
+        characterSheetContainer: document.getElementById('character-sheet-container'),
         audioUploadCard: document.getElementById('audio-upload-card'),
         
         audioDropZone: document.getElementById('audio-drop-zone'),
@@ -1403,6 +1406,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const btnContainer = els.insertWrapPrompt.parentElement;
             if (btnContainer) btnContainer.style.display = (on ? 'none' : '');
         }
+    }
+
+    // Provider selector - show/hide ollama model selector
+    if (els.providerSelect) {
+        const ollamaModelSelector = document.getElementById('ollama-model-selector');
+        const updateProviderUI = () => {
+            if (ollamaModelSelector) {
+                ollamaModelSelector.style.display = els.providerSelect.value === 'ollama' ? 'block' : 'none';
+            }
+        };
+        els.providerSelect.addEventListener('change', updateProviderUI);
+        updateProviderUI(); // Initialize
     }
 
     // Initialize Plain Enhance state (default ON) and persist
@@ -3449,8 +3464,10 @@ POST-PROCESSING:
                 const modelType = (els.modelTypeSelect ? els.modelTypeSelect.value : null);
 
                 // Route specialized enhancement modes to /enhance-specialized
+                // Ideogram4 JSON mode always uses /enhance (enhance-specialized has no JSON support)
+                const isIdeogram4 = (style || '').toLowerCase() === 'ideogram4';
                 let response;
-                if (promptType !== 'LTX2' && currentEnhancementMode && currentEnhancementMode !== 'general' && currentEnhancementMode !== 'auto') {
+                if (!isIdeogram4 && promptType !== 'LTX2' && currentEnhancementMode && currentEnhancementMode !== 'general' && currentEnhancementMode !== 'auto') {
                     console.log(`Using specialized enhancement: ${currentEnhancementMode}`);
                     response = await fetch('/enhance-specialized', {
                         method: 'POST',
@@ -3472,7 +3489,7 @@ POST-PROCESSING:
                             gemini_model: els.geminiModelSelect ? els.geminiModelSelect.value : null
                         }),
                     });
-                } else if (promptType !== 'LTX2' && currentEnhancementMode === 'auto' && window.currentImageAnalysis) {
+                } else if (!isIdeogram4 && promptType !== 'LTX2' && currentEnhancementMode === 'auto' && window.currentImageAnalysis) {
                     console.log('Using auto-detect specialized enhancement');
                     response = await fetch('/enhance-specialized', {
                         method: 'POST',
@@ -3519,7 +3536,10 @@ POST-PROCESSING:
                         ltx2_style: promptType === 'LTX2' ? (document.getElementById('ltx2-style-select')?.value || 'auto') : null,
                         audio_description: promptType === 'LTX2' && audioAnalysisResult ? audioAnalysisResult.audio_description : null,
                         audio_characteristics: promptType === 'LTX2' && audioAnalysisResult ? audioAnalysisResult.characteristics : null,
-                        gemini_model: els.geminiModelSelect ? els.geminiModelSelect.value : null
+                        provider: els.providerSelect ? els.providerSelect.value : null,
+                        ollama_model: els.ollamaModelSelect ? els.ollamaModelSelect.value : null,
+                        gemini_model: els.geminiModelSelect ? els.geminiModelSelect.value : null,
+                        use_ideogram4_json: isIdeogram4
                     }),
                 });
                 }
@@ -3629,6 +3649,105 @@ POST-PROCESSING:
         });
     }
 
+    // --- LTX-2.3 Director: Character/Reference Sheet Generator ---
+    (function initCharacterSheetGenerator() {
+        const generateBtn = document.getElementById('generate-character-sheet-btn');
+        if (!generateBtn) return;
+
+        const descInput = document.getElementById('character-sheet-description');
+        const layoutSelect = document.getElementById('character-sheet-layout');
+        const propsInput = document.getElementById('character-sheet-props');
+        const settingInput = document.getElementById('character-sheet-setting');
+        const useImageAnalysisCheckbox = document.getElementById('character-sheet-use-image-analysis');
+        const resultContainer = document.getElementById('character-sheet-result');
+        const sheetPromptText = document.getElementById('character-sheet-prompt-text');
+        const directorText = document.getElementById('character-sheet-director-text');
+        const copySheetBtn = document.getElementById('copy-character-sheet-prompt-btn');
+        const copyDirectorBtn = document.getElementById('copy-character-sheet-director-btn');
+
+        generateBtn.addEventListener('click', async () => {
+            const characterDescription = descInput ? descInput.value.trim() : '';
+            if (!characterDescription) {
+                showToast('Please enter a character description.', 'error');
+                return;
+            }
+
+            let referenceImageDescription = null;
+            if (useImageAnalysisCheckbox && useImageAnalysisCheckbox.checked) {
+                if (window.currentImageAnalysis && window.currentImageAnalysis.combined_description) {
+                    referenceImageDescription = window.currentImageAnalysis.combined_description;
+                } else if (els.imageDescription && els.imageDescription.value) {
+                    referenceImageDescription = els.imageDescription.value;
+                }
+            }
+
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+
+            try {
+                const response = await fetch('/character-sheet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        character_description: characterDescription,
+                        layout: layoutSelect ? layoutSelect.value : '4_column',
+                        props_description: propsInput && propsInput.value.trim() ? propsInput.value.trim() : null,
+                        setting_description: settingInput && settingInput.value.trim() ? settingInput.value.trim() : null,
+                        reference_image_description: referenceImageDescription,
+                        generate_director_description: true,
+                        provider: els.providerSelect ? els.providerSelect.value : null,
+                        ollama_model: els.ollamaModelSelect ? els.ollamaModelSelect.value : null,
+                        gemini_model: els.geminiModelSelect ? els.geminiModelSelect.value : null
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    showToast(errorData.error || `Server error: ${response.status}`, 'error');
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (data.sheet_prompt && data.sheet_prompt.startsWith('Error')) {
+                    showToast(data.sheet_prompt, 'error');
+                    return;
+                }
+                if (data.sheet_prompt && data.sheet_prompt.startsWith('Validation error')) {
+                    showToast(data.sheet_prompt, 'error');
+                    return;
+                }
+
+                if (sheetPromptText) sheetPromptText.innerText = data.sheet_prompt || '';
+                if (directorText) directorText.innerText = data.director_description || '(not generated)';
+                if (resultContainer) resultContainer.style.display = 'block';
+
+                showToast('Character sheet prompt generated!', 'success');
+            } catch (error) {
+                showToast(error.message || 'Failed to generate character sheet.', 'error');
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '<i class="fas fa-magic"></i> Generate Character Sheet Prompt';
+            }
+        });
+
+        function copyElementText(el) {
+            if (!el || !el.innerText) return;
+            navigator.clipboard.writeText(el.innerText).then(() => {
+                showToast('Copied to clipboard!', 'success');
+            }).catch(() => {
+                showToast('Failed to copy.', 'error');
+            });
+        }
+
+        if (copySheetBtn) {
+            copySheetBtn.addEventListener('click', () => copyElementText(sheetPromptText));
+        }
+        if (copyDirectorBtn) {
+            copyDirectorBtn.addEventListener('click', () => copyElementText(directorText));
+        }
+    })();
+
     if (els.promptType) {
         els.promptType.addEventListener('change', () => {
             if (els.promptType.value === 'WAN2') {
@@ -3643,12 +3762,14 @@ POST-PROCESSING:
                 if (els.ltx2ResolutionContainer) els.ltx2ResolutionContainer.style.display = 'flex';
                 if (els.ltx2MovementContainer) els.ltx2MovementContainer.style.display = 'flex';
                 if (els.ltx2StyleContainer) els.ltx2StyleContainer.style.display = 'flex';
+                if (els.characterSheetContainer) els.characterSheetContainer.style.display = 'flex';
                 if (els.audioUploadCard) els.audioUploadCard.style.display = 'block';
             } else {
                 if (els.ltx2ControlsContainer) els.ltx2ControlsContainer.style.display = 'none';
                 if (els.ltx2ResolutionContainer) els.ltx2ResolutionContainer.style.display = 'none';
                 if (els.ltx2MovementContainer) els.ltx2MovementContainer.style.display = 'none';
                 if (els.ltx2StyleContainer) els.ltx2StyleContainer.style.display = 'none';
+                if (els.characterSheetContainer) els.characterSheetContainer.style.display = 'none';
                 if (els.audioUploadCard) els.audioUploadCard.style.display = 'none';
             }
             

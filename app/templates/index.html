@@ -328,6 +328,29 @@
                                     </select>
                                 </div>
                                 <div class="model-selector">
+                                    <label for="provider-select">Provider:</label>
+                                    <select id="provider-select">
+                                        <option value="gemini" selected>Gemini (cloud)</option>
+                                        <option value="ollama">Ollama (local)</option>
+                                    </select>
+                                </div>
+                                <div class="model-selector" id="ollama-model-selector" style="display: none;">
+                                    <label for="ollama-model-select">Ollama Model:</label>
+                                    <select id="ollama-model-select">
+                                        <optgroup label="Text-only (fast, low RAM)">
+                                            <option value="gemma:2b" selected>Gemma 2B</option>
+                                            <option value="gemma:7b">Gemma 7B</option>
+                                            <option value="gemma:9b">Gemma 9B</option>
+                                        </optgroup>
+                                        <optgroup label="Multimodal (supports images)">
+                                            <option value="llava:7b">LLaVA 7B</option>
+                                            <option value="llava:13b">LLaVA 13B</option>
+                                            <option value="llava:34b">LLaVA 34B</option>
+                                            <option value="bakllava:7b">BakLLaVA 7B</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+                                <div class="model-selector">
                                     <label for="gemini-model-select">AI Engine:</label>
                                     <select id="gemini-model-select">
                                         <option value="gemini-2.5-flash" selected>2.5 Flash (fast)</option>
@@ -1043,6 +1066,55 @@
                 </select>
             </div>
 
+            <!-- LTX-2.3 Director: Character/Reference Sheet Generator (IC-LoRA / Licon-MSR) -->
+            <div class="selector" id="character-sheet-container" style="display: none;">
+                <details>
+                    <summary style="cursor:pointer; font-weight:600;">
+                        <i class="fas fa-id-card"></i> Character Sheet Generator (LTX Director IC-LoRA / Licon-MSR)
+                    </summary>
+                    <div style="margin-top:10px;">
+                        <label for="character-sheet-description">Character Description (text, or add notes about an uploaded reference image above):</label>
+                        <textarea id="character-sheet-description" rows="3" placeholder="e.g. A young woman with short brown hair, teal hooded vest, brown leather bracers, glowing blue crystal pendant..."></textarea>
+
+                        <label for="character-sheet-layout" style="margin-top:8px; display:block;">Sheet Layout:</label>
+                        <select id="character-sheet-layout">
+                            <option value="4_column">4-Column Turnaround (front / left / right / back)</option>
+                            <option value="2_column">2-Column Turnaround (front / back)</option>
+                            <option value="grid">Full Grid (setting + character + props + logo)</option>
+                        </select>
+
+                        <label for="character-sheet-props" style="margin-top:8px; display:block;">Props (optional):</label>
+                        <input type="text" id="character-sheet-props" placeholder="e.g. magical wooden staff with glowing blue crystal">
+
+                        <label for="character-sheet-setting" style="margin-top:8px; display:block;">Setting (optional):</label>
+                        <input type="text" id="character-sheet-setting" placeholder="e.g. sunny open-air tropical beach bar">
+
+                        <label style="margin-top:8px; display:flex; align-items:center; gap:6px;">
+                            <input type="checkbox" id="character-sheet-use-image-analysis">
+                            Use analyzed reference image (if available) to keep appearance consistent
+                        </label>
+
+                        <button type="button" id="generate-character-sheet-btn" class="btn" style="margin-top:10px;">
+                            <i class="fas fa-magic"></i> Generate Character Sheet Prompt
+                        </button>
+
+                        <div id="character-sheet-result" style="display:none; margin-top:12px;">
+                            <label>Reference Sheet Image Prompt:</label>
+                            <div id="character-sheet-prompt-text" class="result-text" style="white-space:pre-wrap;"></div>
+                            <button type="button" id="copy-character-sheet-prompt-btn" class="btn-secondary" style="margin-top:6px;">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+
+                            <label style="margin-top:10px; display:block;">Director @characterN Description (2 lines):</label>
+                            <div id="character-sheet-director-text" class="result-text" style="white-space:pre-wrap;"></div>
+                            <button type="button" id="copy-character-sheet-director-btn" class="btn-secondary" style="margin-top:6px;">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
             <div class="enhancement-mode-selector">
                 <label for="enhancement-mode">Enhancement Mode:</label>
                 <select id="enhancement-mode" name="enhancement_mode">
@@ -1112,6 +1184,9 @@
                         <option value="V-Ray">V-Ray</option>
                         <option value="Midjourney">Midjourney</option>
                         <option value="Flux Aesthetic">Flux Aesthetic</option>
+                    </optgroup>
+                    <optgroup label="Structured JSON Models">
+                        <option value="ideogram4">Ideogram 4.0 (JSON Prompt)</option>
                     </optgroup>
                     <optgroup label="Pop Culture &amp; Aesthetic">
                         <option value="Vaporwave">Vaporwave</option>

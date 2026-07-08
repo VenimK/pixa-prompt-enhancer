@@ -28,7 +28,10 @@ class EnhanceRequest(BaseModel):
     audio_description: str | None = None  # Description of uploaded audio file
     audio_characteristics: dict | None = None  # Structured audio analysis data from /analyze-audio
     movement_level: str | None = None  # LTX-2 movement level: 'static', 'minimal', 'natural', 'expressive', 'dynamic'
+    provider: str | None = None  # Model provider: 'gemini' or 'ollama'
+    ollama_model: str | None = None  # Ollama model name: 'gemma:2b', 'gemma:7b', etc.
     ltx2_style: str | None = None  # LTX-2 video style: 'music_video', 'cinematic', 'artistic', etc.
+    use_ideogram4_json: bool = False  # Generate Ideogram4 JSON format instead of plain text
 
     @field_validator('style')
     @classmethod
@@ -89,6 +92,23 @@ class AnalyzeResponseMulti(BaseModel):
     image_b_description: str | None = None
 
 
+class CharacterSheetRequest(BaseModel):
+    character_description: str  # text description of the character (required)
+    layout: str = "4_column"  # '4_column' | '2_column' | 'grid'
+    props_description: str | None = None
+    setting_description: str | None = None
+    reference_image_description: str | None = None  # from /analyze-image, if used
+    generate_director_description: bool = True  # also produce the 2-line @characterN description
+    provider: str | None = None
+    ollama_model: str | None = None
+    gemini_model: str | None = None
+
+
+class CharacterSheetResponse(BaseModel):
+    sheet_prompt: str  # prompt for generating the reference sheet image
+    director_description: str | None = None  # short 2-line identity description
+
+
 class SpecializedEnhanceRequest(BaseModel):
     prompt: str
     enhancement_mode: str  # 'commercial', 'cinematic', 'character', 'object', 'ace-step', 'auto'
@@ -101,5 +121,7 @@ class SpecializedEnhanceRequest(BaseModel):
     lighting: str | None = None
     cinematography: str | None = None
     ltx2_style: str | None = None  # LTX-2 video style
+    provider: str | None = None  # Model provider: 'gemini' or 'ollama'
+    ollama_model: str | None = None  # Ollama model name override for this request
     gemini_model: str | None = None  # override Gemini model for this request
     include_quality_scoring: bool = True  # set False to skip quality scoring (saves a Gemini call)

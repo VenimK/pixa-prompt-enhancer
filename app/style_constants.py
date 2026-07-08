@@ -51,6 +51,7 @@ STYLE_MAPPINGS = {
     "transformers": "Transformers",
     "voxel art": "Voxel Art",
     "motion graphics": "Motion Graphics",
+    "ideogram4": "Ideogram 4.0 (JSON)",
     
     # Pop Culture & Aesthetic Styles
     "vaporwave": "Vaporwave",
