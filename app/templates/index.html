@@ -1094,6 +1094,16 @@
                             Use analyzed reference image (if available) to keep appearance consistent
                         </label>
 
+                        <label style="margin-top:12px; display:flex; align-items:center; gap:6px;">
+                            <input type="checkbox" id="character-sheet-generate-video-prompt">
+                            Generate ComfyUI LTX2.3 Reference Sheet to Video Prompt
+                        </label>
+
+                        <div id="character-sheet-video-section" style="display:none; margin-top:8px;">
+                            <label for="character-sheet-scene">Scene/Action Description (required for video prompt):</label>
+                            <textarea id="character-sheet-scene" rows="3" placeholder="e.g. The warrior quietly walks beneath the blooming cherry blossom tree toward the shrine as pink petals drift gently through the air. She pauses, closes her eyes for a brief moment, places one hand respectfully on the hilt of her sheathed katana, then gives a small, calm smile before continuing toward the temple entrance."></textarea>
+                        </div>
+
                         <button type="button" id="generate-character-sheet-btn" class="btn" style="margin-top:10px;">
                             <i class="fas fa-magic"></i> Generate Character Sheet Prompt
                         </button>
@@ -1110,6 +1120,14 @@
                             <button type="button" id="copy-character-sheet-director-btn" class="btn-secondary" style="margin-top:6px;">
                                 <i class="fas fa-copy"></i> Copy
                             </button>
+
+                            <div id="character-sheet-video-result" style="display:none; margin-top:10px;">
+                                <label style="margin-top:10px; display:block;">ComfyUI LTX2.3 Reference Sheet to Video Prompt:</label>
+                                <div id="character-sheet-video-text" class="result-text" style="white-space:pre-wrap;"></div>
+                                <button type="button" id="copy-character-sheet-video-btn" class="btn-secondary" style="margin-top:6px;">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </details>

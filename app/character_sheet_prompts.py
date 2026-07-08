@@ -217,3 +217,67 @@ def build_scene_subprompt_with_references(
         f"from the attached reference sheet(s).]\n"
     )
     return note + scene_prompt
+
+
+# ---------------------------------------------------------------------------
+# System prompt — ComfyUI LTX2.3 "reference sheet to video" workflow prompt
+# ---------------------------------------------------------------------------
+
+_REFERENCE_SHEET_TO_VIDEO_SYSTEM_PROMPT = """\
+You are an expert prompt engineer creating a ComfyUI LTX2.3 "reference sheet to video" workflow prompt. This prompt has a strict two-part structure: "Reference consistency" and "Scene".
+
+The "Reference consistency" section must describe the character and setting in exhaustive detail, ensuring the video will match the reference sheet exactly. The "Scene" section describes the action, camera movement, atmosphere, and quality specifications.
+
+RULES:
+- Output exactly two sections: "Reference consistency (must match exactly):" and "Scene:"
+- In the Reference consistency section, describe the character with extreme detail: build, eyes, hair, clothing (colors, patterns, materials), accessories, props, footwear, and any distinguishing features.
+- If a setting is provided, describe it with equal precision: architecture, natural elements, lighting conditions, time of day, weather, and atmosphere.
+- Explicitly state "No additional characters or props" if none are to be added beyond what's in the reference.
+- In the Scene section, describe the action, camera movement (dolly, pan, tilt, tracking), character expressions and gestures, environmental effects (wind, particles, lighting changes), and atmosphere.
+- Include quality keywords: animation style, facial animation, cloth physics, lighting quality, depth of field, and mood.
+- End with "No dialogue" if the scene should have no spoken dialogue.
+- Do NOT use markdown headers, code fences, or bullet points. Use plain text with clear section breaks.
+- Preserve the user's character and setting descriptions exactly, only expanding them with the required detail and structure.
+"""
+
+
+def build_reference_sheet_to_video_prompt(
+    character_description: str,
+    scene_description: str,
+    setting_description: str | None = None,
+    reference_image_description: str | None = None,
+) -> str:
+    """
+    Build a meta-prompt that produces a ComfyUI LTX2.3 "reference sheet to video" workflow prompt.
+
+    Args:
+        character_description: Text description of the character.
+        scene_description: Description of the scene/action to animate.
+        setting_description: Optional description of the setting/environment.
+        reference_image_description: Optional analysis of an uploaded reference image.
+
+    Returns:
+        Meta-prompt string to send to the model provider.
+    """
+    context_parts = [f"Character description: {character_description}"]
+    context_parts.append(f"Scene/action description: {scene_description}")
+
+    if reference_image_description:
+        context_parts.append(
+            f"Reference image analysis (match this appearance exactly): "
+            f"{reference_image_description}"
+        )
+
+    if setting_description:
+        context_parts.append(f"Setting/location description: {setting_description}")
+
+    context = "\n".join(context_parts)
+
+    full_prompt = (
+        f"{_REFERENCE_SHEET_TO_VIDEO_SYSTEM_PROMPT}\n\n"
+        f"INPUT:\n{context}\n\n"
+        f"Generate the complete reference sheet to video prompt now."
+    )
+
+    log_debug(f"[character_sheet] Built reference sheet to video prompt (length={len(full_prompt)})")
+    return full_prompt

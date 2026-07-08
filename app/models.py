@@ -102,6 +102,8 @@ class CharacterSheetRequest(BaseModel):
     setting_description: str | None = None
     reference_image_description: str | None = None  # from /analyze-image, if used
     generate_director_description: bool = True  # also produce the 2-line @characterN description
+    scene_description: str | None = None  # description of scene/action for video prompt
+    generate_video_prompt: bool = False  # also produce ComfyUI LTX2.3 reference sheet to video prompt
     provider: str | None = None
     ollama_model: str | None = None
     gemini_model: str | None = None
@@ -110,6 +112,7 @@ class CharacterSheetRequest(BaseModel):
 class CharacterSheetResponse(BaseModel):
     sheet_prompt: str  # prompt for generating the reference sheet image
     director_description: str | None = None  # short 2-line identity description
+    video_prompt: str | None = None  # ComfyUI LTX2.3 reference sheet to video prompt
 
 
 class SpecializedEnhanceRequest(BaseModel):

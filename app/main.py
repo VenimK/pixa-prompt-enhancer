@@ -51,6 +51,7 @@ from app.ideogram4_prompts import (
 from app.character_sheet_prompts import (
     build_character_sheet_image_prompt,
     build_director_character_description,
+    build_reference_sheet_to_video_prompt,
 )
 
 
@@ -3302,12 +3303,37 @@ async def character_sheet_endpoint(request: Request, body: CharacterSheetRequest
             ):
                 director_description = None
 
+        video_prompt = None
+        if body.generate_video_prompt and body.scene_description:
+            if not body.scene_description.strip():
+                return CharacterSheetResponse(
+                    sheet_prompt=sheet_prompt.strip(),
+                    director_description=director_description.strip() if director_description else None,
+                    video_prompt="Error: scene_description is required when generate_video_prompt is True."
+                )
+            video_meta_prompt = build_reference_sheet_to_video_prompt(
+                character_description=body.character_description,
+                scene_description=body.scene_description,
+                setting_description=body.setting_description,
+                reference_image_description=body.reference_image_description,
+            )
+            video_prompt = await provider_generate_text(
+                video_meta_prompt,
+                model_override=provider_model_override,
+                provider=request_provider,
+            )
+            if video_prompt.startswith("Error") or video_prompt.startswith(
+                "An unexpected error"
+            ):
+                video_prompt = None
+
         elapsed_time = time.time() - start_time
         log_debug(f"[character-sheet] Processing time: {elapsed_time:.2f}s, layout={layout}")
 
         return CharacterSheetResponse(
             sheet_prompt=sheet_prompt.strip(),
             director_description=director_description.strip() if director_description else None,
+            video_prompt=video_prompt.strip() if video_prompt else None,
         )
 
     except Exception as e:

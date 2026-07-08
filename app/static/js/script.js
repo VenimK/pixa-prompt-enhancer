@@ -3675,11 +3675,24 @@ POST-PROCESSING:
         const propsInput = document.getElementById('character-sheet-props');
         const settingInput = document.getElementById('character-sheet-setting');
         const useImageAnalysisCheckbox = document.getElementById('character-sheet-use-image-analysis');
+        const generateVideoPromptCheckbox = document.getElementById('character-sheet-generate-video-prompt');
+        const videoSection = document.getElementById('character-sheet-video-section');
+        const sceneInput = document.getElementById('character-sheet-scene');
         const resultContainer = document.getElementById('character-sheet-result');
         const sheetPromptText = document.getElementById('character-sheet-prompt-text');
         const directorText = document.getElementById('character-sheet-director-text');
+        const videoResultContainer = document.getElementById('character-sheet-video-result');
+        const videoText = document.getElementById('character-sheet-video-text');
         const copySheetBtn = document.getElementById('copy-character-sheet-prompt-btn');
         const copyDirectorBtn = document.getElementById('copy-character-sheet-director-btn');
+        const copyVideoBtn = document.getElementById('copy-character-sheet-video-btn');
+
+        // Toggle video section visibility
+        if (generateVideoPromptCheckbox && videoSection) {
+            generateVideoPromptCheckbox.addEventListener('change', () => {
+                videoSection.style.display = generateVideoPromptCheckbox.checked ? 'block' : 'none';
+            });
+        }
 
         generateBtn.addEventListener('click', async () => {
             const characterDescription = descInput ? descInput.value.trim() : '';
@@ -3697,6 +3710,14 @@ POST-PROCESSING:
                 }
             }
 
+            const shouldGenerateVideo = generateVideoPromptCheckbox && generateVideoPromptCheckbox.checked;
+            const sceneDescription = sceneInput && sceneInput.value.trim() ? sceneInput.value.trim() : null;
+
+            if (shouldGenerateVideo && !sceneDescription) {
+                showToast('Please enter a scene description for the video prompt.', 'error');
+                return;
+            }
+
             generateBtn.disabled = true;
             generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
 
@@ -3711,6 +3732,8 @@ POST-PROCESSING:
                         setting_description: settingInput && settingInput.value.trim() ? settingInput.value.trim() : null,
                         reference_image_description: referenceImageDescription,
                         generate_director_description: true,
+                        scene_description: sceneDescription,
+                        generate_video_prompt: shouldGenerateVideo,
                         provider: els.providerSelect ? els.providerSelect.value : null,
                         ollama_model: els.ollamaModelSelect ? els.ollamaModelSelect.value : null,
                         gemini_model: els.geminiModelSelect ? els.geminiModelSelect.value : null
@@ -3736,6 +3759,17 @@ POST-PROCESSING:
 
                 if (sheetPromptText) sheetPromptText.innerText = data.sheet_prompt || '';
                 if (directorText) directorText.innerText = data.director_description || '(not generated)';
+                
+                if (videoText) {
+                    if (data.video_prompt) {
+                        videoText.innerText = data.video_prompt;
+                        if (videoResultContainer) videoResultContainer.style.display = 'block';
+                    } else {
+                        videoText.innerText = '';
+                        if (videoResultContainer) videoResultContainer.style.display = 'none';
+                    }
+                }
+
                 if (resultContainer) resultContainer.style.display = 'block';
 
                 showToast('Character sheet prompt generated!', 'success');
@@ -3761,6 +3795,9 @@ POST-PROCESSING:
         }
         if (copyDirectorBtn) {
             copyDirectorBtn.addEventListener('click', () => copyElementText(directorText));
+        }
+        if (copyVideoBtn) {
+            copyVideoBtn.addEventListener('click', () => copyElementText(videoText));
         }
     })();
 
