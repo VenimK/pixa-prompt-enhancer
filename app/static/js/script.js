@@ -308,11 +308,12 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(suggestionTimeout);
             const currentText = e.target.value;
             
-            // Only suggest if text changed and has meaningful content
-            if (currentText !== lastPromptText && currentText.length > 10) {
+            // Only suggest if text changed and has meaningful content.
+            // 2.5s debounce + longer minimum: each suggestion is a full Gemini call.
+            if (currentText !== lastPromptText && currentText.length > 24) {
                 suggestionTimeout = setTimeout(() => {
                     generateRealtimeSuggestions(currentText);
-                }, 1000); // 1 second delay
+                }, 2500);
             }
             
             lastPromptText = currentText;
@@ -383,7 +384,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     pause_points: null,
                     transition_smoothness: null,
                     character_coordination: null,
-                    object_interaction: null
+                    object_interaction: null,
+                    include_quality_scoring: false
                 })
             });
             
@@ -509,11 +511,12 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(suggestionTimeout);
             const currentText = e.target.value;
 
-            // Only suggest if text changed and has meaningful content
-            if (currentText !== lastPromptText && currentText.length > 10) {
+            // Only suggest if text changed and has meaningful content.
+            // 2.5s debounce + longer minimum: each suggestion is a full Gemini call.
+            if (currentText !== lastPromptText && currentText.length > 24) {
                 suggestionTimeout = setTimeout(() => {
                     generateRealtimeSuggestions(currentText);
-                }, 1000); // 1 second delay
+                }, 2500);
             }
 
             lastPromptText = currentText;
@@ -3488,7 +3491,8 @@ POST-PROCESSING:
                             lighting: lighting,
                             cinematography: cinematography,
                             ltx2_style: promptType === 'LTX2' ? (document.getElementById('ltx2-style-select')?.value || 'auto') : null,
-                            gemini_model: els.geminiModelSelect ? els.geminiModelSelect.value : null
+                            gemini_model: els.geminiModelSelect ? els.geminiModelSelect.value : null,
+                            include_quality_scoring: true
                         }),
                     });
                 } else if (!isIdeogram4 && promptType !== 'LTX2' && currentEnhancementMode === 'auto' && window.currentImageAnalysis) {
@@ -3510,7 +3514,8 @@ POST-PROCESSING:
                             lighting: lighting,
                             cinematography: cinematography,
                             ltx2_style: promptType === 'LTX2' ? (document.getElementById('ltx2-style-select')?.value || 'auto') : null,
-                            gemini_model: els.geminiModelSelect ? els.geminiModelSelect.value : null
+                            gemini_model: els.geminiModelSelect ? els.geminiModelSelect.value : null,
+                            include_quality_scoring: true
                         }),
                     });
                 } else {
@@ -3543,7 +3548,8 @@ POST-PROCESSING:
                         gemini_model: els.geminiModelSelect ? els.geminiModelSelect.value : null,
                         use_ideogram4_json: isIdeogram4Single,
                         use_ideogram4_storyboard: isIdeogram4Storyboard,
-                        storyboard_layout: isIdeogram4Storyboard ? (document.getElementById('ideogram4-storyboard-layout')?.value || 'grid_2x2') : null
+                        storyboard_layout: isIdeogram4Storyboard ? (document.getElementById('ideogram4-storyboard-layout')?.value || 'grid_2x2') : null,
+                        include_quality_scoring: true
                     }),
                 });
                 }

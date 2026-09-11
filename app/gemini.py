@@ -11,8 +11,7 @@ import sys
 import time
 import traceback
 
-import PIL.Image
-
+from app.image_prep import close_images, prepare_image_for_api, prepare_images_for_api
 from app.logger import log_debug
 
 # --- Gemini SDK compatibility layer ---
@@ -97,8 +96,7 @@ def run_gemini(
             if image_paths and len(image_paths) > 0:
                 images = []
                 try:
-                    for p in image_paths:
-                        images.append(PIL.Image.open(p))
+                    images = prepare_images_for_api(image_paths)
                 except Exception as img_error:
                     return f"Error loading image(s): {img_error}. Please check the image file format and try again."
                 try:
@@ -113,9 +111,12 @@ def run_gemini(
                     return "Error: Gemini API returned empty response. Please try again."
                 except Exception as api_error:
                     return f"Error processing image(s) with Gemini API: {api_error}."
+                finally:
+                    close_images(images)
             elif image_path:
+                image = None
                 try:
-                    image = PIL.Image.open(image_path)
+                    image = prepare_image_for_api(image_path)
                 except Exception as img_error:
                     return f"Error loading image: {img_error}. Please check the image format and try again."
                 try:
@@ -130,6 +131,8 @@ def run_gemini(
                     return "Error: Gemini API returned empty response. Please try again."
                 except Exception as api_error:
                     return f"Error processing image with Gemini API: {api_error}."
+                finally:
+                    close_images([image])
             else:
                 try:
                     start_time = time.time()
@@ -149,8 +152,7 @@ def run_gemini(
             if image_paths and len(image_paths) > 0:
                 images = []
                 try:
-                    for p in image_paths:
-                        images.append(PIL.Image.open(p))
+                    images = prepare_images_for_api(image_paths)
                 except Exception as img_error:
                     return f"Error loading image(s): {img_error}. Please check the image file format and try again."
                 try:
@@ -162,9 +164,12 @@ def run_gemini(
                     return "Error: Gemini API returned empty response. Please try again."
                 except Exception as api_error:
                     return f"Error processing image(s) with Gemini API: {api_error}."
+                finally:
+                    close_images(images)
             elif image_path:
+                image = None
                 try:
-                    image = PIL.Image.open(image_path)
+                    image = prepare_image_for_api(image_path)
                 except Exception as img_error:
                     return f"Error loading image: {img_error}. Please check the image file format and try again."
                 try:
@@ -176,6 +181,8 @@ def run_gemini(
                     return "Error: Gemini API returned empty response. Please try again."
                 except Exception as api_error:
                     return f"Error processing image with Gemini API: {api_error}."
+                finally:
+                    close_images([image])
             else:
                 try:
                     start_time = time.time()

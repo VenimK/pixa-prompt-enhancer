@@ -1,23 +1,19 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, File, UploadFile, Request, Form
+from datetime import datetime
+from fastapi import FastAPI, File, UploadFile, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 import asyncio
 import re
-import subprocess
 import shutil
 import os
-import sys
 import time
 import json
-import mimetypes
 import traceback
 import uuid
-import librosa
-import numpy as np
-import scipy
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -31,8 +27,10 @@ from app.logger import log_debug
 
 # Model provider abstraction (Gemini, ollama/Gemma, etc.)
 from app.providers.base import ModelProvider
-from app.providers.gemini_provider import GeminiProvider, run_gemini_async as gemini_run_async
+from app.providers.gemini_provider import GeminiProvider
 from app.providers.ollama_provider import OllamaProvider
+from app.gemini import run_gemini
+from app.audio_analysis import analyze_real_audio_characteristics
 
 # LTX-2.3 prompt engineering (extracted to app/ltx2_prompts.py)
 from app.ltx2_prompts import build_ltx2_meta_prompt
@@ -75,28 +73,44 @@ except Exception as e:
         default_provider = None  # Will fail at runtime
 
 
+_provider_cache: dict[tuple[str, str], ModelProvider] = {}
+
+
 def get_provider(provider_name: str | None = None, ollama_model: str | None = None) -> ModelProvider:
-    """Get a provider instance by name, falling back to default."""
+    """Get a cached provider instance by name, falling back to default.
+
+    OllamaProvider opens an HTTP client and health-checks the daemon. Creating a
+    new one on every /enhance request added a round-trip to localhost:11434.
+    """
     if provider_name is None:
         provider_name = DEFAULT_MODEL_PROVIDER
 
     provider_name = provider_name.lower()
+    cache_key = (provider_name, ollama_model or "")
+    cached = _provider_cache.get(cache_key)
+    if cached is not None:
+        return cached
 
+    provider: ModelProvider | None = None
     if provider_name == "ollama":
         try:
-            return OllamaProvider(model=ollama_model)
+            provider = OllamaProvider(model=ollama_model)
         except Exception as e:
             log_debug(f"[main] Failed to create OllamaProvider: {e}. Falling back to default.")
             return default_provider
     elif provider_name == "gemini":
         try:
-            return GeminiProvider()
+            provider = GeminiProvider()
         except Exception as e:
             log_debug(f"[main] Failed to create GeminiProvider: {e}. Falling back to default.")
             return default_provider
     else:
         log_debug(f"[main] Unknown provider: {provider_name}. Using default.")
         return default_provider
+
+    if provider is not None:
+        _provider_cache[cache_key] = provider
+    return provider
 
 
 # Global provider instance (for backward compatibility with existing code)
@@ -195,6 +209,7 @@ app.add_middleware(
     CORSMiddleware,
     **cors_config
 )
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Rate limiting — protects Gemini API endpoints from abuse
 limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
@@ -202,7 +217,26 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # --- Setup ---
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+class CachedStaticFiles(StaticFiles):
+    """Serve static assets with a long cache lifetime.
+
+    Cache-busting is already done via `?v={{ version }}` on every stylesheet
+    and script tag, so a 1-day max-age is safe and avoids repeat downloads.
+    """
+
+    async def __call__(self, scope, receive, send):
+        async def send_with_cache(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers") or [])
+                if not any(k.lower() == b"cache-control" for k, _ in headers):
+                    headers.append((b"cache-control", b"public, max-age=86400"))
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await super().__call__(scope, receive, send_with_cache)
+
+
+app.mount("/static", CachedStaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
 # Import style constants
@@ -469,7 +503,7 @@ def _char_limit_instruction(prompt_type: str | None) -> str:
     return f"IMPORTANT: Keep the output under {limit} characters. Write as a single flowing paragraph, no markdown headers or numbered lists."
 
 
-def enhance_prompt_specialized(mode: str, base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None) -> str:
+def enhance_prompt_specialized(mode: str, base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None, generate_fn=None) -> str:
     """Generic specialized prompt enhancer driven by _SPECIALIZED_MODE_CONFIG."""
     cfg = _SPECIALIZED_MODE_CONFIG[mode]
     reqs = "\n".join(f"- {r}" for r in cfg["requirements"])
@@ -496,21 +530,24 @@ def enhance_prompt_specialized(mode: str, base_prompt: str, image_description: s
 {cfg['closing']}
 {limit_line}"""
 
-    enhanced = run_gemini(meta_prompt, model_override=gemini_model)
+    if generate_fn is not None:
+        enhanced = generate_fn(meta_prompt)
+    else:
+        enhanced = run_gemini(meta_prompt, model_override=gemini_model)
     return limit_prompt_length(enhanced, prompt_type or cfg["default_limit"])
 
 
-def enhance_prompt_commercial(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None) -> str:
+def enhance_prompt_commercial(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None, generate_fn=None) -> str:
     """Enhance prompt for commercial photography/product shots."""
-    return enhance_prompt_specialized("commercial", base_prompt, image_description, audio_characteristics, prompt_type, gemini_model)
+    return enhance_prompt_specialized("commercial", base_prompt, image_description, audio_characteristics, prompt_type, gemini_model, generate_fn=generate_fn)
 
 
-def enhance_prompt_cinematic(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None) -> str:
+def enhance_prompt_cinematic(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None, generate_fn=None) -> str:
     """Enhance prompt for cinematic film/video production."""
-    return enhance_prompt_specialized("cinematic", base_prompt, image_description, audio_characteristics, prompt_type, gemini_model)
+    return enhance_prompt_specialized("cinematic", base_prompt, image_description, audio_characteristics, prompt_type, gemini_model, generate_fn=generate_fn)
 
 
-def enhance_prompt_ace_step(prompt: str, image_description: str = None, audio_characteristics: dict = None) -> str:
+def enhance_prompt_ace_step(prompt: str, image_description: str = None, audio_characteristics: dict = None, generate_fn=None) -> str:
     """Generate ACE-Step 1.5 compatible prompts using professional cinematic prompt engineering."""
     
     try:
@@ -561,8 +598,10 @@ No explanation."""
         
         full_prompt = f"{system_prompt}\n\n" + "\n\n".join(context_parts) + "\n\nEnhanced Prompt:"
         
-        # Generate enhanced prompt using Gemini
-        enhanced = run_gemini(full_prompt)
+        if generate_fn is not None:
+            enhanced = generate_fn(full_prompt)
+        else:
+            enhanced = run_gemini(full_prompt)
         
         # Clean up, format, and apply length limit
         enhanced_prompt = enhanced.strip()
@@ -577,14 +616,14 @@ No explanation."""
         return f"Cinematic scene with {prompt}, professional lighting, detailed textures, realistic camera work"
 
 
-def enhance_prompt_object_design(prompt: str, image_description: str = None, audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None) -> str:
+def enhance_prompt_object_design(prompt: str, image_description: str = None, audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None, generate_fn=None) -> str:
     """Enhance prompt for object/scene photography and effects."""
-    return enhance_prompt_specialized("object", prompt, image_description or "", audio_characteristics, prompt_type, gemini_model)
+    return enhance_prompt_specialized("object", prompt, image_description or "", audio_characteristics, prompt_type, gemini_model, generate_fn=generate_fn)
 
 
-def enhance_prompt_character_design(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None) -> str:
+def enhance_prompt_character_design(base_prompt: str, image_description: str = "", audio_characteristics: dict = None, prompt_type: str = None, gemini_model: str = None, generate_fn=None) -> str:
     """Enhance prompt for character design and animation."""
-    return enhance_prompt_specialized("character", base_prompt, image_description, audio_characteristics, prompt_type, gemini_model)
+    return enhance_prompt_specialized("character", base_prompt, image_description, audio_characteristics, prompt_type, gemini_model, generate_fn=generate_fn)
 
 
 @app.post("/enhance-specialized", response_model=EnhanceResponse)
@@ -639,6 +678,9 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
         
         # Apply specialized enhancement based on mode
         gm = request.gemini_model
+        def _generate(prompt: str) -> str:
+            return request_provider.generate_text(prompt, provider_model_override)
+
         if enhancement_mode == 'commercial':
             enhanced_prompt = await asyncio.to_thread(
                 enhance_prompt_commercial,
@@ -646,7 +688,8 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
                 request.image_description or "",
                 request.audio_characteristics,
                 request.prompt_type,
-                gm
+                gm,
+                _generate,
             )
         elif enhancement_mode == 'cinematic':
             enhanced_prompt = await asyncio.to_thread(
@@ -655,7 +698,8 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
                 request.image_description or "",
                 request.audio_characteristics,
                 request.prompt_type,
-                gm
+                gm,
+                _generate,
             )
         elif enhancement_mode == 'character':
             enhanced_prompt = await asyncio.to_thread(
@@ -664,7 +708,8 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
                 request.image_description or "",
                 request.audio_characteristics,
                 request.prompt_type,
-                gm
+                gm,
+                _generate,
             )
         elif enhancement_mode == 'object':
             enhanced_prompt = await asyncio.to_thread(
@@ -673,14 +718,16 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
                 request.image_description or "",
                 request.audio_characteristics,
                 request.prompt_type,
-                gm
+                gm,
+                _generate,
             )
         elif enhancement_mode == 'ace-step':
             enhanced_prompt = await asyncio.to_thread(
                 enhance_prompt_ace_step,
                 request.prompt,
                 request.image_description or "",
-                request.audio_characteristics
+                request.audio_characteristics,
+                _generate,
             )
         else:
             # Fallback to general enhancement
@@ -719,130 +766,6 @@ async def enhance_specialized_endpoint(request: SpecializedEnhanceRequest):
         )
 
 
-
-
-# Helper functions for enhanced audio analysis
-def _calculate_emotion_score(energy, spectral_contrast, mfccs, tempo):
-    """Calculate emotion score based on acoustic features."""
-    # Normalize features
-    energy_norm = min(energy / 0.2, 1.0)
-    tempo_norm = min(tempo / 180.0, 1.0) if tempo else 0.5
-    
-    # Spectral contrast indicates emotional intensity
-    contrast_mean = np.mean(spectral_contrast)
-    contrast_norm = min(contrast_mean / 20.0, 1.0)
-    
-    # MFCCs indicate emotional valence
-    mfcc_std = np.std(mfccs, axis=1).mean()
-    mfcc_norm = min(mfcc_std / 50.0, 1.0)
-    
-    # Combine features with weights
-    emotion_score = (
-        energy_norm * 0.3 +
-        contrast_norm * 0.25 +
-        mfcc_norm * 0.25 +
-        tempo_norm * 0.2
-    )
-    
-    return emotion_score
-
-def _analyze_vocal_density(y, sr):
-    """Analyze vocal density to determine vocal count."""
-    # Use harmonic-percussive source separation
-    y_harmonic, y_percussive = librosa.effects.hpss(y)
-    
-    # Calculate harmonic content as indicator of vocals
-    harmonic_energy = np.sum(y_harmonic ** 2)
-    total_energy = np.sum(y ** 2)
-    
-    if total_energy > 0:
-        vocal_density = harmonic_energy / total_energy
-    else:
-        vocal_density = 0.0
-        
-    return vocal_density
-
-def _analyze_vocal_separation(y, sr):
-    """Analyze how vocals are separated from instrumentation."""
-    # Use spectral features to determine vocal separation
-    chroma = librosa.feature.chroma_stft(y=y, sr=sr)
-    chroma_std = np.std(chroma, axis=1).mean()
-    
-    if chroma_std > 0.15:
-        return "lead_with_backup"
-    elif chroma_std > 0.10:
-        return "harmonized_vocals"
-    elif chroma_std > 0.05:
-        return "multiple_voices"
-    else:
-        return "unknown"
-
-def _analyze_performance_energy(y, sr, tempo):
-    """Analyze overall performance energy."""
-    # Combine multiple energy indicators
-    rms = librosa.feature.rms(y=y)[0]
-    onset_strength = librosa.onset.onset_strength(y=y, sr=sr)
-    
-    rms_energy = np.mean(rms)
-    onset_energy = np.mean(onset_strength)
-    
-    combined_energy = (rms_energy + onset_energy) / 2
-    
-    if combined_energy > 0.15:
-        return "high_energy"
-    elif combined_energy > 0.10:
-        return "balanced"
-    elif combined_energy > 0.05:
-        return "subtle"
-    else:
-        return "minimal"
-
-def _calculate_musical_complexity(y, sr, spectral_centroids, spectral_rolloff):
-    """Calculate musical complexity score."""
-    # Measure complexity through spectral variation
-    centroid_variation = np.std(spectral_centroids) / np.mean(spectral_centroids)
-    rolloff_variation = np.std(spectral_rolloff) / np.mean(spectral_rolloff)
-    
-    # Rhythm complexity
-    tempo_variation = 0.0
-    try:
-        tempo, beats = librosa.beat.beat_track(y=y, sr=sr)
-        if len(beats) > 1:
-            beat_intervals = np.diff(beats)
-            tempo_variation = np.std(beat_intervals) / np.mean(beat_intervals)
-    except Exception:
-        tempo_variation = 0.0
-    
-    complexity_score = (
-        centroid_variation * 0.4 +
-        rolloff_variation * 0.4 +
-        tempo_variation * 0.2
-    )
-    
-    return min(complexity_score, 1.0)
-
-def _assess_audio_quality(y, sr, rms):
-    """Assess overall audio quality."""
-    # Check for clipping
-    clipping_ratio = np.sum(np.abs(y) > 0.95) / len(y)
-    
-    # Check signal-to-noise ratio (approximate)
-    signal_power = np.mean(y ** 2)
-    noise_power = np.mean((y - librosa.util.normalize(y)) ** 2)
-    snr = 10 * np.log10(signal_power / (noise_power + 1e-10)) if noise_power > 0 else 100
-    
-    # RMS consistency
-    rms_std = np.std(rms) / np.mean(rms)
-    
-    quality_score = 1.0
-    if clipping_ratio > 0.001:
-        quality_score -= 0.2  # Clipping penalty
-    if snr < 20:
-        quality_score -= 0.3  # Poor SNR penalty
-    if rms_std > 0.5:
-        quality_score -= 0.1  # Inconsistent levels penalty
-        
-    return max(quality_score, 0.0)
 
 
 def limit_prompt_length(enhanced_prompt: str, model_type: str) -> str:
@@ -1065,7 +988,7 @@ async def read_root(request: Request):
             masked_key = "[Invalid key format]"
         api_key_info = {"set": True, "masked_key": masked_key}
 
-    version = "1.0.0"  # Fixed version string to prevent caching issues
+    version = "1.1.0"  # Bump when static JS/CSS changes so cache-busting query updates
     return templates.TemplateResponse(
         "index.html",
         {
@@ -1084,10 +1007,49 @@ async def read_root(request: Request):
 async def style_test_page(request: Request):
     """Render the style test page."""
     log_debug("GET /style-test - Style test page accessed")
-    version = "1.0.0"  # Fixed version string to prevent caching issues
+    version = "1.1.0"  # Bump when static JS/CSS changes so cache-busting query updates
     return templates.TemplateResponse(
         "style-test.html", {"request": request, "version": version}
     )
+
+
+_MULTI_IMAGE_HEADING = re.compile(
+    r"^##\s+(Combined|Reference A|Reference B|Style Comparison)\s*$",
+    re.IGNORECASE,
+)
+
+
+def _parse_multi_image_analysis(text: str) -> dict[str, str | None]:
+    """Split a structured two-image analysis into combined / A / B sections."""
+    sections: dict[str, list[str]] = {}
+    current: str | None = None
+    heading_map = {
+        "combined": "combined",
+        "reference a": "a",
+        "reference b": "b",
+        "style comparison": "style",
+    }
+    for line in (text or "").splitlines():
+        match = _MULTI_IMAGE_HEADING.match(line.strip())
+        if match:
+            current = heading_map[match.group(1).lower()]
+            sections.setdefault(current, [])
+            continue
+        if current is not None:
+            sections[current].append(line)
+
+    def _join(key: str) -> str:
+        return "\n".join(sections.get(key, [])).strip()
+
+    combined = _join("combined") or (text or "").strip()
+    style = _join("style")
+    if style:
+        combined = f"{combined}\n\n🎨 **Style Comparison:**\n{style}"
+    return {
+        "combined": combined,
+        "a": _join("a") or None,
+        "b": _join("b") or None,
+    }
 
 
 @app.post("/analyze-image", response_model=AnalyzeResponseMulti)
@@ -1166,11 +1128,18 @@ async def analyze_image_endpoint(request: Request, images: list[UploadFile] = Fi
                     image_b_description=None,
                 )
 
-        # Build meta-prompts
+        # One vision call per request. Style used to be extra Gemini round-trips
+        # that only formatted text already inferable from the description.
         if len(saved_paths) == 1:
             meta_prompt = (
                 "Analyze this image in detail. Provide a comprehensive description covering the main subject, "
-                "setting, composition, colors, and notable elements. Be descriptive and thorough."
+                "setting, composition, colors, and notable elements. Be descriptive and thorough.\n\n"
+                "Then append this exact block:\n"
+                "🎨 **Artistic Style Analysis:**\n"
+                "• Primary Style: <style>\n"
+                "• Color Palette: <palette>\n"
+                "• Mood: <mood>\n"
+                "• Recommended Keywords: <comma-separated keywords>"
             )
             combined = await provider_generate_with_image(meta_prompt, saved_paths[0])
             if combined.startswith("Error") or combined.startswith("An unexpected error"):
@@ -1179,55 +1148,40 @@ async def analyze_image_endpoint(request: Request, images: list[UploadFile] = Fi
                     image_a_description=None,
                     image_b_description=None,
                 )
-            
-            # Add style analysis for single image
-            style_info = await asyncio.to_thread(analyze_artistic_style, saved_paths[0])
-            enhanced_description = f"{combined}\n\n🎨 **Artistic Style Analysis:**\n• Primary Style: {style_info['primary_style']}\n• Color Palette: {style_info['color_palette']}\n• Mood: {style_info['mood_atmosphere']}\n• Recommended Keywords: {', '.join(style_info['recommended_keywords'][:5])}"
-            
             return AnalyzeResponseMulti(
-                combined_description=enhanced_description,
+                combined_description=combined,
                 image_a_description=None,
                 image_b_description=None,
             )
-        else:
-            # Per-image short summaries
-            per_image_prompt = (
-                "Briefly summarize this image in 3-5 sentences focusing on subject, style/medium, colors, lighting, and composition."
-            )
-            a_desc = await provider_generate_with_image(per_image_prompt, saved_paths[0])
-            b_desc = await provider_generate_with_image(per_image_prompt, saved_paths[1])
-            if a_desc.startswith("Error") or a_desc.startswith("An unexpected error"):
-                a_desc = None
-            if b_desc.startswith("Error") or b_desc.startswith("An unexpected error"):
-                b_desc = None
 
-            # Combined comparative analysis
-            combined_prompt = (
-                "You are an assistant generating a combined reference from two images. "
-                "Write a structured analysis with these sections: \n"
-                "- Shared elements (overlaps)\n"
-                "- Differences (distinctive traits of A vs B)\n"
-                "- Style/Technique (medium, rendering)\n"
-                "- Notable details (important cues to preserve)\n"
-                "Be concise but descriptive."
-            )
-            combined = await provider_generate_with_images(combined_prompt, saved_paths[:2])
-            if combined.startswith("Error") or combined.startswith("An unexpected error"):
-                combined = (a_desc or "") + ("\n\n" if a_desc and b_desc else "") + (b_desc or "")
-            
-            # Add style analysis for both images
-            style_a = await asyncio.to_thread(analyze_artistic_style, saved_paths[0])
-            style_b = await asyncio.to_thread(analyze_artistic_style, saved_paths[1])
-            
-            style_comparison = f"\n\n🎨 **Style Comparison:**\n• Image A: {style_a['primary_style']} ({style_a['color_palette']})\n• Image B: {style_b['primary_style']} ({style_b['color_palette']})\n• Shared Keywords: {', '.join(set(style_a['recommended_keywords'][:3]) & set(style_b['recommended_keywords'][:3]))}"
-            
-            combined += style_comparison
-
+        combined_prompt = (
+            "You are analyzing two images. The first image is Reference A and the second is Reference B.\n"
+            "Respond with these exact markdown headings, in this order:\n\n"
+            "## Combined\n"
+            "Structured analysis with: Shared elements (overlaps); Differences (A vs B); "
+            "Style/Technique; Notable details to preserve. Be concise but descriptive.\n\n"
+            "## Reference A\n"
+            "3-5 sentences: subject, style/medium, colors, lighting, composition.\n\n"
+            "## Reference B\n"
+            "3-5 sentences: subject, style/medium, colors, lighting, composition.\n\n"
+            "## Style Comparison\n"
+            "• Image A: <style> (<palette>)\n"
+            "• Image B: <style> (<palette>)\n"
+            "• Shared Keywords: <keywords>"
+        )
+        raw = await provider_generate_with_images(combined_prompt, saved_paths[:2])
+        if raw.startswith("Error") or raw.startswith("An unexpected error"):
             return AnalyzeResponseMulti(
-                combined_description=combined,
-                image_a_description=a_desc,
-                image_b_description=b_desc,
+                combined_description=raw,
+                image_a_description=None,
+                image_b_description=None,
             )
+        parsed = _parse_multi_image_analysis(raw)
+        return AnalyzeResponseMulti(
+            combined_description=parsed["combined"],
+            image_a_description=parsed["a"],
+            image_b_description=parsed["b"],
+        )
     except Exception as e:
         error_details = traceback.format_exc()
         print(f"Error in analyze_image_endpoint: {error_details}")
@@ -1237,774 +1191,6 @@ async def analyze_image_endpoint(request: Request, images: list[UploadFile] = Fi
             image_b_description=None,
         )
 
-
-def analyze_real_audio_characteristics(file_path: str, filename: str) -> dict:
-    """Analyze audio file characteristics using real audio processing."""
-    
-    try:
-        log_debug(f"Starting enhanced audio analysis for: {filename}")
-        
-        # Load audio file
-        y, sr = librosa.load(file_path, duration=30)  # Analyze first 30 seconds
-        log_debug(f"Audio loaded successfully: {len(y)} samples, {sr} Hz")
-        
-        characteristics = {
-            "audio_type": "unknown",
-            "tempo": "medium",
-            "tempo_bpm": None,
-            "mood": "neutral", 
-            "energy_level": "medium",
-            "has_vocals": False,
-            "vocal_confidence": 0.0,
-            "danceability": 0.5,
-            "description": "",
-            # Enhanced features
-            "time_signature": "4/4",
-            "beat_strength": "medium",
-            "syncopation": "low",
-            "vocal_style": "unknown",
-            "vocal_range": "medium",
-            "performance_type": "studio_recording",
-            "genre": "unknown",
-            "spectral_characteristics": {},
-            "dynamic_range": "medium",
-            "emotional_arc": "stable",
-            # NEW: Vocal count detection
-            "vocal_count": "unknown",
-            "vocal_density": 0.0,
-            "vocal_separation": "unknown"
-        }
-        
-        # 1. Tempo Detection
-        tempo, beats = librosa.beat.beat_track(y=y, sr=sr)
-        characteristics["tempo_bpm"] = float(tempo)
-        
-        # Convert numpy arrays to lists for JSON serialization
-        beats = beats.tolist() if hasattr(beats, 'tolist') else beats
-        
-        if tempo < 60:
-            characteristics["tempo"] = "very_slow"
-        elif tempo < 90:
-            characteristics["tempo"] = "slow"
-        elif tempo < 120:
-            characteristics["tempo"] = "medium"
-        elif tempo < 140:
-            characteristics["tempo"] = "fast"
-        else:
-            characteristics["tempo"] = "very_fast"
-        
-        # 2. Enhanced Beat Analysis
-        if len(beats) > 10:
-            # Beat strength analysis
-            beat_consistency = 1.0 - np.std(np.diff(beats)) / np.mean(np.diff(beats))
-            if beat_consistency > 0.8:
-                characteristics["beat_strength"] = "strong"
-            elif beat_consistency > 0.5:
-                characteristics["beat_strength"] = "medium"
-            else:
-                characteristics["beat_strength"] = "weak"
-            
-            # 2. Time Signature Detection
-            if len(beats) > 10:
-                beat_intervals = np.diff(beats)
-                avg_interval = np.mean(beat_intervals)
-                
-                # Enhanced time signature detection based on genre
-                genre_hint = characteristics.get("genre", "unknown")
-                
-                if avg_interval > 0.8:  # Slow beats
-                    if genre_hint in ["rock", "metal", "pop"]:
-                        characteristics["time_signature"] = "4/4"  # Most rock is 4/4
-                    elif len(beats) % 3 == 0:
-                        characteristics["time_signature"] = "3/4"
-                    else:
-                        characteristics["time_signature"] = "4/4"  # Most common
-                else:
-                    characteristics["time_signature"] = "4/4"  # Most common for popular music
-        
-        # 3. Energy Level Detection
-        rms = librosa.feature.rms(y=y)[0]
-        energy = float(np.mean(rms))
-        
-        # Calculate dynamic range (difference between max and min RMS)
-        dynamic_range = float(np.max(rms) - np.min(rms)) if len(rms) > 0 else 0.1
-        
-        # Default thresholds for now (genre-based adjustment will happen later)
-        if energy > 0.15:
-            characteristics["energy_level"] = "high"
-        elif energy > 0.10:
-            characteristics["energy_level"] = "medium"
-        else:
-            characteristics["energy_level"] = "low"
-        
-        # 5. Enhanced Emotion Detection using advanced analysis
-        spectral_contrast = librosa.feature.spectral_contrast(y=y, sr=sr)
-        mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
-        
-        emotion_score = _calculate_emotion_score(energy, spectral_contrast, mfccs, characteristics["tempo_bpm"])
-        
-        if emotion_score > 0.7:
-            characteristics["mood"] = "energetic"
-            characteristics["emotional_intensity"] = "high"
-        elif emotion_score > 0.4:
-            characteristics["mood"] = "emotional" 
-            characteristics["emotional_intensity"] = "medium"
-        elif emotion_score > 0.2:
-            characteristics["mood"] = "contemplative"
-            characteristics["emotional_intensity"] = "low"
-        else:
-            characteristics["mood"] = "futuristic"
-            characteristics["emotional_intensity"] = "very_low"
-        
-        # 5b. Compute harmonic/percussive separation early (needed for vocal analysis)
-        harmonic, percussive = librosa.effects.hpss(y)
-        
-        # 5c. Compute spectral features once (used by multiple analyses below)
-        spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
-        spectral_rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr)[0]
-        
-        characteristics["spectral_characteristics"] = {
-            "brightness": float(np.mean(spectral_centroids)),
-            "warmth": float(np.mean(spectral_centroids) < 2000),
-            "spectral_variance": float(np.var(spectral_centroids))
-        }
-        
-        # 5d. Vocal Detection (must happen BEFORE has_vocals dependent code)
-        avg_spectral_centroid = float(np.mean(spectral_centroids))
-        spectral_variance = float(np.var(spectral_centroids))
-        
-        vocal_score = 0.0
-        
-        if avg_spectral_centroid > 2000:
-            vocal_score += 0.3
-        
-        if spectral_variance > 500000:
-            vocal_score += 0.2
-        
-        mfcc_std = np.std(mfccs, axis=1)
-        if float(np.mean(mfcc_std[1:4])) > 15:
-            vocal_score += 0.3
-        
-        zcr = librosa.feature.zero_crossing_rate(y)[0]
-        if float(np.mean(zcr)) > 0.05:
-            vocal_score += 0.2
-        
-        characteristics["vocal_confidence"] = min(float(vocal_score), 1.0)
-        characteristics["has_vocals"] = vocal_score > 0.5
-        
-        # 6. Advanced Vocal Analysis using enhanced methods
-        if characteristics["has_vocals"]:
-            # Vocal count detection using density analysis
-            vocal_density = _analyze_vocal_density(y, sr)
-            characteristics["vocal_density"] = vocal_density
-            
-            if vocal_density > 0.8:
-                characteristics["vocal_count"] = "choir"
-            elif vocal_density > 0.6:
-                characteristics["vocal_count"] = "group"
-            elif vocal_density > 0.4:
-                characteristics["vocal_count"] = "duo"
-            elif vocal_density > 0.2:
-                characteristics["vocal_count"] = "solo"
-            else:
-                characteristics["vocal_count"] = "minimal"
-            
-            # Vocal separation analysis
-            characteristics["vocal_separation"] = _analyze_vocal_separation(y, sr)
-        
-        # 7. Performance Energy Analysis
-        characteristics["performance_energy"] = _analyze_performance_energy(y, sr, characteristics["tempo_bpm"])
-        
-        # 8. Musical Complexity Assessment (reuses spectral_centroids and spectral_rolloff from step 5c)
-        complexity_score = _calculate_musical_complexity(y, sr, spectral_centroids, spectral_rolloff)
-        if complexity_score > 0.8:
-            characteristics["musical_complexity"] = "complex"
-        elif complexity_score > 0.5:
-            characteristics["musical_complexity"] = "moderate"
-        else:
-            characteristics["musical_complexity"] = "simple"
-        
-        # 9. Audio Quality Assessment
-        quality_score = _assess_audio_quality(y, sr, rms)
-        if quality_score > 0.8:
-            characteristics["audio_quality"] = "excellent"
-        elif quality_score > 0.6:
-            characteristics["audio_quality"] = "good"
-        elif quality_score > 0.4:
-            characteristics["audio_quality"] = "fair"
-        else:
-            characteristics["audio_quality"] = "poor"
-        
-        # 9b. Dynamic Range Assessment
-        if dynamic_range < 0.05:
-            characteristics["dynamic_range"] = "narrow"
-        elif dynamic_range < 0.2:
-            characteristics["dynamic_range"] = "medium"
-        else:
-            characteristics["dynamic_range"] = "wide"
-        
-        # 7. Vocal Style Analysis
-        if characteristics["has_vocals"]:
-            # Detect singing vs speech using pitch analysis
-            try:
-                # Use librosa.pyin instead of yin (more reliable)
-                
-                # Extract pitch using harmonic component
-                pitches, magnitudes = librosa.piptrack(y=harmonic, sr=sr, threshold=0.1)
-                
-                # Get dominant pitch for each frame
-                pitch_values = []
-                for t in range(pitches.shape[1]):
-                    index = magnitudes[:, t].argmax()
-                    pitch = pitches[index, t]
-                    if pitch > 0:
-                        pitch_values.append(pitch)
-                
-                if len(pitch_values) > 0:
-                    # Analyze pitch variation
-                    pitch_std = np.std(pitch_values)
-                    pitch_range = np.max(pitch_values) - np.min(pitch_values)
-                    
-                    # Classify vocal style based on pitch characteristics
-                    if pitch_std > 50:  # High variation
-                        characteristics["vocal_style"] = "singing"
-                    elif pitch_std > 20:  # Medium variation
-                        characteristics["vocal_style"] = "melodic_speech"
-                    else:  # Low variation
-                        characteristics["vocal_style"] = "spoken"
-                    
-                    # Vocal range estimation
-                    avg_pitch = float(np.mean(pitch_values))
-                    if avg_pitch > 400:
-                        characteristics["vocal_range"] = "high"
-                    elif avg_pitch > 200:
-                        characteristics["vocal_range"] = "medium"
-                    else:
-                        characteristics["vocal_range"] = "low"
-                else:
-                    characteristics["vocal_style"] = "unknown"
-                    characteristics["vocal_range"] = "medium"
-                    
-            except Exception as pitch_error:
-                log_debug(f"Pitch analysis failed: {pitch_error}")
-                # Fallback to basic classification based on context
-                if tempo < 100 and characteristics.get("mood") == "calm":
-                    characteristics["vocal_style"] = "spoken"  # Folk/calm speech
-                elif characteristics.get("beat_strength") == "strong" and tempo > 120:
-                    characteristics["vocal_style"] = "singing"  # Rock singing style
-                elif tempo < 100 and characteristics.get("mood") in ["calm", "contemplative"]:
-                    characteristics["vocal_style"] = "melodic_speech"  # Folk storytelling
-                else:
-                    characteristics["vocal_style"] = "melodic_speech"
-        
-        # 8. Vocal Count Detection
-        if characteristics["has_vocals"]:
-            log_debug("Starting vocal count detection...")
-            try:
-                # Compute spectral features for vocal detection
-                S = np.abs(librosa.stft(y))
-                S_harmonic = np.abs(librosa.stft(harmonic))
-                
-                # Use mel spectrogram to estimate vocal-band energy (80-4000 Hz)
-                mel = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128, fmin=80, fmax=4000)
-                vocal_energy = float(np.mean(mel))  # Use raw energy, not dB
-                
-                # Focus on vocal frequency range (80-4000 Hz)
-                freqs = librosa.fft_frequencies(sr=sr, n_fft=S.shape[0]*2-1)
-                vocal_mask = (freqs >= 80) & (freqs <= 4000)
-                S_vocal = S_harmonic[vocal_mask, :]
-                
-                # Calculate vocal density from harmonic content
-                if S_vocal.size > 0:
-                    vocal_density = float(np.mean(S_vocal))
-                    characteristics["vocal_density"] = vocal_density
-                    
-                    # Detect multiple vocals through harmonic complexity
-                    harmonic_variance = float(np.var(S_vocal))
-                    
-                    # Use MFCC analysis for vocal separation - key for detecting multiple voices
-                    mfccs = librosa.feature.mfcc(y=harmonic, sr=sr, n_mfcc=20)
-                    mfcc_std = np.std(mfccs, axis=1)
-                    mfcc_delta = librosa.feature.delta(mfccs)
-                    mfcc_delta_std = float(np.mean(np.std(mfcc_delta, axis=1)))
-                    
-                    # Spectral contrast - helps detect voice layering
-                    contrast = librosa.feature.spectral_contrast(y=harmonic, sr=sr)
-                    contrast_var = float(np.mean(np.var(contrast, axis=1)))
-                    
-                    # Chroma features - detect harmonic layering (multiple voices = more chroma activity)
-                    chroma = librosa.feature.chroma_stft(y=harmonic, sr=sr)
-                    chroma_complexity = float(np.mean(np.var(chroma, axis=1)))
-                    
-                    # Combined vocal complexity score
-                    vocal_complexity = (
-                        harmonic_variance * 0.01 +
-                        float(np.mean(mfcc_std[1:6])) * 0.5 +
-                        mfcc_delta_std * 2 +
-                        contrast_var * 0.05 +
-                        chroma_complexity * 20
-                    )
-                    
-                    log_debug(f"Vocal analysis: energy={vocal_energy:.4f}, variance={harmonic_variance:.2f}, mfcc_delta={mfcc_delta_std:.4f}, contrast={contrast_var:.4f}, chroma={chroma_complexity:.4f}, complexity={vocal_complexity:.2f}")
-                    
-                    # Vocal count estimation based on complexity
-                    # Higher complexity = more voices/harmonies
-                    if vocal_complexity < 8:
-                        characteristics["vocal_count"] = "solo"
-                        characteristics["vocal_separation"] = "single_voice"
-                    elif vocal_complexity < 12:
-                        characteristics["vocal_count"] = "duo"
-                        characteristics["vocal_separation"] = "two_voices"
-                    elif vocal_complexity < 18:
-                        characteristics["vocal_count"] = "small_group"
-                        characteristics["vocal_separation"] = "few_voices"
-                    elif vocal_complexity < 25:
-                        characteristics["vocal_count"] = "group"
-                        characteristics["vocal_separation"] = "multiple_voices"
-                    else:
-                        characteristics["vocal_count"] = "choir"
-                        characteristics["vocal_separation"] = "many_voices"
-                    
-                    # Detect lead vs backup vocals for non-solo
-                    if characteristics["vocal_count"] in ["duo", "small_group", "group"]:
-                        # Look for dominant voice patterns using spectral centroid variance
-                        centroid = librosa.feature.spectral_centroid(y=harmonic, sr=sr)
-                        centroid_var = float(np.var(centroid))
-                        if centroid_var > 100000:  # High variance = distinct lead + backup
-                            characteristics["vocal_separation"] = "lead_with_backup"
-                        else:  # Low variance = harmonized together
-                            characteristics["vocal_separation"] = "harmonized_vocals"
-                    
-                    log_debug(f"Vocal count result: count={characteristics['vocal_count']}, separation={characteristics['vocal_separation']}")
-                else:
-                    characteristics["vocal_count"] = "unknown"
-                    characteristics["vocal_density"] = 0.0
-                    characteristics["vocal_separation"] = "unknown"
-                
-            except Exception as vocal_error:
-                log_debug(f"Vocal count analysis failed: {vocal_error}")
-                characteristics["vocal_count"] = "unknown"
-                characteristics["vocal_density"] = 0.0
-                characteristics["vocal_separation"] = "unknown"
-        
-        # Fallback: If vocal count is still unknown but we have vocals, use heuristics
-        if characteristics["has_vocals"] and characteristics["vocal_count"] == "unknown":
-            log_debug(f"Vocal count fallback triggered: has_vocals={characteristics['has_vocals']}, current_count={characteristics['vocal_count']}")
-            # Use vocal confidence and style to estimate vocal count
-            vocal_conf = characteristics.get("vocal_confidence", 0)
-            vocal_style = characteristics.get("vocal_style", "unknown")
-            
-            if vocal_conf > 0.7:
-                # High confidence = clear single voice most likely
-                characteristics["vocal_count"] = "solo"
-                characteristics["vocal_separation"] = "single_voice"
-                characteristics["vocal_density"] = vocal_conf  # Use confidence as density proxy
-                log_debug(f"Vocal count fallback: solo (high confidence {vocal_conf})")
-            elif vocal_conf > 0.5:
-                # Medium confidence = could be solo or duo
-                characteristics["vocal_count"] = "solo"
-                characteristics["vocal_separation"] = "single_voice"
-                characteristics["vocal_density"] = vocal_conf
-                log_debug(f"Vocal count fallback: solo (medium confidence {vocal_conf})")
-            else:
-                # Low confidence = default to solo
-                characteristics["vocal_count"] = "solo"
-                characteristics["vocal_separation"] = "single_voice"
-                characteristics["vocal_density"] = 0.5
-                log_debug(f"Vocal count fallback: solo (low confidence, default)")
-        else:
-            log_debug(f"Vocal count fallback NOT triggered: has_vocals={characteristics['has_vocals']}, current_count={characteristics['vocal_count']}")
-        
-        # 9. Syncopation Detection
-        if len(beats) > 10:
-            # Look for off-beat energy
-            beat_frames = librosa.util.fix_frames(beats)
-            onset_frames = librosa.onset.onset_detect(y=y, sr=sr)
-            
-            # Count how many onsets fall between beats (syncopation)
-            syncopated_count = 0
-            for onset in onset_frames:
-                if not any(abs(onset - beat) < 2 for beat in beat_frames):
-                    syncopated_count += 1
-            
-            syncopation_ratio = syncopated_count / len(onset_frames) if len(onset_frames) > 0 else 0
-            if syncopation_ratio > 0.3:
-                characteristics["syncopation"] = "high"
-            elif syncopation_ratio > 0.1:
-                characteristics["syncopation"] = "medium"
-            else:
-                characteristics["syncopation"] = "low"
-        
-        # 9. Danceability (based on beat consistency and tempo)
-        if len(beats) > 10:
-            beat_diffs = np.diff(beats)
-            beat_consistency = float(1.0 - np.std(beat_diffs) / np.mean(beat_diffs))
-            tempo_factor = min(tempo / 120, 2.0)
-            characteristics["danceability"] = float(beat_consistency * 0.6 + tempo_factor * 0.4)
-        
-        # 10. Enhanced Genre Classification
-        if characteristics["has_vocals"]:
-            if characteristics["vocal_style"] == "singing":
-                if tempo > 120 and energy > 0.15:
-                    # Check for metal vs rock
-                    if energy > 0.25 and characteristics.get("spectral_characteristics", {}).get("brightness", 0) > 3000:
-                        characteristics["genre"] = "metal"  # High energy + bright = metal
-                    else:
-                        characteristics["genre"] = "rock"  # Standard rock
-                elif tempo > 110 and characteristics["danceability"] > 0.8:
-                    # Check for hip-hop vs pop vs rock
-                    if characteristics.get("syncopation") == "high" and characteristics.get("beat_strength") == "strong":
-                        # Additional check for rock vs hip-hop
-                        if characteristics.get("vocal_style") == "singing" and characteristics.get("energy_level") in ["high", "very_high"]:
-                            characteristics["genre"] = "rock"  # Rock with singing + high energy
-                        else:
-                            characteristics["genre"] = "hip_hop"  # Hip-hop with spoken vocals
-                    else:
-                        characteristics["genre"] = "pop"
-                elif tempo < 90 and energy < 0.1:
-                    characteristics["genre"] = "ballad"
-                elif tempo > 100 and tempo < 130 and characteristics.get("spectral_characteristics", {}).get("warmth", False):
-                    characteristics["genre"] = "rnb"  # Warm sound + medium tempo = R&B
-                elif tempo > 90 and characteristics.get("spectral_characteristics", {}).get("brightness", 0) < 2000:
-                    characteristics["genre"] = "indie"  # Darker sound = indie
-                else:
-                    characteristics["genre"] = "singer_songwriter"
-            elif characteristics["vocal_style"] == "spoken":
-                # Check for hip-hop vs other spoken
-                if characteristics["beat_strength"] == "strong" and tempo > 90 and characteristics.get("syncopation") == "high":
-                    characteristics["genre"] = "hip_hop"  # Hip-hop with spoken vocals
-                elif characteristics["beat_strength"] == "strong" and tempo > 120:
-                    characteristics["genre"] = "rock"  # Rock with spoken vocals
-                elif tempo < 100 and characteristics["mood"] == "calm":
-                    characteristics["genre"] = "folk"  # Folk with spoken vocals
-                else:
-                    characteristics["genre"] = "spoken_word"
-            elif characteristics["vocal_style"] == "melodic_speech":
-                # Melodic speech with strong beat often maps to rock/pop
-                if characteristics["beat_strength"] == "strong" and tempo > 100:
-                    characteristics["genre"] = "rock"
-                elif tempo < 100 and characteristics["mood"] in ["calm", "contemplative"]:
-                    characteristics["genre"] = "folk"
-                elif characteristics["danceability"] > 0.8:
-                    characteristics["genre"] = "pop"  # Pop with melodic speech
-                else:
-                    characteristics["genre"] = "singer_songwriter"
-            else:
-                # Unknown vocal style - use tempo and mood
-                if tempo < 100 and characteristics["mood"] == "calm":
-                    characteristics["genre"] = "folk"
-                elif characteristics["beat_strength"] == "strong" and tempo > 120:
-                    characteristics["genre"] = "rock"
-                else:
-                    characteristics["genre"] = "unknown"
-        else:
-            # Instrumental genres
-            if tempo > 130:
-                characteristics["genre"] = "electronic"
-            elif tempo < 80:
-                characteristics["genre"] = "ambient"
-            elif tempo > 100 and characteristics.get("spectral_characteristics", {}).get("brightness", 0) > 2500:
-                characteristics["genre"] = "classical"  # Bright + complex = classical
-            elif tempo > 80 and tempo < 120 and characteristics.get("beat_strength") == "strong":
-                # Check for jazz vs other instrumental
-                if characteristics.get("syncopation") == "high" and characteristics.get("dynamic_range") == "wide":
-                    characteristics["genre"] = "jazz"  # Complex rhythm + wide dynamics = jazz
-                else:
-                    characteristics["genre"] = "instrumental"
-            else:
-                characteristics["genre"] = "instrumental"
-        
-        # World Music Detection (based on spectral and rhythmic characteristics)
-        spectral = characteristics.get("spectral_characteristics", {})
-        if characteristics.get("genre") in ["rock", "pop", "metal", "hip_hop", "rnb", "indie"]:
-            pass
-        elif spectral.get("brightness", 0) > 3000 and characteristics.get("syncopation") == "high":
-            # Latin music: bright + highly syncopated
-            if tempo > 110:
-                characteristics["genre"] = "latin"
-        elif spectral.get("brightness", 0) < 2000 and characteristics.get("beat_strength") == "strong":
-            # Check if it's actually rock/pop with warm tones
-            if characteristics.get("vocal_style") == "singing" and characteristics.get("vocal_confidence", 0) > 0.6:
-                characteristics["genre"] = "rock"  # Rock with warm tones
-            elif tempo > 100:
-                characteristics["genre"] = "african"  # African music: warm + strong beat
-        elif spectral.get("spectral_variance", 0) > 1000000 and tempo > 90:
-            # Asian music: complex spectral content
-            characteristics["genre"] = "asian"
-        
-        # 12. Post-Genre Time Signature Correction
-        # Fix time signature based on detected genre
-        if characteristics["genre"] in ["rock", "metal", "pop", "hip_hop", "electronic"]:
-            characteristics["time_signature"] = "4/4"  # Most popular music is 4/4
-        elif characteristics["genre"] in ["classical", "folk"]:
-            # Keep original detection for classical/folk (could be 3/4 or 4/4)
-            pass
-        else:
-            # For other genres, default to 4/4
-            characteristics["time_signature"] = "4/4"
-        
-        # 13. Genre-Based Energy Adjustment
-        # Adjust energy level based on detected genre
-        genre = characteristics["genre"]
-        current_energy = characteristics["energy_level"]
-        
-        if genre in ["rock", "pop", "hip_hop"]:
-            # Rock/pop should feel more energetic
-            if current_energy == "low":
-                characteristics["energy_level"] = "medium"
-            elif current_energy == "medium" and characteristics.get("beat_strength") == "strong":
-                characteristics["energy_level"] = "high"
-        elif genre in ["classical", "folk"]:
-            # Classical/folk should feel calmer
-            if current_energy == "high":
-                characteristics["energy_level"] = "medium"
-        
-        # 11. Performance Type Detection
-        # Reverb analysis for live vs studio
-        reverb_indicator = float(np.mean(harmonic) / np.mean(percussive))
-        
-        if reverb_indicator > 2.0:
-            characteristics["performance_type"] = "live_performance"
-        elif reverb_indicator < 0.5:
-            characteristics["performance_type"] = "studio_recording"
-        else:
-            characteristics["performance_type"] = "home_recording"
-        
-        # 12. Emotional Arc Detection
-        # Analyze energy progression over time
-        hop_length = 512
-        rms_frames = librosa.feature.rms(y=y, hop_length=hop_length)[0]
-        
-        if len(rms_frames) > 10:
-            # Check if energy builds, falls, or stays stable
-            try:
-                energy_trend = np.polyfit(range(len(rms_frames)), rms_frames, 1)[0]
-                
-                if energy_trend > 0.001:
-                    characteristics["emotional_arc"] = "building"
-                elif energy_trend < -0.001:
-                    characteristics["emotional_arc"] = "declining"
-                else:
-                    characteristics["emotional_arc"] = "stable"
-            except Exception as trend_error:
-                log_debug(f"Emotional arc analysis failed: {trend_error}")
-                characteristics["emotional_arc"] = "stable"
-        
-        # 13. Mood Detection (enhanced)
-        if characteristics["energy_level"] in ["high", "very_high"] and characteristics["tempo"] in ["fast", "very_fast"]:
-            if characteristics["has_vocals"]:
-                characteristics["mood"] = "energetic"
-            else:
-                characteristics["mood"] = "energetic_instrumental"
-        elif characteristics["energy_level"] in ["low", "very_low"] and characteristics["tempo"] in ["slow", "very_slow"]:
-            if characteristics["vocal_style"] == "spoken":
-                characteristics["mood"] = "contemplative"
-            else:
-                characteristics["mood"] = "calm"
-        elif characteristics["has_vocals"] and characteristics["energy_level"] == "medium":
-            characteristics["mood"] = "emotional"
-        elif characteristics["genre"] == "electronic":
-            characteristics["mood"] = "futuristic"
-        else:
-            characteristics["mood"] = "neutral"
-        
-        # 14. Audio Type Classification (enhanced)
-        if characteristics["has_vocals"]:
-            if characteristics["vocal_style"] == "singing":
-                if characteristics["tempo"] in ["medium", "fast", "very_fast"]:
-                    characteristics["audio_type"] = "singing"
-                else:
-                    characteristics["audio_type"] = "ballad"
-            elif characteristics["vocal_style"] == "spoken":
-                characteristics["audio_type"] = "speech"
-            else:
-                characteristics["audio_type"] = "melodic_speech"
-        else:
-            if characteristics["danceability"] > 0.6:
-                characteristics["audio_type"] = "instrumental_dance"
-            else:
-                characteristics["audio_type"] = "instrumental"
-        
-        # 15. Enhanced Description Generation
-        description_parts = []
-        
-        # Audio type and style
-        if characteristics["vocal_style"] == "singing":
-            description_parts.append(f"{characteristics['vocal_style']} performance with {characteristics['vocal_range']} vocal range")
-        elif characteristics["vocal_style"] == "spoken":
-            description_parts.append("spoken dialogue with clear diction")
-        elif characteristics["vocal_style"] == "melodic_speech":
-            description_parts.append("melodic speech with rhythmic delivery")
-        else:
-            description_parts.append("instrumental performance")
-        
-        # Tempo and rhythm
-        if characteristics["beat_strength"] == "strong":
-            description_parts.append(f"with strong {characteristics['tempo']} tempo ({characteristics['tempo_bpm']:.1f} BPM)")
-        else:
-            description_parts.append(f"with {characteristics['tempo']} tempo ({characteristics['tempo_bpm']:.1f} BPM)")
-        
-        # Time signature
-        if characteristics["time_signature"] != "4/4":
-            description_parts.append(f"in {characteristics['time_signature']} time")
-        
-        # Danceability and syncopation
-        if characteristics["danceability"] > 0.7:
-            if characteristics["syncopation"] == "high":
-                description_parts.append("highly syncopated danceable rhythm")
-            else:
-                description_parts.append("strong danceable rhythm")
-        elif characteristics["syncopation"] == "high":
-            description_parts.append("complex syncopated rhythm")
-        
-        # Mood and emotional arc
-        mood_descriptions = {
-            "energetic": "creating high energy and excitement",
-            "energetic_instrumental": "building instrumental energy",
-            "calm": "establishing a peaceful, serene mood",
-            "contemplative": "creating an introspective, thoughtful atmosphere",
-            "emotional": "with emotional, expressive delivery",
-            "futuristic": "with modern, innovative soundscapes",
-            "neutral": "with balanced mood"
-        }
-        description_parts.append(mood_descriptions.get(characteristics["mood"], "with neutral mood"))
-        
-        # Emotional arc
-        if characteristics["emotional_arc"] == "building":
-            description_parts.append("with intensity building throughout")
-        elif characteristics["emotional_arc"] == "declining":
-            description_parts.append("gradually calming down")
-        
-        # Performance characteristics
-        if characteristics["performance_type"] == "live_performance":
-            description_parts.append("captured in a live setting with natural ambiance")
-        elif characteristics["performance_type"] == "studio_recording":
-            description_parts.append("with polished studio production quality")
-        
-        # Genre-specific details
-        genre_details = {
-            "pop": "featuring catchy melodic hooks",
-            "ballad": "with intimate, emotional delivery",
-            "electronic": "with synthesized textures and electronic elements",
-            "ambient": "creating atmospheric soundscapes",
-            "instrumental": "showcasing musical instrumentation",
-            "spoken_word": "with articulate vocal performance"
-        }
-        if characteristics["genre"] in genre_details:
-            description_parts.append(genre_details[characteristics["genre"]])
-        
-        # Vocal performance details
-        if characteristics["has_vocals"]:
-            if characteristics["vocal_confidence"] > 0.8:
-                description_parts.append("featuring prominent vocal performance")
-            description_parts.append("requiring precise lip-sync synchronization")
-        
-        characteristics["description"] = " ".join(description_parts) + "."
-        
-        log_debug(f"Enhanced audio analysis completed: {filename}")
-        log_debug(f"Genre: {characteristics['genre']}, Style: {characteristics['vocal_style']}, Beat: {characteristics['beat_strength']}")
-        log_debug(f"Vocal Count: {characteristics['vocal_count']}, Vocal Density: {characteristics['vocal_density']}, Vocal Separation: {characteristics['vocal_separation']}")
-        
-        return characteristics
-        
-    except Exception as e:
-        log_debug(f"Error in enhanced audio analysis: {str(e)}")
-        log_debug(f"Error type: {type(e).__name__}")
-        log_debug(f"Traceback: {traceback.format_exc()}")
-        # Fallback to filename-based analysis
-        return analyze_audio_characteristics(filename, 0)
-
-
-def analyze_audio_characteristics(filename: str, file_size: int) -> dict:
-    """Fallback filename-based analysis when real audio analysis fails."""
-    
-    characteristics = {
-        "audio_type": "unknown",
-        "tempo": "medium",
-        "mood": "neutral", 
-        "instruments": [],
-        "vocals": False,
-        "description": "",
-        "tempo_bpm": None,
-        "energy_level": "medium",
-        "vocal_confidence": 0.0,
-        "danceability": 0.5
-    }
-    
-    # Analyze filename for clues
-    filename_lower = filename.lower()
-    
-    # Detect audio type from filename
-    if any(word in filename_lower for word in ["song", "music", "track", "audio", "beat"]):
-        characteristics["audio_type"] = "music"
-    elif any(word in filename_lower for word in ["speech", "talk", "voice", "dialogue", "speaking"]):
-        characteristics["audio_type"] = "speech"
-    elif any(word in filename_lower for word in ["sing", "vocal", "lyrics", "song"]):
-        characteristics["audio_type"] = "singing"
-    elif any(word in filename_lower for word in ["instrumental", "ambient", "background"]):
-        characteristics["audio_type"] = "instrumental"
-    
-    # Detect tempo from filename
-    if any(word in filename_lower for word in ["fast", "quick", "upbeat", "energetic", "dance"]):
-        characteristics["tempo"] = "fast"
-    elif any(word in filename_lower for word in ["slow", "calm", "relaxing", "ambient", "chill"]):
-        characteristics["tempo"] = "slow"
-    
-    # Detect mood from filename
-    if any(word in filename_lower for word in ["happy", "joy", "celebration", "upbeat", "party"]):
-        characteristics["mood"] = "happy"
-    elif any(word in filename_lower for word in ["sad", "emotional", "dramatic", "melancholy"]):
-        characteristics["mood"] = "emotional"
-    elif any(word in filename_lower for word in ["energetic", "powerful", "intense", "epic"]):
-        characteristics["mood"] = "energetic"
-    elif any(word in filename_lower for word in ["calm", "peaceful", "relaxing", "meditation"]):
-        characteristics["mood"] = "calm"
-    
-    # Detect vocal presence
-    if any(word in filename_lower for word in ["vocals", "singing", "voice", "lyrics", "song"]):
-        characteristics["vocals"] = True
-        characteristics["vocal_confidence"] = 0.7
-    
-    # Generate descriptive text
-    description_parts = []
-    
-    # Audio type description
-    if characteristics["audio_type"] == "singing":
-        description_parts.append("singing performance with vocals")
-    elif characteristics["audio_type"] == "music":
-        description_parts.append("musical track")
-    elif characteristics["audio_type"] == "speech":
-        description_parts.append("spoken dialogue/voice")
-    elif characteristics["audio_type"] == "instrumental":
-        description_parts.append("instrumental music")
-    else:
-        description_parts.append("audio track")
-    
-    # Tempo description
-    if characteristics["tempo"] == "fast":
-        description_parts.append("with fast, energetic rhythm suitable for dancing")
-    elif characteristics["tempo"] == "slow":
-        description_parts.append("with slow, gentle rhythm")
-    else:
-        description_parts.append("with moderate tempo")
-    
-    # Mood description
-    if characteristics["mood"] == "happy":
-        description_parts.append("creating a joyful, upbeat mood")
-    elif characteristics["mood"] == "emotional":
-        description_parts.append("with emotional, dramatic atmosphere")
-    elif characteristics["mood"] == "energetic":
-        description_parts.append("building high energy and excitement")
-    elif characteristics["mood"] == "calm":
-        description_parts.append("establishing a peaceful, serene mood")
-    
-    # Vocal description
-    if characteristics["vocals"]:
-        description_parts.append("featuring vocal performance that should be lip-synced")
-    
-    characteristics["description"] = " ".join(description_parts) + "."
-    
-    return characteristics
 
 
 @app.post("/analyze-audio", response_model=dict)
@@ -3278,30 +2464,42 @@ async def character_sheet_endpoint(request: Request, body: CharacterSheetRequest
             reference_image_description=body.reference_image_description,
         )
 
-        sheet_prompt = await provider_generate_text(
-            sheet_meta_prompt,
-            model_override=provider_model_override,
-            provider=request_provider,
-        )
-
-        if sheet_prompt.startswith("Error") or sheet_prompt.startswith("An unexpected error"):
-            return CharacterSheetResponse(sheet_prompt=sheet_prompt)
-
-        director_description = None
+        director_meta_prompt = None
         if body.generate_director_description:
             director_meta_prompt = build_director_character_description(
                 character_description=body.character_description,
                 reference_image_description=body.reference_image_description,
             )
-            director_description = await provider_generate_text(
-                director_meta_prompt,
+
+        if director_meta_prompt:
+            sheet_prompt, director_description = await asyncio.gather(
+                provider_generate_text(
+                    sheet_meta_prompt,
+                    model_override=provider_model_override,
+                    provider=request_provider,
+                ),
+                provider_generate_text(
+                    director_meta_prompt,
+                    model_override=provider_model_override,
+                    provider=request_provider,
+                ),
+            )
+        else:
+            sheet_prompt = await provider_generate_text(
+                sheet_meta_prompt,
                 model_override=provider_model_override,
                 provider=request_provider,
             )
-            if director_description.startswith("Error") or director_description.startswith(
-                "An unexpected error"
-            ):
-                director_description = None
+            director_description = None
+
+        if sheet_prompt.startswith("Error") or sheet_prompt.startswith("An unexpected error"):
+            return CharacterSheetResponse(sheet_prompt=sheet_prompt)
+
+        if director_description and (
+            director_description.startswith("Error")
+            or director_description.startswith("An unexpected error")
+        ):
+            director_description = None
 
         video_prompt = None
         if body.generate_video_prompt and body.scene_description:

@@ -11,7 +11,7 @@ Covers:
 
 import os
 import pytest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 os.environ.setdefault("GOOGLE_API_KEY", "test-key-for-ci")
 
@@ -192,9 +192,10 @@ class TestMovementToProse:
 # ---------------------------------------------------------------------------
 
 class TestLTX2Endpoint:
-    @patch("app.gemini.run_gemini")
-    def test_enhance_ltx2_returns_negative_prompt(self, mock_gemini):
-        mock_gemini.return_value = "A young woman is stepping forward in a sunlit park, hair swaying gently."
+    @patch("app.main.provider_evaluate_quality", new_callable=AsyncMock, return_value=None)
+    @patch("app.main.provider_generate_text", new_callable=AsyncMock)
+    def test_enhance_ltx2_returns_negative_prompt(self, mock_generate, mock_quality):
+        mock_generate.return_value = "A young woman is stepping forward in a sunlit park, hair swaying gently."
         resp = client.post("/enhance", json={
             "prompt": "woman walks forward",
             "prompt_type": "LTX2",
@@ -209,9 +210,10 @@ class TestLTX2Endpoint:
         assert data["negative_prompt"] is not None
         assert "judder" in data["negative_prompt"]
 
-    @patch("app.gemini.run_gemini")
-    def test_enhance_ltx2_prompt_under_limit(self, mock_gemini):
-        mock_gemini.return_value = "A" * 2500  # within 3000 limit
+    @patch("app.main.provider_evaluate_quality", new_callable=AsyncMock, return_value=None)
+    @patch("app.main.provider_generate_text", new_callable=AsyncMock)
+    def test_enhance_ltx2_prompt_under_limit(self, mock_generate, mock_quality):
+        mock_generate.return_value = "A" * 2500  # within 3000 limit
         resp = client.post("/enhance", json={
             "prompt": "test prompt",
             "prompt_type": "LTX2",
@@ -223,9 +225,10 @@ class TestLTX2Endpoint:
         data = resp.json()
         assert len(data["enhanced_prompt"]) <= 3000
 
-    @patch("app.gemini.run_gemini")
-    def test_enhance_image_has_no_negative(self, mock_gemini):
-        mock_gemini.return_value = "Enhanced image prompt."
+    @patch("app.main.provider_evaluate_quality", new_callable=AsyncMock, return_value=None)
+    @patch("app.main.provider_generate_text", new_callable=AsyncMock)
+    def test_enhance_image_has_no_negative(self, mock_generate, mock_quality):
+        mock_generate.return_value = "Enhanced image prompt."
         resp = client.post("/enhance", json={
             "prompt": "a cat",
             "prompt_type": "Image",

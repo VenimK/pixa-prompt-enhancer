@@ -7,7 +7,7 @@ Run with: pytest tests/test_endpoints.py -v
 
 import os
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, patch, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -54,8 +54,9 @@ class TestHealthAndRoot:
 # ---------------------------------------------------------------------------
 
 class TestEnhanceEndpoint:
-    @patch("app.gemini.run_gemini", return_value=MOCK_ENHANCED)
-    def test_enhance_basic(self, mock_gemini):
+    @patch("app.main.provider_evaluate_quality", new_callable=AsyncMock, return_value=None)
+    @patch("app.main.provider_generate_text", new_callable=AsyncMock, return_value=MOCK_ENHANCED)
+    def test_enhance_basic(self, mock_generate, mock_quality):
         payload = {
             "prompt": "sunset over ocean",
             "prompt_type": "Image",
@@ -72,8 +73,23 @@ class TestEnhanceEndpoint:
         # Quality scoring was skipped
         assert data.get("quality_scores") is None
 
-    @patch("app.gemini.run_gemini", side_effect=[MOCK_ENHANCED, MOCK_QUALITY_JSON])
-    def test_enhance_with_quality_scoring(self, mock_gemini):
+    @patch(
+        "app.main.provider_evaluate_quality",
+        new_callable=AsyncMock,
+        return_value={
+            "quality_scores": {
+                "clarity": 8.5,
+                "visual_specificity": 7.0,
+                "composition_lighting": 8.0,
+                "consistency": 9.0,
+                "model_compatibility": 7.5,
+                "overall": 8.0,
+            },
+            "top_improvements": ["Add more depth details", "Specify camera angle", "Include atmosphere cues"],
+        },
+    )
+    @patch("app.main.provider_generate_text", new_callable=AsyncMock, return_value=MOCK_ENHANCED)
+    def test_enhance_with_quality_scoring(self, mock_generate, mock_quality):
         payload = {
             "prompt": "sunset over ocean",
             "prompt_type": "Image",
@@ -89,8 +105,9 @@ class TestEnhanceEndpoint:
         assert "clarity" in data["quality_scores"]
         assert isinstance(data["top_improvements"], list)
 
-    @patch("app.gemini.run_gemini", return_value=MOCK_ENHANCED)
-    def test_enhance_video_prompt_type(self, mock_gemini):
+    @patch("app.main.provider_evaluate_quality", new_callable=AsyncMock, return_value=None)
+    @patch("app.main.provider_generate_text", new_callable=AsyncMock, return_value=MOCK_ENHANCED)
+    def test_enhance_video_prompt_type(self, mock_generate, mock_quality):
         payload = {
             "prompt": "person walking in park",
             "prompt_type": "WAN2",
@@ -118,8 +135,9 @@ class TestEnhanceEndpoint:
         # The app returns a validation error message inside enhanced_prompt
         assert "validation" in data["enhanced_prompt"].lower() or "error" in data["enhanced_prompt"].lower()
 
-    @patch("app.gemini.run_gemini", return_value="Error: API key invalid")
-    def test_enhance_gemini_error_forwarded(self, mock_gemini):
+    @patch("app.main.provider_evaluate_quality", new_callable=AsyncMock, return_value=None)
+    @patch("app.main.provider_generate_text", new_callable=AsyncMock, return_value="Error: API key invalid")
+    def test_enhance_gemini_error_forwarded(self, mock_generate, mock_quality):
         payload = {
             "prompt": "test prompt",
             "prompt_type": "Image",
@@ -140,8 +158,9 @@ class TestEnhanceEndpoint:
 # ---------------------------------------------------------------------------
 
 class TestEnhanceSpecialized:
-    @patch("app.gemini.run_gemini", return_value=MOCK_ENHANCED)
-    def test_specialized_commercial(self, mock_gemini):
+    @patch("app.main.provider_evaluate_quality", new_callable=AsyncMock, return_value=None)
+    @patch("app.providers.gemini_provider.GeminiProvider.generate_text", return_value=MOCK_ENHANCED)
+    def test_specialized_commercial(self, mock_generate, mock_quality):
         payload = {
             "prompt": "luxury watch on marble",
             "enhancement_mode": "commercial",
@@ -152,8 +171,9 @@ class TestEnhanceSpecialized:
         data = resp.json()
         assert "enhanced_prompt" in data
 
-    @patch("app.gemini.run_gemini", return_value=MOCK_ENHANCED)
-    def test_specialized_cinematic(self, mock_gemini):
+    @patch("app.main.provider_evaluate_quality", new_callable=AsyncMock, return_value=None)
+    @patch("app.providers.gemini_provider.GeminiProvider.generate_text", return_value=MOCK_ENHANCED)
+    def test_specialized_cinematic(self, mock_generate, mock_quality):
         payload = {
             "prompt": "hero walks into the light",
             "enhancement_mode": "cinematic",
@@ -162,8 +182,9 @@ class TestEnhanceSpecialized:
         resp = client.post("/enhance-specialized", json=payload)
         assert resp.status_code == 200
 
-    @patch("app.gemini.run_gemini", return_value=MOCK_ENHANCED)
-    def test_specialized_character(self, mock_gemini):
+    @patch("app.main.provider_evaluate_quality", new_callable=AsyncMock, return_value=None)
+    @patch("app.providers.gemini_provider.GeminiProvider.generate_text", return_value=MOCK_ENHANCED)
+    def test_specialized_character(self, mock_generate, mock_quality):
         payload = {
             "prompt": "medieval knight with battle scars",
             "enhancement_mode": "character",
@@ -172,8 +193,9 @@ class TestEnhanceSpecialized:
         resp = client.post("/enhance-specialized", json=payload)
         assert resp.status_code == 200
 
-    @patch("app.gemini.run_gemini", return_value=MOCK_ENHANCED)
-    def test_specialized_object(self, mock_gemini):
+    @patch("app.main.provider_evaluate_quality", new_callable=AsyncMock, return_value=None)
+    @patch("app.providers.gemini_provider.GeminiProvider.generate_text", return_value=MOCK_ENHANCED)
+    def test_specialized_object(self, mock_generate, mock_quality):
         payload = {
             "prompt": "futuristic spaceship engine",
             "enhancement_mode": "object",
@@ -224,8 +246,8 @@ class TestQualityHelpers:
 class TestPathTraversalSafety:
     """Verify that upload filenames are sanitised."""
 
-    @patch("app.gemini.run_gemini", return_value="Safe description")
-    def test_image_upload_sanitises_filename(self, mock_gemini):
+    @patch("app.main.provider_generate_with_image", new_callable=AsyncMock, return_value="Safe description")
+    def test_image_upload_sanitises_filename(self, mock_generate):
         """Ensure a malicious filename like '../../etc/passwd' cannot escape UPLOADS_DIR."""
         import io
         malicious_name = "../../etc/passwd.png"

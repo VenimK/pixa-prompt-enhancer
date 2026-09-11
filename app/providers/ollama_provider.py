@@ -12,7 +12,6 @@ import time
 from typing import Any
 
 import httpx
-import PIL.Image
 
 from app.logger import log_debug
 from app.providers.base import ModelProvider
@@ -29,14 +28,17 @@ class OllamaProvider(ModelProvider):
     """Ollama provider for local Gemma models."""
 
     def __init__(self, model: str | None = None):
-        self.client = httpx.Client(timeout=OLLAMA_TIMEOUT)
+        self.client = httpx.Client(
+            timeout=httpx.Timeout(OLLAMA_TIMEOUT, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+        )
         self.default_model = model or OLLAMA_MODEL
         self._check_connection()
 
     def _check_connection(self):
-        """Verify ollama is running."""
+        """Verify ollama is running. Short timeout so a down server does not stall startup."""
         try:
-            resp = self.client.get(f"{OLLAMA_HOST}/api/tags")
+            resp = self.client.get(f"{OLLAMA_HOST}/api/tags", timeout=2.0)
             if resp.status_code == 200:
                 log_debug("[ollama] Connected successfully")
             else:
